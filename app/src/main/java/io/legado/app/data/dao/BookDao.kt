@@ -827,6 +827,22 @@ interface BookDao {
     @get:Query("SELECT * FROM books where type & ${BookType.text} > 0 ORDER BY durChapterTime DESC limit 1")
     val lastReadBook: Book?
 
+    /** The reader shortcut can also open local comics, including older CBZ records. */
+    @get:Query(
+        """
+        SELECT * FROM books
+        WHERE type & ${BookType.text} > 0
+           OR (
+               (type & ${BookType.local} > 0 OR
+                   (type = 0 AND (origin = '${BookType.localTag}' OR instr(origin, '${BookType.webDavTag}') = 1)))
+               AND (type & ${BookType.image} > 0 OR lower(originName) LIKE '%.cbz')
+           )
+        ORDER BY durChapterTime DESC
+        LIMIT 1
+        """
+    )
+    val lastReadBookForReader: Book?
+
     @get:Query("SELECT bookUrl FROM books")
     val allBookUrls: List<String>
 
@@ -858,13 +874,19 @@ interface BookDao {
     fun update(vararg book: Book)
 
     /**
-     * 只回写字数列。
+     * 只回写字数列，且仅当该字段当前仍为空时才写。
      *
      * 不能用 [update]：它是 Room 的 @Update，按主键做**全字段**写入，
-     * 会用这里的内存快照盖掉 `ReadBook` 并发写回的阅读进度（`durChapterIndex` / `durChapterPos`。
+     * 会用这里的内存快照盖掉 `ReadBook` 并发写回的阅读进度。
+     * 「当前为空」条件是必要的：是否允许汇总取决于批次开始时读到的快照，
+     * 若书源在重算期间写入了整书字数，无条件 UPDATE 会把新值覆盖掉。
+     * @return 实际更新行数；0 表示期间已有值，调用方不应计入「已更新」。
      */
-    @Query("update books set wordCount = :wordCount where bookUrl = :bookUrl")
-    fun upWordCount(bookUrl: String, wordCount: String)
+    @Query(
+        """update books set wordCount = :wordCount
+           where bookUrl = :bookUrl and (wordCount is null or trim(wordCount) = '')"""
+    )
+    fun upWordCount(bookUrl: String, wordCount: String): Int
 
     @Delete
     fun delete(vararg book: Book)

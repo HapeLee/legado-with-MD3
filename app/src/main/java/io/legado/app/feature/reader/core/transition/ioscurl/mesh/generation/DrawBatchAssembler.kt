@@ -10,6 +10,14 @@ import io.legado.app.feature.reader.core.transition.ioscurl.model.CurlRect
 internal class DrawBatchAssembler {
     var clip = CurlRect(0.0, 0.0, 0.0, 0.0)
     val batches = ArrayList<CurlDrawBatch>(MeshConstants.INITIAL_BATCH_CAPACITY)
+    var coalesce = false
+    var stripCount = 0
+    var pendingCount = 0
+    var pendingVertices = 0
+    var pendingMode = 0
+    val pendingBuffers = arrayOfNulls<VertexBuffer>(MeshConstants.MAX_DRAW_BATCHES)
+    val pendingFirst = IntArray(MeshConstants.MAX_DRAW_BATCHES)
+    val pendingSizes = IntArray(MeshConstants.MAX_DRAW_BATCHES)
 }
 
 /**
@@ -21,8 +29,13 @@ internal fun DrawBatchAssembler.assemble(
     ranges: CurveSampleRanges,
     surface: PageSurfaceBuilder,
     shadow: ShadowBuilder,
+    coalesceTriangleStrips: Boolean,
 ): List<CurlDrawBatch> {
     batches.clear()
+    pendingCount = 0
+    pendingVertices = 0
+    stripCount = 0
+    coalesce = coalesceTriangleStrips
     clip = projection.frame.clip
     val frontEnabled = projection.frame.input.frontEnabled
     val backEnabled = projection.frame.input.backEnabled
@@ -56,6 +69,7 @@ internal fun DrawBatchAssembler.assemble(
         strip(DrawProgram.TextureAlpha, surface.curve.lower, backFirst, fringes)
         strip(DrawProgram.TextureAlpha, surface.curve.upper, backFirst, fringes)
     }
+    flushStrips()
     return batches.toList()
 }
 
@@ -88,8 +102,24 @@ private fun DrawBatchAssembler.strip(
     if (count == 0) return
     check(
         count.toLong() in 0..MeshConstants.MAX_VERTICES_PER_BATCH &&
-            batches.size < MeshConstants.MAX_DRAW_BATCHES
+            stripCount < MeshConstants.MAX_DRAW_BATCHES
     )
+    stripCount++
+    if (coalesce) {
+        val padding = if (pendingCount == 0) 0 else 2 + (pendingVertices and 1)
+        if (pendingCount > 0 &&
+            (pendingMode != program.id ||
+                pendingVertices.toLong() + padding + count > MeshConstants.MAX_VERTICES_PER_BATCH)
+        ) flushStrips()
+        pendingMode = program.id
+        if (pendingCount > 0) pendingVertices += 2 + (pendingVertices and 1)
+        pendingBuffers[pendingCount] = vertices
+        pendingFirst[pendingCount] = first
+        pendingSizes[pendingCount] = count
+        pendingCount++
+        pendingVertices += count
+        return
+    }
     batches +=
         CurlDrawBatch(
             2,
@@ -102,6 +132,37 @@ private fun DrawBatchAssembler.strip(
             null,
             clip,
         )
+}
+
+/** Packs each source range once, adding only degenerate connectors between ordered strips. */
+private fun DrawBatchAssembler.flushStrips() {
+    if (pendingCount == 0) return
+    val bytes = ByteArray(pendingVertices * 64)
+    var offset = 0
+    for (index in 0 until pendingCount) {
+        val vertices = checkNotNull(pendingBuffers[index])
+        val first = pendingFirst[index]
+        val count = pendingSizes[index]
+        if (offset > 0) {
+            val previous = offset - 64
+            // The next strip must start at an even index to retain its original winding.
+            if ((offset / 64) and 1 != 0) {
+                bytes.copyInto(bytes, offset, previous, previous + 64)
+                offset += 64
+            }
+            bytes.copyInto(bytes, offset, previous, previous + 64)
+            offset += 64
+            vertices.writeBytes(bytes, offset, first, 1)
+            offset += 64
+        }
+        vertices.writeBytes(bytes, offset, first, count)
+        offset += count * 64
+        pendingBuffers[index] = null
+    }
+    check(offset == bytes.size)
+    batches += CurlDrawBatch(2, pendingMode, 3, true, pendingVertices, pendingVertices, bytes, null, clip)
+    pendingCount = 0
+    pendingVertices = 0
 }
 
 /**

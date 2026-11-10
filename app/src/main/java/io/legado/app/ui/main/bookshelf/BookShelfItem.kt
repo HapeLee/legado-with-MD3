@@ -4,6 +4,7 @@ import androidx.compose.runtime.Stable
 import io.legado.app.constant.BookType
 import io.legado.app.data.entities.Book
 import io.legado.app.domain.model.PrivateAccessState
+import io.legado.app.help.book.shouldOpenMangaReader
 import io.legado.app.utils.splitNotBlank
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -42,6 +43,9 @@ data class BookShelfItem(
     val isAudio: Boolean get() = (type and BookType.audio) > 0
 
     val isImage: Boolean get() = (type and BookType.image) > 0
+
+    fun shouldOpenMangaReader(showMangaUi: Boolean): Boolean =
+        toLightBook().shouldOpenMangaReader(showMangaUi)
 
     val isVideo: Boolean get() = (type and BookType.video) > 0
 

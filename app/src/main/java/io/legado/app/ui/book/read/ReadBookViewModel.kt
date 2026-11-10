@@ -39,6 +39,7 @@ import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadStyleGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
+import io.legado.app.domain.model.readaloud.ReadAloudProgress
 import io.legado.app.domain.model.settings.ReadAloudTimerMode
 import io.legado.app.domain.usecase.AiTextFactoryUseCase
 import io.legado.app.domain.usecase.ChangeBookSourceUseCase
@@ -59,6 +60,7 @@ import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isEpub
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.isLocalTxt
+import io.legado.app.help.book.isMarkdown
 import io.legado.app.help.book.isMobi
 import io.legado.app.help.book.removeType
 import io.legado.app.help.config.ReadBookConfig
@@ -71,7 +73,6 @@ import io.legado.app.model.ReadBook
 import io.legado.app.model.ReaderSession
 import io.legado.app.model.ReaderSessionEvent
 import io.legado.app.model.SourceCallBack
-import io.legado.app.model.activeReadAloudProgress
 import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
@@ -179,13 +180,9 @@ class ReadBookViewModel(
     @Volatile private var composePageContext: ReaderPageContext? = null
     private var composeProgressJob: Job? = null
     private var readBookSyncJob: Job? = null
-    private val _readAloudProgress = MutableStateFlow(
-        activeReadAloudProgress(
-            isPlaying = ReadBook.isCurrentBookReadAloud && BaseReadAloudService.isPlay(),
-            currentProgress = BaseReadAloudService.currentProgress,
-        )
-    )
+    private val _readAloudProgress = MutableStateFlow(currentReadAloudProgress())
     val readAloudProgress = _readAloudProgress.asStateFlow()
+
     private suspend fun emitEffectWhenSubscribed(effect: ReadBookEffect) {
         _effects.subscriptionCount.first { it > 0 }
         _effects.emit(effect)
@@ -563,8 +560,8 @@ class ReadBookViewModel(
                 this@ReadBookViewModel.openReadMenuRoute(route)
             }
 
-            override fun publishReadAloudProgress(chapterStart: Int) {
-                _readAloudProgress.value = chapterStart
+            override fun publishReadAloudProgress(progress: ReadAloudProgress) {
+                _readAloudProgress.value = progress
             }
         },
         readSettingsRepository = readSettingsRepository,
@@ -637,10 +634,8 @@ class ReadBookViewModel(
         _uiState.update { it.copy(isAutoPage = active) }
     }
 
-    fun setTextSelectMenuConfig(value: String) {
-        viewModelScope.launch {
-            readSettingsRepository.update { it.copy(textSelectMenuConfig = value) }
-        }
+    fun setTextSelectMenuConfig(value: String) = viewModelScope.launch {
+        readSettingsRepository.update { it.copy(textSelectMenuConfig = value) }
     }
 
     /** 云端进度同步域；投影目标 isReadingProgressSyncConfigured 仍留在 UiState 供菜单读。 */
@@ -1089,9 +1084,6 @@ class ReadBookViewModel(
             is ReadBookIntent.OpenChapterUrl -> openChapterUrl()
             is ReadBookIntent.SourceCustomButton -> runSourceCustomButton(intent.longClick)
             is ReadBookIntent.ToggleReadUrlInBrowser -> toggleReadUrlInBrowser()
-            is ReadBookIntent.SetParagraphCommentHeight -> viewModelScope.launch {
-                readSettingsRepository.update { it.copy(paragraphCommentHeightPercent = intent.percent) }
-            }
             is ReadBookIntent.OpenContentEdit -> contentEditDelegate.open()
             is ReadBookIntent.LoadContentEdit -> contentEditDelegate.load()
             is ReadBookIntent.SaveContentEdit ->
@@ -1111,9 +1103,9 @@ class ReadBookViewModel(
             // Menu actions
             is ReadBookIntent.MenuUpdateToc -> {
                 ReadBook.book?.let { book ->
-                    if (book.isEpub) {
+                    if (book.isEpub || book.isMarkdown) {
                         io.legado.app.help.book.BookHelp.clearCache(book)
-                        io.legado.app.model.localBook.EpubFile.clear()
+                        if (book.isEpub) io.legado.app.model.localBook.EpubFile.clear()
                     }
                     if (book.isMobi) {
                         io.legado.app.model.localBook.MobiFile.clear()
@@ -1343,7 +1335,7 @@ class ReadBookViewModel(
                 }
             }
 
-            is ReadBookIntent.TtsProgress -> readAloudDelegate.updateProgress(intent.chapterStart)
+            is ReadBookIntent.TtsProgress -> readAloudDelegate.updateProgress(intent.progress)
             is ReadBookIntent.ReadAloudAction -> readAloudDelegate.openDefaultInterface()
             is ReadBookIntent.ConfirmAddCurrentBookToBookshelf -> addCurrentBookToBookshelfAndFinish()
             is ReadBookIntent.ExitWithoutAddingCurrentBookToBookshelf -> removeCurrentNotShelfBookAndFinish()
@@ -1898,8 +1890,8 @@ class ReadBookViewModel(
             }
         }
         viewModelScope.launch {
-            eventFlowSticky<Int>(EventBus.TTS_PROGRESS).collect { chapterStart ->
-                readAloudDelegate.updateProgress(chapterStart)
+            eventFlowSticky<ReadAloudProgress>(EventBus.TTS_PROGRESS).collect { progress ->
+                readAloudDelegate.updateProgress(progress)
             }
         }
     }

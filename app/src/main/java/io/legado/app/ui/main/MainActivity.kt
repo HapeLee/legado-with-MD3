@@ -72,6 +72,7 @@ import io.legado.app.base.BaseComposeActivity
 import io.legado.app.constant.AppConst.appInfo
 import io.legado.app.constant.EventBus
 import io.legado.app.core.ui.player.playerUnderlaySemantics
+import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.domain.gateway.MangaSettingsGateway
@@ -376,6 +377,7 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
     private val backupSettingsGateway by inject<BackupSettingsGateway>()
     private val readAloudSettingsRepository by inject<ReadAloudSettingsRepository>()
     internal val navRouteTracker by inject<MainNavRouteTracker>()
+    internal val bookRepository by inject<BookRepository>()
     private val routeEvents = MutableSharedFlow<RouteEvent>(extraBufferCapacity = 1)
     /**
      * Web 服务与「局域网请求」各自持有独立的 launcher：授权结果互不影响，也不需要用一个可变字段
@@ -405,8 +407,13 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
     internal var activeReadBookRoute: MainRouteReadBook? = null
     internal var activeMangaKeyHandler: ((Int) -> Boolean)? = null
 
-    /** 听书/朗读播放浮层是否可见：可见期间由浮层接管系统栏，覆盖阅读器的隐藏策略。 */
+    /** 听书/朗读浮层及其退场动画期间，由浮层接管窗口交互。 */
     private var isPlaybackOverlayVisible = false
+
+    private val foregroundReadBookInputHandler: ReadBookInputHandler?
+        get() = activeReadBookInputHandler?.takeIf {
+            !isPlaybackOverlayVisible && activeReadBookRoute == navRouteTracker.currentRoute
+        }
 
     override fun onPictureInPictureModeChanged(
         isInPictureInPictureMode: Boolean,
@@ -762,7 +769,7 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                 playbackCapsuleState.source == null || matchingCapsule,
             )
             if (!pageShellShowCapsule) readAloudMorph.clearStartAnchors()
-            isPlaybackOverlayVisible = playerVisible
+            isPlaybackOverlayVisible = playerVisible || morphPresent
         }
         // 只用于首帧锚点布局，不把尚未启动的朗读伪装成正在播放。
         val capsuleAnchorPreview = if (playerVisible && pageShellShowCapsule) {
@@ -1031,6 +1038,7 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                         awaitCapsuleAnchor = pageShellShowCapsule,
                         predictiveBackEnabled = configuration.appShell.predictiveBackEnabled,
                         onDismiss = { readAloudPlayerVisible = false },
+                        onRestore = { readAloudPlayerVisible = true },
                         onSwitchToClassic = { bookUrl ->
                             // 栈顶是阅读界面：让它直接落在经典朗读控制页；
                             // 否则没有可用的阅读界面，打开一个新的。
@@ -1249,14 +1257,16 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
         val keyCode = event.keyCode
         val isDown = event.action == KeyEvent.ACTION_DOWN
         if (keyCode == KeyEvent.KEYCODE_MENU && isDown) {
-            activeReadBookInputHandler?.toggleMenu()
-            if (activeReadBookInputHandler != null) return true
+            foregroundReadBookInputHandler?.let { controller ->
+                controller.toggleMenu()
+                return true
+            }
         }
         return super.dispatchKeyEvent(event)
     }
 
     override fun onGenericMotionEvent(event: MotionEvent): Boolean {
-        val controller = activeReadBookInputHandler ?: return super.onGenericMotionEvent(event)
+        val controller = foregroundReadBookInputHandler ?: return super.onGenericMotionEvent(event)
         if (0 != (event.source and InputDevice.SOURCE_CLASS_POINTER) &&
             event.action == MotionEvent.ACTION_SCROLL
         ) {
@@ -1282,13 +1292,16 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (activeMangaKeyHandler?.invoke(keyCode) == true) return true
-        if (activeReadBookInputHandler?.onKeyDown(keyCode, event) == true) return true
+        val mangaHandler = activeMangaKeyHandler
+        if (!isPlaybackOverlayVisible && mangaHandler != null &&
+            navRouteTracker.currentRoute is MainRouteReadManga && mangaHandler(keyCode)
+        ) return true
+        if (foregroundReadBookInputHandler?.onKeyDown(keyCode, event) == true) return true
         return super.onKeyDown(keyCode, event)
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
-        if (activeReadBookInputHandler?.onKeyUp(keyCode, event) == true) return true
+        if (foregroundReadBookInputHandler?.onKeyUp(keyCode, event) == true) return true
         return super.onKeyUp(keyCode, event)
     }
 

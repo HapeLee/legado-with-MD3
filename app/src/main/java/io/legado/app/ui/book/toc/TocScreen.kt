@@ -865,8 +865,12 @@ fun ChapterItem(
     val downloadFailedDescription = stringResource(R.string.a11y_download_failed)
     val notDownloadedDescription = stringResource(R.string.a11y_not_downloaded)
     val assignmentStateDescription = stringResource(R.string.cast_assignment_state)
-    val audioDownloadStateDescription =
-        stringResource(R.string.read_aloud_audio_download_state)
+    val audioDownloadStateDescription = when (item.audioDownloadState) {
+        TocAudioDownloadState.None -> null
+        TocAudioDownloadState.Complete -> stringResource(R.string.read_aloud_audio_download_state)
+        TocAudioDownloadState.Partial -> stringResource(R.string.read_aloud_audio_download_partial_state)
+        TocAudioDownloadState.Unverified -> stringResource(R.string.read_aloud_audio_download_unverified_state)
+    }
     val wordCountDescription = item.wordCount?.let {
         stringResource(R.string.a11y_word_count, it)
     }
@@ -885,7 +889,7 @@ fun ChapterItem(
         if (showWordCount) wordCountDescription?.let(::add)
         downloadStateDescription?.let(::add)
         if (item.hasCastAssignment) add(assignmentStateDescription)
-        if (item.hasAudioDownload) add(audioDownloadStateDescription)
+        audioDownloadStateDescription?.let(::add)
     }.joinToString(", ")
     val canDownload = item.downloadState == DownloadState.NONE ||
             item.downloadState == DownloadState.ERROR

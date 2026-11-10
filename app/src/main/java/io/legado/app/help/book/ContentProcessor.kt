@@ -191,7 +191,7 @@ class ContentProcessor private constructor(
     ): BookContent {
         val indent = paragraphIndent ?: ReadBookConfig.paragraphIndent
         val canonicalInput = content
-        var presentation = if (includePresentation && !includeTitle && settings.adaptSpecialStyle && (book.isEpub || book.isMobi)) {
+        var presentation = if (includePresentation && !includeTitle && settings.adaptSpecialStyle && (book.isEpub || book.isMobi || book.isMarkdown)) {
             try {
                 if (localPresentationProvider != null) {
                     localPresentationProvider()

@@ -158,6 +158,8 @@ class ConfigUpdateActionsInvariantTest {
             "AutoReadSpeed",
             // 只决定点击目录时开新 Sheet 还是旧 Activity，取用时读设置，无渲染副作用
             "UseNewTocSheet",
+            // 段评弹窗打开时读取高度设置，无需刷新正文。
+            "ParagraphCommentHeight",
             // 只影响下次目录解析时的无规则章节切分长度，取用时读设置，无渲染副作用
             "MaxLengthWithNoToc",
             // 只写 DataStore 的 readingAnchorEnabled，锚点栏可见性由 readPreferences 反应式驱动

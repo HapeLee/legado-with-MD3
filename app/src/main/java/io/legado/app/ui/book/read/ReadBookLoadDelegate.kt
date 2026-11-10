@@ -21,6 +21,7 @@ import io.legado.app.exception.NoStackTraceException
 import io.legado.app.feature.reader.platform.ReaderPerfTrace
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isLocal
+import io.legado.app.help.book.isLocalManga
 import io.legado.app.help.book.isLocalModified
 import io.legado.app.help.book.simulatedTotalChapterNum
 import io.legado.app.help.coroutine.Coroutine
@@ -214,8 +215,12 @@ class ReadBookLoadDelegate(
     }
 
     private fun checkLocalBookFileExist(book: Book): Boolean {
+        if (book.isLocalManga) {
+            ReadBook.upMsg(context.getString(R.string.local_manga_requires_reader))
+            return false
+        }
         try {
-            LocalBook.getBookInputStream(book)
+            LocalBook.getBookInputStream(book).use { }
             return true
         } catch (e: Throwable) {
             ReadBook.upMsg("打开本地书籍出错: ${e.localizedMessage}")

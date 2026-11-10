@@ -194,6 +194,19 @@ object NetworkUtils {
         return relativeUrl
     }
 
+    /**
+     * 归一化没有 scheme 的协议相对媒体地址（//host/path）。
+     * 直链播放没有 baseURL 可拼，DefaultDataSource 会把无 scheme URI 当本地文件；
+     * 本地绝对路径 /path 与已带 scheme 的 file/content/data/http(s) 保持不变。
+     */
+    fun normalizeMediaUrl(url: String): String {
+        val trimmed = url.trim()
+        if (trimmed.length > 2 && trimmed.startsWith("//") && trimmed[2] != '/') {
+            return "https:$trimmed"
+        }
+        return trimmed
+    }
+
     fun getBaseUrl(url: String?): String? {
         url ?: return null
         if (url.startsWith("http://", true)

@@ -16,7 +16,7 @@ enum class ReaderSelectionEndpoint {
 /**
  * 选区可跨的页：对照旧 `ContentTextView.upSelectChars`（`relativePage(0..2)`）——当前页、
  * 下一页、下下页，**不含上一页**；滚动模式的连续堆叠允许选到邻章首页（`nextPlusPage` 语义），
- * 分页模式实际只有当前页可见。
+ * 分页模式的可见选区只绘制在当前页。
  */
 fun ReaderPageWindow.selectionPages(): List<ReaderPage> =
     listOfNotNull(current, next, nextPlus)
@@ -101,6 +101,32 @@ data class ReaderSelection(
 
         ReaderSelectionEndpoint.FOCUS ->
             copy(focus = position, focusIsTitle = isTitle, focusChapterIndex = chapter)
+    }
+
+    fun hasEndpointOn(page: ReaderPage, endpoint: ReaderSelectionEndpoint): Boolean {
+        val isAnchor = endpoint == ReaderSelectionEndpoint.ANCHOR
+        val chapter = if (isAnchor) chapterIndex else focusChapterIndex
+        val position = if (isAnchor) anchor else focus
+        val isTitle = if (isAnchor) anchorIsTitle else focusIsTitle
+        return page.id.chapterIndex == chapter && page.elements.any {
+            it is ReaderElement.Text && it.chapterPosition == position && it.emphasized == isTitle
+        }
+    }
+
+    fun extendToNextPage(window: ReaderPageWindow): ReaderSelection? {
+        val current = window.current ?: return null
+        val next = window.next ?: return null
+        if (current.isPlaceholder || next.isPlaceholder ||
+            startChapterIndex != current.id.chapterIndex ||
+            endChapterIndex != current.id.chapterIndex ||
+            next.id.chapterIndex != current.id.chapterIndex ||
+            next.id.pageIndex != current.id.pageIndex + 1
+        ) return null
+        val last = next.elements.asSequence().filterIsInstance<ReaderElement.Text>()
+            .filterNot { it.emphasized }
+            .maxByOrNull { it.chapterPosition } ?: return null
+        if (last.chapterPosition <= endInclusive && !endIsTitle) return null
+        return moveEnd(last.chapterPosition)
     }
 
     fun selectedText(page: ReaderPage): String {

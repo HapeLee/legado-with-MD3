@@ -11,7 +11,7 @@ import java.util.Locale
 
 /**
  * 缓存维护最容易出错的地方在口径，不在编排：
- * 什么算孤儿、存的字数能不能还原、大书求和会不会溢出。这里把这些钉死。
+ * 什么算孤儿（含历史命名残留）、存的字数能不能还原、大书求和会不会溢出。
  */
 class CacheMaintenanceRulesTest {
 
@@ -23,33 +23,44 @@ class CacheMaintenanceRulesTest {
 
     @Test
     fun `findOrphanSubjects - 目录与 nb 文件主体不在章节列表时算孤儿`() {
-        val legal = setOf("00001-aaa", "00002-bbb")
+        val legal = setOf("00001-aaaaaaaaaaaaaaaa", "00002-bbbbbbbbbbbbbbbb")
 
         val found = findOrphanSubjects(
-            cachedEntryNames = listOf("00001-aaa", "00002-bbb", "00003-ccc", "00004-ddd.nb"),
+            cachedEntryNames = listOf(
+                "00001-aaaaaaaaaaaaaaaa",
+                "00002-bbbbbbbbbbbbbbbb",
+                "00003-cccccccccccccccc",
+                "00004-dddddddddddddddd.nb",
+            ),
             legalSubjects = legal,
             bookImageFolderName = "images",
         )
 
-        assertEquals(listOf("00003-ccc", "00004-ddd.nb"), found)
+        assertEquals(
+            listOf("00003-cccccccccccccccc", "00004-dddddddddddddddd.nb"),
+            found,
+        )
     }
 
     @Test
     fun `findOrphanSubjects - 书级图片目录永不算孤儿`() {
         val found = findOrphanSubjects(
-            cachedEntryNames = listOf("images", "00009-zzz"),
-            legalSubjects = setOf("00001-aaa"),
+            cachedEntryNames = listOf("images", "00009-9999999999999999"),
+            legalSubjects = setOf("00001-aaaaaaaaaaaaaaaa"),
             bookImageFolderName = "images",
         )
 
-        assertEquals(listOf("00009-zzz"), found)
+        assertEquals(listOf("00009-9999999999999999"), found)
     }
 
     @Test
     fun `findOrphanSubjects - 章节列表为空时不产出孤儿`() {
         // 书刚入库、还没拉到目录时，磁盘上的缓存不能因为查无此章被判要删。
         val found = findOrphanSubjects(
-            cachedEntryNames = listOf("00001-aaa", "00002-bbb.nb"),
+            cachedEntryNames = listOf(
+                "00001-aaaaaaaaaaaaaaaa",
+                "00002-bbbbbbbbbbbbbbbb.nb",
+            ),
             legalSubjects = emptySet(),
             bookImageFolderName = "images",
         )
@@ -60,12 +71,61 @@ class CacheMaintenanceRulesTest {
     @Test
     fun `findOrphanSubjects - legacy 平铺 nb 与章节目录同一口径`() {
         val found = findOrphanSubjects(
-            cachedEntryNames = listOf("00007-ghost.nb"),
-            legalSubjects = setOf("00007-ghost"),
+            cachedEntryNames = listOf("00007-abcdef0123456789.nb"),
+            legalSubjects = setOf("00007-abcdef0123456789"),
             bookImageFolderName = "images",
         )
 
         assertEquals(emptyList<String>(), found)
+    }
+
+    @Test
+    fun `历史命名的残留同样会被列为孤儿`() {
+        // 早期版本 / 异 Locale 写入的缓存名与当前 getFileName() 规则对不上，
+        // 它们在章节表里查无此章，就是孤儿，不该因为格式不认识而被跳过。
+        val legacy = listOf("deadbeef.nb", "legacy-chapter-1", "00001-ABCDEF0123456789")
+        assertEquals(
+            legacy,
+            findOrphanSubjects(
+                cachedEntryNames = legacy,
+                legalSubjects = setOf("00001-aaaaaaaaaaaaaaaa"),
+                bookImageFolderName = "images",
+            ),
+        )
+    }
+
+    @Test
+    fun `混合命名时合法缓存受保护而历史残留被列出`() {
+        val found = findOrphanSubjects(
+            cachedEntryNames = listOf(
+                "00001-aaaaaaaaaaaaaaaa",
+                "00003-cccccccccccccccc",
+                "legacy-chapter-9",
+                "deadbeef.nb",
+            ),
+            legalSubjects = setOf("00001-aaaaaaaaaaaaaaaa"),
+            bookImageFolderName = "images",
+        )
+        assertEquals(
+            listOf("00003-cccccccccccccccc", "legacy-chapter-9", "deadbeef.nb"),
+            found,
+        )
+    }
+
+    @Test
+    fun `一本书的缓存全是孤儿时仍能被正常识别`() {
+        val entries = listOf(
+            "00007-cccccccccccccccc",
+            "00008-dddddddddddddddd.nb",
+        )
+        assertEquals(
+            entries,
+            findOrphanSubjects(
+                cachedEntryNames = entries,
+                legalSubjects = setOf("00001-aaaaaaaaaaaaaaaa"),
+                bookImageFolderName = "images",
+            ),
+        )
     }
 
     @Test

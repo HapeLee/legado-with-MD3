@@ -781,7 +781,9 @@ private fun ReaderImageLayoutMode.toScaleMode(): ReaderImageScaleMode = when (th
 
 private fun ReaderTextStyle.merge(override: ReaderInlineSourceStyle): ReaderTextStyle = copy(
     colorArgb = override.colorArgb ?: colorArgb,
+    bookColorFallbackArgb = if (override.colorArgb != null) colorArgb else bookColorFallbackArgb,
     backgroundArgb = override.backgroundArgb ?: backgroundArgb,
+    marked = override.marked || marked,
     fontWeight = override.fontWeight ?: fontWeight,
     italic = override.italic ?: italic,
     fontSizePx = fontSizePx * override.fontSizeScale,
@@ -794,6 +796,7 @@ private fun ReaderTextStyle.merge(override: ReaderCharacterStyle?): ReaderTextSt
     if (override == null) return this
     return copy(
         colorArgb = override.colorArgb ?: colorArgb,
+        bookColorFallbackArgb = bookColorFallbackArgb.takeIf { override.colorArgb == null },
         backgroundArgb = override.backgroundArgb ?: backgroundArgb,
         // 边框是一个整体：颜色给了就整套换掉，颜色为 null（HTML 来源、角色气泡都没这项）
         // 就保留原来的，不出现「半径归 override、粗细归底样式」的拼装。

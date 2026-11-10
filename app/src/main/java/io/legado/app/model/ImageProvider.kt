@@ -13,12 +13,17 @@ import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isEpub
+import io.legado.app.help.book.isMarkdown
 import io.legado.app.help.book.isMobi
 import io.legado.app.help.book.isPdf
 import io.legado.app.model.localBook.EpubFile
+import io.legado.app.model.localBook.MarkdownFile
+import io.legado.app.model.localBook.MarkdownImageSource
 import io.legado.app.model.localBook.MobiFile
 import io.legado.app.model.localBook.PdfFile
 import io.legado.app.utils.BitmapUtils
+import io.legado.app.utils.isAbsUrl
+import io.legado.app.utils.isDataUrl
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.SvgUtils
 import io.legado.app.utils.toastOnUi
@@ -139,6 +144,18 @@ object ImageProvider {
             val vFile = BookHelp.getImage(book, src)
             if (!BookHelp.isImageExist(book, src)) {
                 val inputStream = when {
+                    book.isMarkdown -> {
+                        if (src.isAbsUrl() || src.isDataUrl() ||
+                            src.startsWith(MarkdownImageSource.INLINE_PREFIX, true)
+                        ) {
+                            //网络图/data URI/短占位内嵌图走 BookHelp 的普通资源下载（不按书源规则解析地址）
+                            BookHelp.saveImage(bookSource, book, src)
+                            null
+                        } else {
+                            //相对路径按 markdown 文件所在目录解析；无法定位文件时降级为占位图
+                            MarkdownFile.getImage(book, src)
+                        }
+                    }
                     book.isEpub -> EpubFile.getImage(book, src)
                     book.isPdf -> PdfFile.getImage(book, src)
                     book.isMobi -> MobiFile.getImage(book, src)
@@ -167,7 +184,7 @@ object ImageProvider {
                 .forEach { bitmapLruCache.remove(it) }
             return@withContext true
         }
-        if (book.isEpub || book.isPdf || book.isMobi) {
+        if (book.isEpub || book.isPdf || book.isMobi || book.isMarkdown) {
             val file = BookHelp.getImage(book, src)
             bitmapLruCache.remove(file.absolutePath)
             file.delete()

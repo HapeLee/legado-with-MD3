@@ -41,6 +41,7 @@ import io.legado.app.feature.reader.core.navigation.ReaderPageContext
 import io.legado.app.feature.reader.core.navigation.ReaderPageNavigator
 import io.legado.app.feature.reader.core.navigation.ReaderPartialPagePolicy
 import io.legado.app.feature.reader.core.readaloud.ReaderVisibleTextPosition
+import io.legado.app.domain.model.readaloud.ReadAloudProgress
 import io.legado.app.feature.reader.core.selection.ReaderSearchMatcher
 import io.legado.app.feature.reader.core.selection.ReaderSearchRequest
 import io.legado.app.feature.reader.core.selection.ReaderSelection
@@ -404,6 +405,8 @@ class ReadBookController(
     val composePageTurns = _composePageTurns.asSharedFlow()
     private val _composeSelectionCancels = MutableSharedFlow<Unit>(extraBufferCapacity = 16)
     val composeSelectionCancels = _composeSelectionCancels.asSharedFlow()
+    private val _composeSelectionExtensions = MutableSharedFlow<ReaderSelection>(extraBufferCapacity = 1)
+    val composeSelectionExtensions = _composeSelectionExtensions.asSharedFlow()
 
     /** 宿主要求画布建立选区（全文搜索命中），对照旧 View 的"搜索结果即真选区"。 */
     private val _composeSelections = MutableSharedFlow<ReaderSelection>(extraBufferCapacity = 4)
@@ -421,7 +424,7 @@ class ReadBookController(
     private var composeSelection: ReaderSelection? = null
     private var searchSelection: ReaderSelection? = null
     private var pendingSearchNavigation: ReadBookEffect.NavigateToSearchResult? = null
-    private var readAloudPosition: Pair<Int, Int>? = null
+    private var readAloudPosition: ReaderVisibleTextPosition? = null
     private var composeVisibleBodyTextPositionProvider: (() -> ReaderVisibleTextPosition?)? = null
     private var composeImageClickAt = 0L
     private var composeImageDoubleClick = false
@@ -627,11 +630,7 @@ class ReadBookController(
         composeSelectedText = resolvedText
         val requestVersion = ++textMenuRequestVersion
         activity.lifecycleScope.launch {
-            val items = getActionMenuItems().filterNot {
-                selection.includesTitle && it.id in setOf(
-                    R.id.menu_mark, R.id.menu_ai_clean, R.id.menu_ai_rewrite,
-                )
-            }
+            val items = getActionMenuItems().forSelection(selection.includesTitle)
             if (textMenuRequestVersion != requestVersion) return@launch
             _textMenuState.value = TextMenuState(
                 selectedText = resolvedText,
@@ -961,7 +960,7 @@ class ReadBookController(
                     xor viewModel.pageBatteryPercent.toLong(),
             )
             val pageHasSearchSelection = selection?.chapterIndex == source.id.chapterIndex
-            val pageHasAloudParagraph = aloudPosition?.first == source.id.chapterIndex &&
+            val pageHasAloudParagraph = aloudPosition?.chapterIndex == source.id.chapterIndex &&
                 aloudParagraphIndex != null
             decorated.copy(
                 // Search/read-aloud state must not clone every glyph in the visible window:
@@ -1199,7 +1198,7 @@ class ReadBookController(
         // 上次切章位置、静读时长不计、邻章预取推迟。
         ReadBook.onComposeManualPageCommitted()
         if (BaseReadAloudService.isRun && ReadBook.onComposeManualPageTurn()) {
-            readAloudPosition = page.id.chapterIndex to chapterPosition
+            readAloudPosition = ReaderVisibleTextPosition(page.id.chapterIndex, chapterPosition)
         }
     }
 
@@ -2264,6 +2263,13 @@ class ReadBookController(
             items.add(ActionMenuItem(R.id.menu_edit, activity.getString(R.string.edit)))
             items.add(ActionMenuItem(R.id.menu_ai_clean, activity.getString(R.string.ai_text_clean)))
             items.add(ActionMenuItem(R.id.menu_ai_rewrite, activity.getString(R.string.ai_text_rewrite)))
+            items.add(
+                ActionMenuItem(
+                    R.id.menu_extend_selection,
+                    activity.getString(R.string.extend_selection_to_next_page),
+                    showState = 1,
+                )
+            )
             items.add(ActionMenuItem(R.id.menu_search_content, activity.getString(R.string.search_content)))
             items.add(
                 ActionMenuItem(
@@ -2329,6 +2335,13 @@ class ReadBookController(
         }
     }
 
+    private fun List<ActionMenuItem>.forSelection(includesTitle: Boolean): List<ActionMenuItem> =
+        if (includesTitle) {
+            filterNot { it.id in setOf(R.id.menu_mark, R.id.menu_ai_clean, R.id.menu_ai_rewrite) }
+        } else {
+            this
+        }
+
     fun refreshActionMenuItems() {
         activity.lifecycleScope.launch {
             menuMutex.withLock {
@@ -2336,7 +2349,9 @@ class ReadBookController(
             }
             val menuItems = getActionMenuItems()
             _textMenuState.value?.let { currentState ->
-                _textMenuState.value = currentState.copy(items = menuItems)
+                _textMenuState.value = currentState.copy(
+                    items = menuItems.forSelection(composeSelection?.includesTitle == true)
+                )
             }
         }
     }
@@ -2349,11 +2364,20 @@ class ReadBookController(
                 showState = item.showState
             )
         }
-        viewModel.setTextSelectMenuConfig(GSON.toJson(configs))
-        refreshActionMenuItems()
+        val saveJob = viewModel.setTextSelectMenuConfig(GSON.toJson(configs))
+        activity.lifecycleScope.launch {
+            saveJob.join()
+            refreshActionMenuItems()
+        }
     }
 
     fun onTextMenuItemClick(item: ActionMenuItem) {
+        if (item.id == R.id.menu_extend_selection) {
+            if (_textMenuState.value != null) {
+                composeSelection?.let(_composeSelectionExtensions::tryEmit)
+            }
+            return
+        }
         if (item.intent != null) {
             runCatching {
                 item.intent.putExtra(Intent.EXTRA_PROCESS_TEXT, selectedText)
@@ -2724,13 +2748,16 @@ class ReadBookController(
         }
     }
 
-    fun updateReadAloudProgress(chapterStart: Int) {
-        if (!ReadBook.isCurrentBookReadAloud || !BaseReadAloudService.isPlay()) return
+    fun updateReadAloudProgress(progress: ReadAloudProgress) {
+        val current = ReadAloud.bookSession.state.value
+        if (ReadBook.book?.bookUrl != progress.bookUrl || !BaseReadAloudService.isPlay() ||
+            !progress.matches(current.book?.bookUrl, current.chapterIndex, current.generation)
+        ) return
+        val anchor = ReaderVisibleTextPosition(progress.chapterIndex, progress.chapterPosition)
         // 只更新朗读高亮锚点。可见页的移动由朗读服务驱动（moveToReadAloudPage →
         // moveToNextPage → upContent）与用户导航负责；这里若再按朗读位置 locate
         // 回迁可见页，进入阅读器时会把页面先拉回朗读所在的上一段（跨页段落的
         // locate 落在段落起始页），随后 curPageChanged 的跟随重启又跳回当前页。
-        val anchor = BaseReadAloudService.currentChapterIndex to chapterStart
         if (readAloudPosition == anchor) return
         readAloudPosition = anchor
         // 高亮在窗口发布时才计算绘制（directReaderWindow），锚点变化后必须重发布
@@ -2923,7 +2950,10 @@ class ReadBookController(
      * 返回翻页后发布的页窗口（同步）；null 表示翻页被拒绝（边界/无内容）。
      * 滚动模式依赖这个同步返回在跨页帧内完成窗口替换与偏移折算，不走 StateFlow 往返。
      */
-    fun completeComposePageTurn(direction: PageDirection): ReaderPageWindow? {
+    fun completeComposePageTurn(
+        direction: PageDirection,
+        selectionTarget: ReaderPageId? = null,
+    ): ReaderPageWindow? {
         if (directReaderPages.isEmpty()) return null
         val currentIndex = directReaderPageIndex ?: 0
         val delta = when (direction) {
@@ -2934,6 +2964,12 @@ class ReadBookController(
         val navigation = ReaderPageNavigator.move(directReaderPages, currentIndex, delta)
         if (delta == 0) return null
         val fromChapterIndex = directReaderPages[currentIndex].id.chapterIndex
+        if (selectionTarget != null) {
+            val target = navigation.window.current
+            if (navigation.hitBoundary || target?.id != selectionTarget ||
+                target.isPlaceholder || selectionTarget.chapterIndex != fromChapterIndex
+            ) return null
+        }
         // 部分排版章节的护栏：本章还有没成型的页，窗口里的"下一页"其实已经是下一章，
         // 翻过去会跳过本章剩余内容（旧 `isLastIndexCurrent` 拒绝）；倒退进还没排完的
         // 上一章同理（旧 `moveToPrev` 的 `prevChapter.isCompleted == false`）。
@@ -3411,7 +3447,7 @@ data class TextMenuState(
     val startBottomY: Int,
     val endX: Int,
     val endBottomY: Int,
-    val items: List<ActionMenuItem>
+    val items: List<ActionMenuItem>,
 )
 
 data class ActionMenuItem(
@@ -3441,6 +3477,7 @@ data class ActionMenuItem(
                 R.id.menu_edit -> "menu_edit"
                 R.id.menu_ai_clean -> "menu_ai_clean"
                 R.id.menu_ai_rewrite -> "menu_ai_rewrite"
+                R.id.menu_extend_selection -> "menu_extend_selection"
                 R.id.menu_search_content -> "menu_search_content"
                 R.id.menu_insert_bgm_before -> "menu_insert_bgm_before"
                 R.id.menu_insert_bgm_after -> "menu_insert_bgm_after"

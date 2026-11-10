@@ -9,6 +9,8 @@ import io.legado.app.domain.model.manga.MangaPageContent
 import io.legado.app.domain.model.manga.MangaProgressState
 import io.legado.app.domain.model.manga.MangaSessionCommand
 import io.legado.app.domain.model.manga.OpenedMangaBook
+import io.legado.app.exception.LocalMangaDirectoryEmptyException
+import io.legado.app.exception.TocEmptyException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +23,34 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DefaultMangaReaderSessionTest {
+
+    @Test
+    fun `only an empty directory offers folder reselection for an empty TOC`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val errors = mapOf(
+            "directory" to LocalMangaDirectoryEmptyException("No images"),
+            "archive" to TocEmptyException("No images"),
+        )
+        val gateway = object : MangaReaderDataGateway by FakeGateway() {
+            override suspend fun openBook(
+                bookUrl: String?,
+                inBookshelf: Boolean,
+                chapterChanged: Boolean,
+            ): OpenedMangaBook = throw errors.getValue(requireNotNull(bookUrl))
+        }
+        val session = DefaultMangaReaderSession(gateway, dispatcher, dispatcher)
+
+        session.execute(MangaSessionCommand.Open("directory", true, false))
+        advanceUntilIdle()
+        assertEquals("No images", session.state.value.openError)
+        assertTrue(session.state.value.canReselectBookDirectory)
+
+        session.execute(MangaSessionCommand.Open("archive", true, false))
+        advanceUntilIdle()
+        assertEquals("No images", session.state.value.openError)
+        assertEquals(false, session.state.value.canReselectBookDirectory)
+        session.close()
+    }
 
     @Test
     fun `external toc reopen does not overwrite selected progress with retained session`() =

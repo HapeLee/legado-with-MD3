@@ -650,6 +650,8 @@
     <string name="black">黑色</string>
     <string name="content_empty">文章內容為空</string>
     <string name="on_change_source">正在換源請等待…</string>
+    <string name="local_manga_requires_reader">請使用漫畫閱讀器開啟本機漫畫。</string>
+    <string name="local_manga_directory_unavailable">無法存取本機漫畫，請重新選擇漫畫所在資料夾以授予讀取權限。</string>
     <string name="chapter_list_empty">目錄列表為空</string>
     <string name="text_letter_spacing">字距</string>
 
@@ -3089,6 +3091,8 @@
     <string name="read_aloud_audio_download_deleted_chapters">已刪除 %1$d 章的聽書音頻</string>
     <string name="read_aloud_audio_download_invalid_range">章範圍填得唔對</string>
     <string name="read_aloud_audio_download_state">已下載聽書音頻</string>
+    <string name="read_aloud_audio_download_partial_state">聽書音訊已部分下載</string>
+    <string name="read_aloud_audio_download_unverified_state">已儲存聽書音訊，整章完整性未驗證</string>
     <string name="cast_assignment_state">本章已分配角色</string>
     <string name="cast_assignment_delete">刪除分配</string>
     <string name="cast_assignment_deleted">已刪除 %1$d 條分配</string>
@@ -3122,4 +3126,5 @@
     <string name="a11y_reorder_position">第 %1$d 項，共 %2$d 項</string>
     <string name="hyper_os4_components">HyperOS 4 風格元件</string>
     <string name="hyper_os4_components_summary">在 Miuix 主題下使用新的玻璃頂欄、標籤頁與下拉選單。</string>
+    <string name="paragraph_comment_height_percent">%1$d%%</string>
 </resources>

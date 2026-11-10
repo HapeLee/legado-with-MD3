@@ -49,6 +49,7 @@ import io.legado.app.domain.model.readaloud.ContentSplitPolicy
 import io.legado.app.domain.model.readaloud.ReadAloudPlaybackCursor
 import io.legado.app.domain.model.readaloud.ReadAloudPlaybackInfo
 import io.legado.app.domain.model.readaloud.ReadAloudPlaybackQueue
+import io.legado.app.domain.model.readaloud.ReadAloudProgress
 import io.legado.app.domain.model.readaloud.ReadAloudSessionStatus
 import io.legado.app.domain.model.readaloud.SpeechAnalysisMode
 import io.legado.app.domain.model.readaloud.SpeechPlanItem
@@ -83,7 +84,6 @@ import io.legado.app.utils.isNightMode
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.toastOnUi
-import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.Job
@@ -92,6 +92,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.java.KoinJavaComponent.get
 import splitties.init.appCtx
 import splitties.systemservices.audioManager
@@ -265,6 +266,8 @@ abstract class BaseReadAloudService : BaseService(),
     private var chapterQuota: Int? = null
     private var prepareReadAloudJob: Coroutine<*>? = null
     private var prepareReadAloudGeneration = 0L
+    private var playAfterPreparation: Boolean? = null
+    private var preparedBookGeneration = bookSession.state.value.generation
     private var cover: Bitmap =
         BitmapFactory.decodeResource(appCtx.resources, R.drawable.ic_launcher)
     var pageChanged = false
@@ -286,6 +289,10 @@ abstract class BaseReadAloudService : BaseService(),
     protected open fun onPlaybackStateReplaced() {}
     protected val hasSpeechPlaybackQueue: Boolean
         get() = useSpeechPlaybackQueue && !playbackQueue.isEmpty
+
+    protected val canStartPreparedPlayback: Boolean
+        get() = !stopRequested && playAfterPreparation == null &&
+            preparedBookGeneration == bookSession.state.value.generation
 
     /** 当前朗读倍速, 用于把字符进度估算成媒体播放器时间轴 */
     protected open val currentSpeechRate: Float
@@ -372,6 +379,7 @@ abstract class BaseReadAloudService : BaseService(),
         super.onDestroy()
         prepareReadAloudGeneration++
         prepareReadAloudJob?.cancel()
+        playAfterPreparation = null
         if (useWakeLock) {
             wakeLock.release()
             wifiLock?.release()
@@ -449,13 +457,16 @@ abstract class BaseReadAloudService : BaseService(),
         requestedStartPos: Int,
         requestedChapterPosition: Int?,
     ) {
+        if (stopRequested) return
         // 每次"从指定位置开始朗读"都是新会话：恢复页面跟随朗读（手动脱离后点"从此处朗读"等）
         sessionStore.restoreReadAloudFollow()
         clearFinishChapterTimerIfChapterChanged(bookSession.chapterIndex)
         val generation = ++prepareReadAloudGeneration
         prepareReadAloudJob?.cancel()
+        playAfterPreparation = play
         playStop()
-        prepareReadAloudJob = execute(executeContext = IO) {
+        val moveToLast = toLast
+        prepareReadAloudJob = execute {
             val prepared = bookSession.prepareChapter()
             val input = requireNotNull(prepared.input)
             val pagination = requireNotNull(prepared.pagination)
@@ -501,7 +512,6 @@ abstract class BaseReadAloudService : BaseService(),
                 ),
                 splitPolicy = splitPolicy,
             )
-            if (generation != prepareReadAloudGeneration) return@execute
             var preparedPlaybackQueue = buildPlaybackQueue(
                 prepared.book?.bookUrl.orEmpty(), preparedSpeechPlan,
             )
@@ -513,15 +523,7 @@ abstract class BaseReadAloudService : BaseService(),
                 splitByPage = preparedReadAloudByPage,
                 policy = splitPolicy,
             )
-            if (!usePreparedPlaybackQueue && preparedNowSpeak !in preparedContentList.indices) {
-                AppLog.put(
-                    "启动朗读失败：无法定位朗读段落 position=$preparedReadAloudNumber " +
-                        "pageIndex=$pageIndex startPos=$startPos"
-                )
-                return@execute
-            }
-            val moveToLast = toLast
-            if (moveToLast) {
+            if (moveToLast && preparedParagraphs.isNotEmpty()) {
                 preparedReadAloudNumber = preparedParagraphs.last().chapterPosition
                 preparedNowSpeak = preparedContentList.lastIndex
                 pos = 0
@@ -545,7 +547,9 @@ abstract class BaseReadAloudService : BaseService(),
                     preparedReadAloudNumber = preparedPlaybackQueue.cues[cursor.cueIndex].chapterStart
                 }
             }
-            val shouldReadChapterTitle = !moveToLast && startsAtChapterBeginning &&
+            // 只有卷名的章节没有正文坐标，从历史进度恢复时也从卷名开始读。
+            val shouldReadChapterTitle =
+                (preparedParagraphs.isEmpty() || (startsAtChapterBeginning && !moveToLast)) &&
                     preparedChapter.title.isNotBlank()
             if (shouldReadChapterTitle) {
                 if (usePreparedPlaybackQueue) {
@@ -566,39 +570,52 @@ abstract class BaseReadAloudService : BaseService(),
             } else if (usePreparedPlaybackQueue) {
                 preparedContentChapterPositions = preparedPlaybackQueue.cues.map { it.chapterStart }
             }
-            if (generation != prepareReadAloudGeneration) return@execute
-            this@BaseReadAloudService.pageIndex = pageIndex
-            readerReadAloudChapter = preparedChapter
+            if (preparedNowSpeak !in preparedContentList.indices) {
+                error(
+                    "启动朗读失败：无法定位朗读段落 position=$preparedReadAloudNumber " +
+                        "pageIndex=$pageIndex startPos=$startPos"
+                )
+            }
             // 变声器快照：每章准备时刷一次，写库后版本号变了才真的重取
             io.legado.app.help.readaloud.effect.VoiceEffectStore.refresh()
-            readAloudBgm.onChapter(
-                bookUrl = prepared.book?.bookUrl.orEmpty(),
-                chapterIndex = preparedChapter.chapterIndex,
-                positions = io.legado.app.help.readaloud.cast.BgmSceneStore.positionsToOrdinals(
-                    input.source,
-                ),
-            )
-            contentList = preparedContentList
-            contentChapterPositions = preparedContentChapterPositions
-            speechPlan = preparedSpeechPlan
-            playbackQueue = preparedPlaybackQueue
-            playbackCursor = preparedPlaybackCursor
-            nowSpeak = preparedNowSpeak
-            readAloudNumber = preparedReadAloudNumber
-            paragraphStartPos = preparedParagraphStartPos
-            updateReadAloudProgressSnapshot(preparedReadAloudNumber + preparedParagraphStartPos + 1)
-            onPlaybackStateReplaced()
-            if (moveToLast) toLast = false
-            preparedPlaybackCursor?.takeIf { hasSpeechPlaybackQueue }?.let(::publishPlaybackInfo)
-            launch(Main) {
-                if (generation != prepareReadAloudGeneration) return@launch
+            val bgmPositions = io.legado.app.help.readaloud.cast.BgmSceneStore.positionsToOrdinals(input.source)
+            withContext(Main) {
+                if (generation != prepareReadAloudGeneration || stopRequested ||
+                    prepared.generation != bookSession.state.value.generation
+                ) return@withContext
+                val shouldPlay = playAfterPreparation == true
+                playAfterPreparation = null
+                preparedBookGeneration = prepared.generation
+                this@BaseReadAloudService.pageIndex = pageIndex
+                readerReadAloudChapter = preparedChapter
+                readAloudBgm.onChapter(prepared.book?.bookUrl.orEmpty(), preparedChapter.chapterIndex, bgmPositions)
+                contentList = preparedContentList
+                contentChapterPositions = preparedContentChapterPositions
+                speechPlan = preparedSpeechPlan
+                playbackQueue = preparedPlaybackQueue
+                playbackCursor = preparedPlaybackCursor
+                nowSpeak = preparedNowSpeak
+                readAloudNumber = preparedReadAloudNumber
+                paragraphStartPos = preparedParagraphStartPos
+                updateReadAloudProgressSnapshot(preparedReadAloudNumber + preparedParagraphStartPos + 1)
+                onPlaybackStateReplaced()
+                if (moveToLast) toLast = false
+                preparedPlaybackCursor?.takeIf { hasSpeechPlaybackQueue }?.let(::publishPlaybackInfo)
                 syncReaderToPlaybackPage()
                 upMediaMetadata()
-                if (play) play() else pageChanged = true
+                if (shouldPlay) {
+                    play()
+                } else {
+                    pageChanged = true
+                    if (!pause) pauseReadAloud()
+                }
             }
         }.onError {
             AppLog.put("启动朗读出错\n${it.localizedMessage}", it, true)
-            launch(Main) { if (generation == prepareReadAloudGeneration) pauseReadAloud() }
+            if (generation == prepareReadAloudGeneration && !stopRequested) {
+                playAfterPreparation = null
+                pauseReadAloud()
+            }
         }
     }
 
@@ -748,6 +765,7 @@ abstract class BaseReadAloudService : BaseService(),
 
     @CallSuper
     open fun pauseReadAloud(abandonFocus: Boolean = true) {
+        if (playAfterPreparation != null) playAfterPreparation = false
         readAloudBgm.pause()
         bookSession.upReadTime()
         bookSession.updateProgress(currentProgress, forceSave = true, expectedChapterIndex = currentChapterIndex)
@@ -775,6 +793,22 @@ abstract class BaseReadAloudService : BaseService(),
         resumeReadAloudInternal()
     }
 
+    /** 准备中更新播放意图，准备失败时重试当前会话的章节。 */
+    protected fun resumeAfterPreparation(): Boolean {
+        if (stopRequested) return true
+        if (playAfterPreparation != null) {
+            playAfterPreparation = true
+            resumeReadAloudInternal()
+            return true
+        }
+        val request = bookSession.state.value
+        if (request.book == null ||
+            (preparedBookGeneration == request.generation && readerReadAloudChapter != null)
+        ) return false
+        newReadAloud(true, 0, 0, request.chapterPosition)
+        return true
+    }
+
     private fun resumeReadAloudInternal() {
         pause = false
         needResumeOnAudioFocusGain = false
@@ -790,6 +824,19 @@ abstract class BaseReadAloudService : BaseService(),
     abstract fun upSpeechRate(reset: Boolean = false)
 
     fun upTtsProgress(progress: Int) {
+        val chapter = readerReadAloudChapter
+        val current = bookSession.state.value
+        val event = current.book?.let { book ->
+            ReadAloudProgress(
+                bookUrl = book.bookUrl,
+                chapterIndex = chapter?.chapterIndex ?: -1,
+                chapterPosition = progress.coerceAtLeast(0),
+                sessionGeneration = preparedBookGeneration,
+            )
+        }
+        if (event != null &&
+            !event.matches(current.book.bookUrl, current.chapterIndex, current.generation)
+        ) return
         bookSession.upReadTime()
         val chapterPosition = progress.coerceAtLeast(0)
         if (hasSpeechPlaybackQueue) {
@@ -808,7 +855,8 @@ abstract class BaseReadAloudService : BaseService(),
             refreshMediaSessionPlaybackState()
         }
         updateReadAloudProgressSnapshot(progress)
-        postEvent(EventBus.TTS_PROGRESS, progress)
+        // 未绑定书籍时保留本地媒体状态更新，只有归属完整的进度才能进入阅读器。
+        if (event != null) postEvent(EventBus.TTS_PROGRESS, event)
     }
 
     /**
@@ -903,27 +951,33 @@ abstract class BaseReadAloudService : BaseService(),
     }
 
     private fun switchChapter(index: Int, play: Boolean) {
-        if (index < 0) return
+        if (index < 0 || stopRequested) return
         val bookUrl = bookSession.book?.bookUrl ?: return
+        val bookGeneration = bookSession.state.value.generation
         val generation = ++prepareReadAloudGeneration
         prepareReadAloudJob?.cancel()
+        playAfterPreparation = play
         playStop()
-        prepareReadAloudJob = execute(executeContext = IO) {
+        prepareReadAloudJob = execute {
             io.legado.app.data.appDb.bookChapterDao.getChapter(bookUrl, index) != null
         }.onSuccess { exists ->
-            if (generation != prepareReadAloudGeneration || bookSession.book?.bookUrl != bookUrl) return@onSuccess
+            if (generation != prepareReadAloudGeneration || stopRequested ||
+                bookGeneration != bookSession.state.value.generation
+            ) return@onSuccess
             if (!exists) {
                 stopReadAloudService()
             } else {
                 bookSession.updateProgress(currentProgress, forceSave = true, expectedChapterIndex = currentChapterIndex)
                 bookSession.selectChapter(index)
-                // newReadAloud 开头会 cancel 这个 prepareReadAloudJob，而这段回调正跑在它里面：
-                // 直接调用等于取消掉自己脚下这份作业，下一章一帧都不准备（切章后没声也不报错）。
-                launch(Main) { newReadAloud(play, 0, 0, 0) }
+                prepareReadAloudJob = null
+                newReadAloud(playAfterPreparation == true, 0, 0, 0)
             }
         }.onError {
             AppLog.put("加载朗读章节失败", it, true)
-            pauseReadAloud()
+            if (generation == prepareReadAloudGeneration && !stopRequested) {
+                playAfterPreparation = null
+                pauseReadAloud()
+            }
         }
     }
 
@@ -1040,6 +1094,7 @@ abstract class BaseReadAloudService : BaseService(),
     }
 
     private fun prevP() {
+        if (playAfterPreparation != null || stopRequested) return
         bookSession.upReadTime()
         if (hasSpeechPlaybackQueue) {
             val current = playbackCursor ?: ReadAloudPlaybackCursor(nowSpeak, paragraphStartPos)
@@ -1085,6 +1140,7 @@ abstract class BaseReadAloudService : BaseService(),
     }
 
     private fun nextP() {
+        if (playAfterPreparation != null || stopRequested) return
         if (hasSpeechPlaybackQueue) {
             val current = playbackCursor ?: ReadAloudPlaybackCursor(nowSpeak, paragraphStartPos)
             playbackQueue.next(current)?.let { next ->
@@ -1390,7 +1446,7 @@ abstract class BaseReadAloudService : BaseService(),
 
     /** 在已准备好的本章队列中定位，保留暂停状态和章节定时，不重新分析或切换章节。 */
     internal fun seekToMediaPosition(positionMs: Long) {
-        if (stopRequested) return
+        if (!canStartPreparedPlayback) return
         val chapter = readerReadAloudChapter ?: return
         val target = resolveReadAloudMediaSeek(
             positionMs = positionMs,

@@ -14,11 +14,10 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.Book
-import io.legado.app.help.book.isAudio
-import io.legado.app.help.book.isImage
-import io.legado.app.help.book.isLocal
-import io.legado.app.help.book.isVideo
 import io.legado.app.domain.gateway.MangaSettingsGateway
+import io.legado.app.help.book.isAudio
+import io.legado.app.help.book.isVideo
+import io.legado.app.help.book.shouldOpenMangaReader
 import io.legado.app.ui.main.MainActivity
 import org.koin.core.context.GlobalContext
 
@@ -57,16 +56,17 @@ fun Fragment.startActivityForBook(
     book: Book,
     configIntent: Intent.() -> Unit = {},
 ) {
+    val openMangaReader = book.shouldOpenMangaReader(mangaSettingsGateway.currentSettings.showMangaUi)
     val intent = when {
         book.isVideo -> MainActivity.createVideoPlayIntent(requireActivity(), book.bookUrl)
         book.isAudio -> MainActivity.createAudioPlayIntent(requireActivity(), book.bookUrl)
-        !book.isLocal && book.isImage && mangaSettingsGateway.currentSettings.showMangaUi ->
+        openMangaReader ->
             MainActivity.createReadMangaIntent(requireActivity(), book.bookUrl)
 
         else -> MainActivity.createReadBookIntent(requireActivity(), book.bookUrl)
     }
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    if (book.isAudio || (!book.isLocal && book.isImage && mangaSettingsGateway.currentSettings.showMangaUi)) {
+    if (book.isAudio || openMangaReader) {
         intent.putExtra("bookUrl", book.bookUrl)
     }
     intent.apply(configIntent)

@@ -3,7 +3,9 @@ package io.legado.app.ui.main
 import android.app.Activity
 import android.content.Intent
 import androidx.navigation3.runtime.NavKey
+import io.legado.app.data.entities.Book
 import io.legado.app.feature.reader.platform.ReaderPerfTrace
+import io.legado.app.help.book.isLocalManga
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.rss.article.MainRouteRssSort
 import io.legado.app.ui.rss.read.MainRouteRssRead
@@ -42,6 +44,30 @@ object MainNavigator {
         resetToHome: Boolean = false,
     ) {
         navigateToRouteInternal(backStack, route, tracker, resetToHome)
+    }
+
+    internal fun redirectLocalManga(
+        backStack: MutableList<NavKey>,
+        route: MainRouteReadBook,
+        book: Book?,
+        tracker: MainNavRouteTracker? = null,
+    ): Boolean {
+        if (book == null || !book.isLocalManga || backStack.lastOrNull() != route) return false
+        val mangaRoute = MainRouteReadManga(
+            bookUrl = book.bookUrl,
+            inBookshelf = route.inBookshelf,
+            chapterChanged = route.chapterChanged,
+            openRequestId = System.nanoTime(),
+            sharedCoverKey = route.sharedCoverKey,
+        )
+        if (backStack.any { it is MainRouteReadManga }) {
+            backStack.removeAt(backStack.lastIndex)
+            navigateToRoute(backStack, mangaRoute, tracker)
+        } else {
+            backStack[backStack.lastIndex] = mangaRoute
+            tracker?.onBackStackChanged(backStack)
+        }
+        return true
     }
 
     private fun navigateToRouteInternal(
@@ -382,6 +408,10 @@ object MainNavigator {
             MainRouteSettingsBubble -> backStack.add(route)
 
             MainRouteThirdPartyLicenses -> backStack.add(route)
+
+            // 「设置 → 下载缓存设置」的子页。只压栈不清栈，返回时要回到下载缓存设置页。
+            // navigateToRouteInternal 的 when 没有 else，漏注册会表现为点击入口完全无响应。
+            MainRouteCacheMaintenance -> backStack.add(route)
 
             MainRouteAbout -> {
                 if (currentRoute == MainRouteHome) {

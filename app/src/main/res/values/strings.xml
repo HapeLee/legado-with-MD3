@@ -760,6 +760,8 @@
     <string name="black">Black</string>
     <string name="content_empty">No content</string>
     <string name="on_change_source">Changing source, wait please</string>
+    <string name="local_manga_requires_reader">Open local comics in the manga reader.</string>
+    <string name="local_manga_directory_unavailable">Cannot access this local comic. Reselect its folder to grant access.</string>
     <string name="chapter_list_empty">Chapters is empty</string>
     <string name="text_letter_spacing">Word spacing</string>
 
@@ -2310,6 +2312,7 @@
     <string name="ai_text_clean_rule_group">AI Clean</string>
     <string name="ai_text_clean_rule_created">AI content edit saved.</string>
     <string name="ai_text_rewrite">AI Rewrite</string>
+    <string name="extend_selection_to_next_page">Extend selection to next page</string>
     <string name="ai_text_rewrite_saved">AI rewrite saved.</string>
     <string name="ai_generate">Generate</string>
     <string name="ai_rewrite_requirements">Requirement</string>
@@ -3541,7 +3544,7 @@
     <string name="cache_maintenance_tab_wordcount">Word Count</string>
     <string name="cache_maintenance_action_scan">Scan now</string>
     <string name="cache_maintenance_action_scanning">Scanning %1$d / %2$d, tap to cancel</string>
-    <string name="cache_maintenance_action_deleting">Deleting, tap to cancel</string>
+    <string name="cache_maintenance_action_deleting">Deleting %1$d / %2$d, tap to cancel</string>
     <string name="cache_maintenance_action_recounting">Recounting %1$d / %2$d, tap to cancel</string>
     <string name="cache_maintenance_action_select_all">Select all / none</string>
     <string name="cache_maintenance_action_delete">Delete selected</string>
@@ -3552,10 +3555,20 @@
     <string name="cache_maintenance_recount_desc">%1$d chapters pending recount</string>
     <string name="cache_maintenance_recount_blocked">%1$d chapters have neither cache nor word count, book total stays empty</string>
     <string name="cache_maintenance_result_delete">Deleted %1$d entries, freed %2$s</string>
-    <string name="cache_maintenance_result_delete_skipped">%1$d books skipped: downloading or reading</string>
+    <string name="cache_maintenance_result_delete_skipped">%1$d books not processed: downloading, reading, or chapter list unavailable</string>
+    <string name="cache_maintenance_result_delete_skipped_entries">Orphan entries kept because images are still in use: %1$d</string>
     <string name="cache_maintenance_result_recount">Updated %1$d chapters, %2$d books</string>
     <string name="cache_maintenance_confirm_delete_title">Delete orphaned chapter cache</string>
     <string name="cache_maintenance_confirm_delete_text">Only entries that match no chapter in the book table of contents are deleted. This cannot be undone.</string>
+    <string name="cache_maintenance_status_idle">Not scanned</string>
+    <string name="cache_maintenance_status_running">Task running</string>
+    <string name="cache_maintenance_status_done">Scan finished</string>
+    <string name="cache_maintenance_intro_orphan">Checks cached chapter files that no longer match any chapter in the book table of contents. Nothing runs automatically: tap Scan now to start. Scanning is read-only and deletes nothing.</string>
+    <string name="cache_maintenance_intro_wordcount">Checks online books for chapters that have cached content but no recorded word count, and recalculates them. The book total is filled only after a complete recount when it was empty. Nothing runs automatically: tap Scan now to start.</string>
+    <string name="cache_maintenance_scan_hint">Read-only scan across all books. Tap to start; tap the progress row to cancel.</string>
+    <string name="cache_maintenance_leave_confirm_title">Leave during task?</string>
+    <string name="cache_maintenance_leave_confirm_text">The running task will be cancelled. Deletions and word count writes already committed cannot be rolled back.</string>
+    <string name="cache_maintenance_result_cancelled">Task cancelled. Some results are already committed; scan again to see the current state.</string>
     <string name="tts_cache_total">Total Cache</string>
     <string name="tts_cache_file_count">%d files</string>
     <string name="tts_cache_empty">No cached audio</string>
@@ -3890,6 +3903,8 @@
     <string name="read_aloud_audio_download_chapter_bar">Chapters</string>
     <string name="read_aloud_audio_download_chapter_hint">This chapter is downloaded (%1$d sentences); reading aloud plays the local audio</string>
     <string name="read_aloud_audio_download_chapter_none">This chapter is not downloaded yet</string>
+    <string name="read_aloud_audio_download_partial">%1$d/%2$d sentences downloaded</string>
+    <string name="read_aloud_audio_download_unverified">%1$d sentences saved. Run the download again to verify the chapter.</string>
     <string name="read_aloud_audio_download_sentence_bar">Sentences</string>
     <string name="read_aloud_audio_download_downloaded">Downloaded chapters</string>
     <string name="read_aloud_audio_download_empty">Nothing downloaded yet</string>
@@ -3899,6 +3914,8 @@
     <string name="read_aloud_audio_download_deleted_chapters">Deleted downloaded audio of %1$d chapters</string>
     <string name="read_aloud_audio_download_invalid_range">Check the chapter range</string>
     <string name="read_aloud_audio_download_state">Audiobook downloaded</string>
+    <string name="read_aloud_audio_download_partial_state">Audiobook partially downloaded</string>
+    <string name="read_aloud_audio_download_unverified_state">Audiobook audio saved. Chapter completeness unverified</string>
     <string name="read_aloud_audio_download_section_range">Range</string>
     <string name="read_aloud_audio_download_range_count">%1$d chapters</string>
     <string name="read_aloud_audio_download_section_progress">Progress</string>

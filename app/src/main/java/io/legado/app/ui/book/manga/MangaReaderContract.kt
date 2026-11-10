@@ -39,6 +39,7 @@ data class MangaReaderUiState(
     val pendingChapterIndex: Int? = null,
     val navigationId: Long = 0L,
     val errorMessage: MangaReaderText? = null,
+    val canReselectBookDirectory: Boolean = false,
     val pendingMessages: ImmutableList<MangaReaderMessage> = persistentListOf(),
     val menuVisible: Boolean = false,
     val autoReadEnabled: Boolean = false,

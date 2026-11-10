@@ -13,14 +13,14 @@ import io.legado.app.feature.reader.core.style.ReaderBackgroundBand
  * 直边色块配圆角描边会在四角露出色块尖。
  * 圆角夹到宽高较小一边的一半：半径超出的圆角矩形在窄行盒上会画出交叉的弧线。
  */
-fun DrawScope.drawBackgroundBand(band: ReaderBackgroundBand) {
+fun DrawScope.drawBackgroundBand(band: ReaderBackgroundBand, markColorArgb: Int? = null) {
     val bounds = band.bounds
     val topLeft = Offset(bounds.left, bounds.top)
     val size = Size(bounds.width, bounds.height)
     val radiusPx = band.borderRadiusPx
         .coerceAtLeast(0f)
         .coerceAtMost(minOf(bounds.width, bounds.height) / 2f)
-    band.fillColorArgb?.let { fill ->
+    band.resolvedFillColorArgb(markColorArgb)?.let { fill ->
         if (radiusPx > 0f) {
             drawRoundRect(Color(fill), topLeft, size, CornerRadius(radiusPx))
         } else {

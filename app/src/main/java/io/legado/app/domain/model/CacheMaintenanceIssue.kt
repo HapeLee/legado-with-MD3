@@ -16,7 +16,6 @@ data class OrphanedChapterGroup(
     val bookName: String,
     val entryNames: List<String>,
     val bytes: Long,
-    val containsImages: Boolean,
 )
 
 /**
@@ -29,7 +28,31 @@ data class OrphanedChapterGroup(
 data class DeletedChapterCache(
     val deletedEntries: Int,
     val freedBytes: Long,
+    /** 因正在下载/阅读或读不到章节列表而整本跳过的书数。 */
     val skippedBooks: Int = 0,
+    /** 因图片文件租约仍活跃而未能删除的条目数 —— 这些条目必须留在列表里。 */
+    val skippedEntries: Int = 0,
+)
+
+/** 一次批量删除请求：一本书及其待删的孤立条目名。 */
+@Stable
+data class OrphanDeleteRequest(
+    val bookUrl: String,
+    val entryNames: Set<String>,
+)
+
+/**
+ * 删除过程的逐本回报。
+ *
+ * [accumulated] 是「到目前为止」的结果，[removedBookUrl] 是本次确认可以从列表移除的书；
+ * 任务被取消时 ViewModel 仍能用最后一次回报写回已提交的部分，而不是丢掉全部。
+ */
+@Stable
+data class DeletionProgress(
+    val handled: Int,
+    val total: Int,
+    val accumulated: DeletedChapterCache,
+    val removedBookUrl: String?,
 )
 
 /**
@@ -54,5 +77,9 @@ data class WordCountRecountTarget(
 data class RecountOutcome(
     val updatedChapters: Int,
     val updatedBooks: Int,
-    val skippedChapters: Int,
+    /**
+     * 本次真正进入重算流程的书。被正在下载/阅读、书已删除或并非在线文字书等条件跳过的书
+     * 不在其中，调用方必须把它们留在列表里，否则会表现为「勾了、执行了、书消失却没补字数」。
+     */
+    val handledBookUrls: Set<String> = emptySet(),
 )

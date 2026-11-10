@@ -231,6 +231,7 @@ object VideoPlay : CoroutineScope by MainScope() {
 
     /** 播放一条没有书籍上下文的直链（外部/调试入口），进度按地址记在缓存里。 */
     suspend fun openUrl(url: String, title: String?) {
+        val mediaUrl = NetworkUtils.normalizeMediaUrl(url)
         singleUrl = true
         book = null
         bookSource = null
@@ -239,10 +240,10 @@ object VideoPlay : CoroutineScope by MainScope() {
         episodes = emptyList()
         chapter = null
         videoTitle = title
-        playUrl = url
+        playUrl = mediaUrl
         danmaku = null
         durChapterPos = withContext(Dispatchers.IO) {
-            CacheManager.getInt(VIDEO_POS_PREFIX + url) ?: 0
+            CacheManager.getInt(VIDEO_POS_PREFIX + mediaUrl) ?: 0
         }
         _state.update {
             it.copy(
@@ -253,11 +254,11 @@ object VideoPlay : CoroutineScope by MainScope() {
                 episodeIndex = 0,
                 isLoading = false,
                 error = null,
-                playUrl = url,
+                playUrl = mediaUrl,
                 danmaku = null,
             )
         }
-        player.setMediaItem(MediaItem.fromUri(url), durChapterPos.toLong())
+        player.setMediaItem(MediaItem.fromUri(mediaUrl), durChapterPos.toLong())
         player.prepare()
         if (autoPlay) player.play()
     }
@@ -320,12 +321,13 @@ object VideoPlay : CoroutineScope by MainScope() {
             fail(IllegalStateException(appCtx.getString(R.string.video_link_not_found)))
             return
         }
-        playUrl = url
-        player.setMediaItem(MediaItem.fromUri(url), durChapterPos.coerceAtLeast(0).toLong())
+        val mediaUrl = NetworkUtils.normalizeMediaUrl(url)
+        playUrl = mediaUrl
+        player.setMediaItem(MediaItem.fromUri(mediaUrl), durChapterPos.coerceAtLeast(0).toLong())
         player.playbackParameters = player.playbackParameters.withSpeed(playSpeed)
         player.prepare()
         if (autoPlay) player.play()
-        _state.update { it.copy(isLoading = false, playUrl = url) }
+        _state.update { it.copy(isLoading = false, playUrl = mediaUrl) }
     }
 
     private fun applyBook(book: Book, source: BookSource, chapters: List<BookChapter>) {

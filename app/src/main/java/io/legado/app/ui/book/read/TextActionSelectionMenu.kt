@@ -30,6 +30,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.material.icons.filled.MoreVert
@@ -585,6 +586,7 @@ private fun ActionMenuItem.builtInIcon(): ImageVector? = when (id) {
     R.id.menu_aloud -> Icons.AutoMirrored.Outlined.VolumeUp
     R.id.menu_bookmark -> Icons.Outlined.Bookmark
     R.id.menu_mark -> Icons.Outlined.BorderColor
+    R.id.menu_extend_selection -> Icons.AutoMirrored.Outlined.ArrowForward
     R.id.menu_dict -> Icons.AutoMirrored.Outlined.MenuBook
     R.id.menu_replace -> Icons.Outlined.FindReplace
     R.id.menu_edit -> Icons.Outlined.Edit
