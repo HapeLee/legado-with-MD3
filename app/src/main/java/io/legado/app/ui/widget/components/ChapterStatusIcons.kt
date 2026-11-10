@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -13,6 +14,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import io.legado.app.R
 import io.legado.app.ui.book.toc.TocItemUi
+import io.legado.app.ui.book.toc.TocAudioDownloadState
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.icon.AppIcon
 
@@ -28,7 +30,7 @@ fun ChapterStatusIcons(
     spacing: Dp,
     modifier: Modifier = Modifier,
 ) {
-    if (!item.hasCastAssignment && !item.hasAudioDownload) return
+    if (!item.hasCastAssignment && item.audioDownloadState == TocAudioDownloadState.None) return
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         if (item.hasCastAssignment) {
             AppIcon(
@@ -38,14 +40,18 @@ fun ChapterStatusIcons(
                 tint = LegadoTheme.colorScheme.primary,
             )
         }
-        if (item.hasAudioDownload) {
+        if (item.audioDownloadState != TocAudioDownloadState.None) {
             AppIcon(
-                imageVector = Icons.Default.Download,
-                contentDescription = stringResource(R.string.read_aloud_audio_download_state),
+                imageVector = if (item.audioDownloadState == TocAudioDownloadState.Unverified) {
+                    Icons.Default.HelpOutline
+                } else Icons.Default.Download,
+                contentDescription = null,
                 modifier = Modifier
                     .padding(start = spacing)
                     .size(iconSize),
-                tint = LegadoTheme.colorScheme.secondary,
+                tint = if (item.audioDownloadState == TocAudioDownloadState.Complete) {
+                    LegadoTheme.colorScheme.secondary
+                } else LegadoTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

@@ -25,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -37,7 +38,10 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
@@ -47,7 +51,9 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.withSave
 import coil3.compose.AsyncImage
@@ -336,12 +342,11 @@ fun CoilBookCover(
         }
     }
 
-    val transitionRadius = rememberSharedCoverTransitionRadius(
+    val shape = rememberSharedCoverTransitionShape(
         sharedCoverKey = sharedCoverKey,
         radius = radius,
         animatedVisibilityScope = animatedVisibilityScope
     )
-    val shape = remember(transitionRadius) { RoundedCornerShape(transitionRadius) }
     val contentBlurModifier = if (contentBlur > 0.dp) {
         Modifier.blur(contentBlur, BlurredEdgeTreatment.Unbounded)
     } else {
@@ -360,7 +365,7 @@ fun CoilBookCover(
                     BookCoverMorphAnchors.report(
                         key = sharedCoverKey,
                         bounds = coordinates.boundsInRoot(),
-                        cornerRadiusPx = with(coilDensity) { transitionRadius.toPx() },
+                        cornerRadiusPx = with(coilDensity) { radius.toPx() },
                         bookName = name,
                         author = author,
                         coverPath = finalPath ?: path,
@@ -454,23 +459,28 @@ fun CoilBookCover(
 
 
 /**
- * 转场两端的圆角：起点用源页面缓存下来的圆角，终点用本节点的 [radius]，
+ * 转场两端的圆角形状：起点用源页面缓存下来的圆角，终点用本节点的 [radius]，
  * 期间随转场进度插值，避免两端圆角不一致时跳变。脱敏封面复用同一实现。
+ *
+ * 圆角值只能在**绘制期**读（[Shape.createOutline]）。以前这里直接返回插值出来的 `Dp`，
+ * 于是转场那几百毫秒里每一张参与共享的封面都在逐帧重组（`remember(transitionRadius)`
+ * 的形状也跟着逐帧重建）——打开/退出阅读界面时书架网格整片卡顿的直接来源。
+ * 与 `ReaderSharedBounds` 的 `AnimatedCornerShape` 是同一策略。
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-internal fun rememberSharedCoverTransitionRadius(
+internal fun rememberSharedCoverTransitionShape(
     sharedCoverKey: String?,
     radius: Dp,
     animatedVisibilityScope: AnimatedVisibilityScope?
-): Dp {
+): Shape {
     if (sharedCoverKey == null || animatedVisibilityScope == null) {
-        return radius
+        return remember(radius) { RoundedCornerShape(radius) }
     }
 
     val transition = animatedVisibilityScope.transition
     val startRadius = sharedCoverRadiusCache[sharedCoverKey] ?: radius
-    val animatedRadiusValue by transition.animateFloat(
+    val animatedRadius = transition.animateFloat(
         label = "book-cover-corner-radius"
     ) { state ->
         if (state == EnterExitState.Visible) radius.value else startRadius.value
@@ -495,7 +505,19 @@ internal fun rememberSharedCoverTransitionRadius(
         }
     }
 
-    return animatedRadiusValue.dp
+    return remember(animatedRadius, radius) { SharedCoverTransitionShape(animatedRadius) }
+}
+
+/** 圆角半径延迟到绘制期才读的 [Shape]，避免动画值进组合导致每帧重组。 */
+private class SharedCoverTransitionShape(
+    private val animatedRadius: State<Float>,
+) : Shape {
+    override fun createOutline(
+        size: Size,
+        layoutDirection: LayoutDirection,
+        density: Density,
+    ): Outline = RoundedCornerShape(animatedRadius.value.dp)
+        .createOutline(size, layoutDirection, density)
 }
 
 /**

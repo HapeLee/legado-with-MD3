@@ -763,6 +763,7 @@ private fun MangaMenuIconButton(
 internal fun ReaderStatusOverlay(
     state: MangaReaderUiState,
     onIntent: (MangaReaderIntent) -> Unit,
+    onReselectBookDirectory: (() -> Unit)?,
 ) {
     if (state.isLoading) {
         Surface(
@@ -786,6 +787,12 @@ internal fun ReaderStatusOverlay(
                 verticalArrangement = Arrangement.Center,
             ) {
                 AppText(errorText, modifier = Modifier.padding(24.dp))
+                if (state.canReselectBookDirectory && onReselectBookDirectory != null) {
+                    MediumTonalButton(
+                        onClick = onReselectBookDirectory,
+                        text = stringResource(R.string.select_folder),
+                    )
+                }
                 MediumTonalButton(onClick = { onIntent(MangaReaderIntent.Retry) }, text = stringResource(R.string.retry))
             }
         }

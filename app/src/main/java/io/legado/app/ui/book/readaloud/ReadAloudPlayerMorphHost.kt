@@ -9,12 +9,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.serialization.NavKeySerializer
 import io.legado.app.R
 import io.legado.app.core.ui.player.PlayerMorphAppearance
 import io.legado.app.core.ui.player.PlayerMorphHost
@@ -33,11 +35,35 @@ import io.legado.app.ui.book.readaloud.player.ReadAloudPlayerViewModel
 import io.legado.app.ui.book.readaloud.player.applyReadBookConfigIntent
 import io.legado.app.ui.book.readaloud.player.rememberPlayerThemeOverride
 import io.legado.app.ui.main.MainNavRouteTracker
-import io.legado.app.ui.main.MainRouteReadBook
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.launch
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
 import org.koin.compose.koinInject
+
+internal data class ReadAloudConfigReturn(
+    val origin: List<NavKey>,
+    val subRoute: NavKey,
+) {
+    fun isInSubRoute(backStack: List<NavKey>): Boolean =
+        backStack.getOrNull(origin.size) == subRoute && backStack.take(origin.size) == origin
+
+    companion object {
+        private val keysSerializer = ListSerializer(NavKeySerializer<NavKey>())
+        val Saver = Saver<ReadAloudConfigReturn?, String>(
+            save = { pending ->
+                pending?.let { Json.encodeToString(keysSerializer, it.origin + it.subRoute) }
+            },
+            restore = { saved ->
+                runCatching {
+                    val keys = Json.decodeFromString(keysSerializer, saved)
+                    ReadAloudConfigReturn(keys.dropLast(1), keys.last())
+                }.getOrNull()
+            },
+        )
+    }
+}
 
 /** 朗读特有的设置与经典控制；几何、封面和返回手势由共用宿主处理。 */
 @Composable
@@ -49,6 +75,7 @@ fun ReadAloudPlayerMorphHost(
     awaitCapsuleAnchor: Boolean = false,
     predictiveBackEnabled: Boolean = true,
     onDismiss: () -> Unit,
+    onRestore: () -> Unit,
     onSwitchToClassic: (bookUrl: String) -> Unit,
     onOpenTtsEnginesAndVoices: (bookUrl: String) -> Unit,
     onOpenTtsCache: () -> Unit,
@@ -59,7 +86,6 @@ fun ReadAloudPlayerMorphHost(
     val scope = rememberCoroutineScope()
     val navRouteTracker: MainNavRouteTracker = koinInject()
     val navBackStack by navRouteTracker.backStack.collectAsStateWithLifecycle()
-    val topRoute = navBackStack.lastOrNull()
     val settingsState by playerViewModel.readAloudSettings.collectAsStateWithLifecycle()
     var configVisible by rememberSaveable { mutableStateOf(false) }
     /**
@@ -68,32 +94,24 @@ fun ReadAloudPlayerMorphHost(
      * 回来就落在常规 tab。
      */
     var configTab by rememberSaveable { mutableIntStateOf(0) }
-    /**
-     * 从朗读设置跳去子页（引擎与音色 / 朗读缓存 / 人物配音）时置位：
-     * 播放器是 Activity 级浮层，压在新页面上面，所以只能先收；这里只留一个"弹层在等
-     * 播放器重新摊开"的标记，导航栈顶回到阅读页就把播放器重新叫出来、朗读设置跟着回来
-     * ——「从哪进，出来就是哪」。不直接留着 `configVisible`：返回手势的闸门看的就是它。
-     */
-    var configWaitsForPlayer by remember { mutableStateOf(false) }
-    /**
-     * 跳子页时记下那个目的地：只有"从它返回阅读页"才算回来。中途去了别处（连按两次返回
-     * 落到书架）就把标记作废，否则下次点进阅读页会凭空弹出播放器 + 朗读设置。
-     */
-    var pendingSubRoute by remember { mutableStateOf<NavKey?>(null) }
+    // 播放器重新展开后再显示设置，展开期间系统返回仍由播放器接管。
+    var configWaitsForPlayer by rememberSaveable { mutableStateOf(false) }
+    var pendingConfigReturn by rememberSaveable(stateSaver = ReadAloudConfigReturn.Saver) {
+        mutableStateOf<ReadAloudConfigReturn?>(null)
+    }
     var activeNumberConfig by rememberSaveable {
         mutableStateOf<ReadAloudPlayerConfigHostAction?>(null)
     }
     val expanded by remember { derivedStateOf { morph.expanded } }
     val currentDismiss by rememberUpdatedState(onDismiss)
+    val currentRestore by rememberUpdatedState(onRestore)
     val currentSwitch by rememberUpdatedState(onSwitchToClassic)
     val currentOpenTtsEnginesAndVoices by rememberUpdatedState(onOpenTtsEnginesAndVoices)
     val currentOpenTtsCache by rememberUpdatedState(onOpenTtsCache)
     val currentOpenBookVoiceCasting by rememberUpdatedState(onOpenBookVoiceCasting)
     val currentOpenReadAloudSubPage by rememberUpdatedState(onOpenReadAloudSubPage)
 
-    suspend fun collapsePlayer(keepConfig: Boolean = false) {
-        configWaitsForPlayer = keepConfig
-        if (!keepConfig) pendingSubRoute = null
+    suspend fun collapsePlayer() {
         configVisible = false
         activeNumberConfig = null
         morph.animateTo(0f)
@@ -102,11 +120,20 @@ fun ReadAloudPlayerMorphHost(
 
     fun navigateFromPlayer(action: () -> Unit) {
         scope.launch {
-            val keepConfig = configVisible
+            val origin = navRouteTracker.backStack.value
             // 先推目的地再收播放器：等收完再推，中间会露出阅读页一帧
             action()
-            pendingSubRoute = navRouteTracker.currentRoute
-            collapsePlayer(keepConfig = keepConfig)
+            val destination = navRouteTracker.backStack.value
+            if (destination == origin) return@launch
+            pendingConfigReturn = if (configVisible && destination.dropLast(1) == origin) {
+                ReadAloudConfigReturn(origin, destination.last())
+            } else null
+            if (pendingConfigReturn == null) {
+                collapsePlayer()
+            } else {
+                configVisible = false
+                activeNumberConfig = null
+            }
         }
     }
 
@@ -151,11 +178,14 @@ fun ReadAloudPlayerMorphHost(
         }
     }
 
-    LaunchedEffect(expanded) {
-        if (expanded) {
+    LaunchedEffect(expanded, visible) {
+        if (!visible) {
+            configWaitsForPlayer = false
+            configVisible = false
+            activeNumberConfig = null
+        } else if (expanded) {
             if (configWaitsForPlayer) {
                 configWaitsForPlayer = false
-                pendingSubRoute = null
                 configVisible = true
             }
         } else if (!configWaitsForPlayer) {
@@ -163,27 +193,34 @@ fun ReadAloudPlayerMorphHost(
             activeNumberConfig = null
         }
     }
-    // 只有「从我推上去的那个子页」回到阅读页才把播放器叫回来；中途去了别处（连按两次返回
-    // 落到书架）就作废，否则下次点进阅读页会凭空弹出朗读设置。
-    LaunchedEffect(topRoute) {
-        if (!configWaitsForPlayer) return@LaunchedEffect
-        when (topRoute) {
-            pendingSubRoute -> Unit
-            is MainRouteReadBook -> {
-                pendingSubRoute = null
-                ReadAloudPlayerOverlayBus.request()
+    LaunchedEffect(navBackStack, visible, pendingConfigReturn) {
+        val pending = pendingConfigReturn ?: return@LaunchedEffect
+        if (navBackStack.isEmpty()) return@LaunchedEffect
+        when {
+            navBackStack == pending.origin -> {
+                // 快速返回时收起动画可能还在运行，等播放器关闭后再展开。
+                if (visible) {
+                    collapsePlayer()
+                } else {
+                    pendingConfigReturn = null
+                    configWaitsForPlayer = true
+                    currentRestore()
+                }
             }
-
-            else -> {
-                configWaitsForPlayer = false
-                pendingSubRoute = null
+            pending.isInSubRoute(navBackStack) -> {
+                // 重建可能发生在退场动画中途，恢复后仍须先让出子页。
+                if (visible) collapsePlayer()
             }
+            // 登录页和人物详情等嵌套页仍在此次设置流程中。
+            else -> pendingConfigReturn = null
         }
     }
     LaunchedEffect(playerViewModel) {
         playerViewModel.effects.collect { effect ->
             when (effect) {
                 ReadAloudPlayerEffect.ReturnToClassic -> {
+                    pendingConfigReturn = null
+                    configWaitsForPlayer = false
                     collapsePlayer()
                     currentSwitch(playerViewModel.uiState.value.bookUrl)
                 }

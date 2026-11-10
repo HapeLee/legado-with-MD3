@@ -38,6 +38,7 @@ import io.legado.app.ui.book.explore.ExploreShowScreen
 import io.legado.app.ui.book.explore.ExploreShowUiState
 import io.legado.app.ui.theme.AppTheme
 import io.legado.app.ui.theme.LocalBottomOverlayPadding
+import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.LocalLegadoThemeColors
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -96,7 +97,7 @@ class FloatingNavigationContentTest {
             CompositionLocalProvider(LocalInspectionMode provides true, LocalDensity provides Density(1f)) {
                 AppTheme(AppUiConfiguration(), applyBackground = false) {
                     CompositionLocalProvider(
-                        LocalLegadoThemeColors provides LocalLegadoThemeColors.current.copy(composeEngine = case.engine),
+                        LocalLegadoThemeColors provides LocalLegadoThemeColors.current.copy(composeEngine = ThemeResolver.resolveComposeEngine(case.engine)),
                     ) {
                         key(case) {
                             val insets = WindowInsets(bottom = case.inset)

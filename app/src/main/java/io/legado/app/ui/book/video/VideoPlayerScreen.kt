@@ -148,11 +148,18 @@ private const val INTRO_COLLAPSED_LINES = 3
 private const val INTRO_EXPAND_ANIM_MILLIS = 220
 
 /**
- * 画面是竖的（短剧常见）：按像素宽高比换算后的显示宽小于高。
- * 片源还没解析出尺寸（[VideoSize.UNKNOWN]）时不算竖屏，保持横屏窗口。
+ * 只在片源尺寸有效时请求全屏方向。切集会短暂报告 [VideoSize.UNKNOWN]，
+ * 此时不请求新方向，保留当前窗口，避免竖屏短剧先横屏再竖屏。
+ * [fallbackToLandscape] 用于会话内还没拿到过有效尺寸的首次全屏：沿用旧行为回退横屏。
  */
-private val VideoSize.isPortrait: Boolean
-    get() = width > 0 && height > 0 && width.toFloat() * pixelWidthHeightRatio < height
+internal fun VideoSize.fullscreenOrientationOrNull(fallbackToLandscape: Boolean = false): Int? {
+    val displayWidth = width.toFloat() * pixelWidthHeightRatio
+    if (width <= 0 || height <= 0 || !displayWidth.isFinite() || displayWidth <= 0f) {
+        return if (fallbackToLandscape) ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE else null
+    }
+    return if (displayWidth < height) ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+    else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+}
 
 /**
  * 让画面正好填满 [widthDp] 所需的高度（dp），即「贴合视频比例」的高度：
@@ -191,6 +198,9 @@ fun VideoPlayerScreen(
     // null 表示还没被拖动过，用默认 16:9；拖动中关掉尺寸动画，否则会跟不上手。
     var playerHeightDp by remember { mutableStateOf<Float?>(null) }
     var draggingPlayerHeight by remember { mutableStateOf(false) }
+    // 会话内是否见过有效尺寸：首次全屏还没拿到尺寸时沿用旧的横屏回退，
+    // 之后 UNKNOWN 一律保留当前方向，避免竖屏切集闪横屏。
+    var hasSeenValidSize by remember { mutableStateOf(false) }
 
     LaunchedEffect(bookUrl, rssArticle) {
         when {
@@ -247,19 +257,24 @@ fun VideoPlayerScreen(
         }
     }
 
-    // 画面方向：书源里既有横屏番剧也有竖屏短剧，一律按横屏窗口开全屏，竖屏片源就会
-    // 挂在两条大黑边中间。全屏时按画面自身的比例选窗口方向，片源没解析出尺寸时维持横屏。
+    // 画面方向：全屏时按有效画面比例选方向。切集会短暂报告 VideoSize.UNKNOWN，
+    // 会话内已经见过有效尺寸时保留当前窗口，避免竖屏短剧先横屏再竖屏；
+    // 还没见过有效尺寸的首次全屏沿用旧的横屏回退，避免横屏片源冷启动停在竖屏。
     val videoSize by produceState(
         initialValue = runCatching { VideoPlay.player.videoSize }.getOrDefault(VideoSize.UNKNOWN),
     ) {
         val player = VideoPlay.player
+        fun record(size: VideoSize) {
+            value = size
+            if (size.fullscreenOrientationOrNull() != null) hasSeenValidSize = true
+        }
         val listener = object : Player.Listener {
             override fun onVideoSizeChanged(size: VideoSize) {
-                value = size
+                record(size)
             }
         }
         player.addListener(listener)
-        value = player.videoSize
+        record(player.videoSize)
         awaitDispose { player.removeListener(listener) }
     }
 
@@ -270,9 +285,13 @@ fun VideoPlayerScreen(
             controller.hide(WindowInsetsCompat.Type.systemBars())
             controller.systemBarsBehavior =
                 WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            activity.requestedOrientation =
-                if (videoSize.isPortrait) ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
-                else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            videoSize.fullscreenOrientationOrNull(
+                fallbackToLandscape = !hasSeenValidSize,
+            )?.let { orientation ->
+                if (activity.requestedOrientation != orientation) {
+                    activity.requestedOrientation = orientation
+                }
+            }
         } else {
             controller.show(WindowInsetsCompat.Type.systemBars())
             activity.requestedOrientation = restoreOrientation

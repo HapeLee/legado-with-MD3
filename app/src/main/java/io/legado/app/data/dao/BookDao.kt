@@ -827,6 +827,22 @@ interface BookDao {
     @get:Query("SELECT * FROM books where type & ${BookType.text} > 0 ORDER BY durChapterTime DESC limit 1")
     val lastReadBook: Book?
 
+    /** The reader shortcut can also open local comics, including older CBZ records. */
+    @get:Query(
+        """
+        SELECT * FROM books
+        WHERE type & ${BookType.text} > 0
+           OR (
+               (type & ${BookType.local} > 0 OR
+                   (type = 0 AND (origin = '${BookType.localTag}' OR instr(origin, '${BookType.webDavTag}') = 1)))
+               AND (type & ${BookType.image} > 0 OR lower(originName) LIKE '%.cbz')
+           )
+        ORDER BY durChapterTime DESC
+        LIMIT 1
+        """
+    )
+    val lastReadBookForReader: Book?
+
     @get:Query("SELECT bookUrl FROM books")
     val allBookUrls: List<String>
 

@@ -641,6 +641,8 @@
     <string name="black">黑色</string>
     <string name="content_empty">文章內容為空</string>
     <string name="on_change_source">正在換源請等待…</string>
+    <string name="local_manga_requires_reader">請使用漫畫閱讀器開啟本機漫畫。</string>
+    <string name="local_manga_directory_unavailable">無法存取本機漫畫，請重新選擇漫畫所在文件夾以授予讀取權限。</string>
     <string name="chapter_list_empty">目錄列表為空</string>
     <string name="text_letter_spacing">字距</string>
 
@@ -1952,6 +1954,8 @@
     <string name="fixed_book_type">鎖定書籍類型</string>
     <string name="fixed_book_type_summary">書籍更新時不覆蓋書籍類型</string>
     <string name="floating_bottom_bar">懸浮底部導航欄</string>
+    <string name="top_bar_button_liquid_glass">頂欄按鈕液態玻璃</string>
+    <string name="top_bar_button_liquid_glass_summary">為頂欄按鈕啟用背景模糊和折射，需要 Android 13 或更新版本</string>
     <string name="floating_bottom_bar_liquid_glass">液態玻璃效果</string>
     <string name="floating_bottom_bar_liquid_glass_summary">為懸浮導航欄啟用液態玻璃高亮效果。需要模糊和 Android 13+</string>
     <string name="floating_bottom_bar_summary">使用分離的膠囊樣式作為底部導航欄</string>
@@ -2129,6 +2133,17 @@
     <string name="position_top_end">右上角</string>
     <string name="position_top_start">左上角</string>
     <string name="predictive_back">預測性返回手勢</string>
+    <string name="navigation_animation">導覽動畫</string>
+    <string name="navigation_animation_scale">縮放</string>
+    <string name="text_animation_level">文字動畫等級</string>
+    <string name="text_animation_slide">滑動（預設）</string>
+    <string name="text_animation_subtle">輕柔</string>
+    <string name="text_animation_standard">標準</string>
+    <string name="text_animation_strong">明顯</string>
+    <string name="text_animation_preview">文字動畫示例</string>
+    <string name="text_animation_preview_summary">點按切換示例文字</string>
+    <string name="text_animation_example_reading">正在閱讀</string>
+    <string name="text_animation_example_finished">已讀完</string>
     <string name="predictive_back_summary">啟用系統預測性返回手勢</string>
     <string name="preferred_contrast">偏好對比度</string>
     <string name="preview_effect">預覽效果</string>
@@ -3068,6 +3083,8 @@
     <string name="read_aloud_audio_download_deleted_chapters">已刪除 %1$d 章的聽書音頻</string>
     <string name="read_aloud_audio_download_invalid_range">章範圍填得不對</string>
     <string name="read_aloud_audio_download_state">已下載聽書音頻</string>
+    <string name="read_aloud_audio_download_partial_state">聽書音頻已部分下載</string>
+    <string name="read_aloud_audio_download_unverified_state">已儲存聽書音頻，整章完整性未核驗</string>
     <string name="cast_assignment_state">本章已分配角色</string>
     <string name="cast_assignment_delete">刪除分配</string>
     <string name="cast_assignment_deleted">已刪除 %1$d 條分配</string>
@@ -3099,4 +3116,5 @@
     <string name="a11y_open_playback">開啟播放介面</string>
     <string name="a11y_open_playback_named">開啟《%1$s》的播放介面</string>
     <string name="a11y_reorder_position">第 %1$d 項，共 %2$d 項</string>
+    <string name="paragraph_comment_height_percent">%1$d%%</string>
 </resources>

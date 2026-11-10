@@ -34,6 +34,7 @@ import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.MochiSheetLayout
 import io.legado.app.ui.widget.components.text.AppText
 
 private data class NavIconDestination(
@@ -79,6 +80,7 @@ fun NavIconManageSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.theme_config_nav_icons),
+        mochiLayout = MochiSheetLayout.Compact,
     ) {
         Column(
             modifier = Modifier

@@ -5,6 +5,7 @@ import android.graphics.drawable.Drawable
 import androidx.core.graphics.drawable.toBitmap
 import com.bumptech.glide.Glide
 import com.google.gson.JsonParser
+import io.legado.app.R
 import io.legado.app.api.ReturnData
 import io.legado.app.api.ReaderWebChapter
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
@@ -20,6 +21,7 @@ import io.legado.app.help.CacheManager
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isLocal
+import io.legado.app.help.book.isLocalManga
 import io.legado.app.domain.gateway.BookshelfSettingsGateway
 import io.legado.app.help.glide.ImageLoader
 import io.legado.app.model.BookCover
@@ -198,6 +200,9 @@ object BookController {
             return returnData.setErrorMsg("参数index不能为空, 请指定目录序号")
         }
         val book = appDb.bookDao.getBook(bookUrl)
+        if (book?.isLocalManga == true) {
+            return returnData.setErrorMsg(appCtx.getString(R.string.local_manga_requires_reader))
+        }
         val chapter = runBlocking {
             var chapter = appDb.bookChapterDao.getChapter(bookUrl, index)
             var wait = 0

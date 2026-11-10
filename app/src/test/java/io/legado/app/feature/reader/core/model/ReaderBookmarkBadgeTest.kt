@@ -10,7 +10,8 @@ class ReaderBookmarkBadgeTest {
         ReaderBookmarkBadge.create(bookmarked, scroll, 600, 100f, 30, 2f, size)
 
     @Test
-    fun topEdgeAnchorsToBodyTopAndPreservesRibbonRatio() {
+    fun topEdgeAnchorsToHeaderBottomAndPreservesRibbonRatio() {
+        // headerBottom = 100f -> topPx = 100
         assertEquals(ReaderBookmarkBadge(538f, 100f, 20, 40), badge())
         assertEquals(ReaderBookmarkBadge(518f, 100f, 40, 80), badge(size = 20))
     }

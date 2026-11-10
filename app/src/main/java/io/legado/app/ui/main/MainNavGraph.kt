@@ -141,6 +141,11 @@ import io.legado.app.ui.book.video.VideoPlayerScreen
 import io.legado.app.ui.browser.WebViewModel
 import io.legado.app.ui.browser.WebViewRouteScreen
 import io.legado.app.ui.config.ConfigNavScreen
+import io.legado.app.feature.settings.search.SettingsSearchRouteScreen
+import io.legado.app.feature.settings.search.SettingsSearchCatalog
+import io.legado.app.feature.settings.search.SettingsSearchPage
+import io.legado.app.feature.settings.search.SettingsSearchTargetScope
+import io.legado.app.feature.settings.reading.ReadSetting
 import io.legado.app.feature.settings.manga.MangaConfigRouteScreen
 import io.legado.app.feature.manga.translation.MangaTranslationGlobalSettingsContent
 import io.legado.app.feature.manga.translation.MangaTranslationIntent
@@ -271,6 +276,15 @@ private fun ConsumeBookPageResult(
                 }
             }
         }
+    }
+}
+
+private fun MainActivity.exitReaderGate(backStack: MutableList<NavKey>, route: NavKey) {
+    if (backStack.size > 1) {
+        MainNavigator.navigateBack(this, backStack, navRouteTracker, fromRoute = route)
+    } else {
+        backStack.clear()
+        backStack.add(MainRouteHome)
     }
 }
 
@@ -564,7 +578,7 @@ fun MainActivity.mainEntryProvider(
                             sharedCoverKey = sharedCoverKey
                         )
                     )
-                } else if (!book.isLocal && book.isImage && showMangaUi) {
+                } else if (book.shouldOpenMangaReader(showMangaUi)) {
                     onNavigateToRoute(
                         MainRouteReadManga(
                             bookUrl = book.bookUrl,
@@ -688,36 +702,59 @@ fun MainActivity.mainEntryProvider(
             onNavigateToTranslation = { pushRoute(MainRouteSettingsTranslation) },
             onNavigateToLab = { pushRoute(MainRouteSettingsLabConfig) },
             onNavigateToPrivate = { pushRoute(MainRouteSettingsPrivate) },
-            onNavigateToBubble = { pushRoute(MainRouteSettingsBubble) }
+            onNavigateToBubble = { pushRoute(MainRouteSettingsBubble) },
+            onSearchSettings = { pushRoute(MainRouteSettingsSearch) },
+        )
+    }
+
+    entry<MainRouteSettingsSearch> {
+        SettingsSearchRouteScreen(
+            onBackClick = { onNavigateBack() },
+            onOpenSetting = { id ->
+                if (ReadSetting.fromId(id) != null) pushRoute(MainRouteSettingsReadTarget(id))
+                else pushRoute(MainRouteSettingsTarget(id))
+            },
+        )
+    }
+
+    entry<MainRouteSettingsTarget> { route ->
+        val item = SettingsSearchCatalog.find(route.settingId)
+        if (item != null) SettingsSearchTargetScope(item) {
+            SettingsDestinationContent(item.page, onNavigateBack)
+        } else SettingsSearchRouteScreen(
+            onBackClick = onNavigateBack,
+            onOpenSetting = { id ->
+                if (ReadSetting.fromId(id) != null) pushRoute(MainRouteSettingsReadTarget(id))
+                else pushRoute(MainRouteSettingsTarget(id))
+            },
+        )
+    }
+
+    entry<MainRouteSettingsReadTarget> { route ->
+        ReadConfigRouteScreen(
+            onBackClick = { onNavigateBack() },
+            focusSettingId = route.settingId,
         )
     }
 
     entry<MainRouteSettingsOther> {
-        OtherConfigRouteScreen(onBackClick = { onNavigateBack() })
+        SettingsDestinationContent(SettingsSearchPage.Other, onNavigateBack)
     }
 
     entry<MainRouteSettingsRead> {
-        ReadConfigRouteScreen(onBackClick = { onNavigateBack() })
+        SettingsDestinationContent(SettingsSearchPage.Reading, onNavigateBack)
     }
 
     entry<MainRouteSettingsManga> { route ->
-        val translationViewModel: MangaTranslationViewModel = koinViewModel(key = "manga-settings-translation")
-        val translation by translationViewModel.uiState.collectAsStateWithLifecycle()
-        LaunchedEffect(translationViewModel) { translationViewModel.onIntent(MangaTranslationIntent.BindGlobal) }
-        MangaConfigRouteScreen(onBackClick = { onNavigateBack() },
-            onOpenAiSettings = { pushRoute(MainRouteSettingsAi) },
-            translationContent = { MangaTranslationGlobalSettingsContent(translation, translationViewModel::onIntent) },
-            startAtTranslation = route.openTranslation, translationReady = translation.loaded,
-            onOpenCacheSettings = { pushRoute(MainRouteSettingsDownloadCache) })
+        SettingsDestinationContent(
+            SettingsSearchPage.Manga,
+            onNavigateBack,
+            startAtMangaTranslation = route.openTranslation,
+        )
     }
 
     entry<MainRouteSettingsCover> {
-        CoverConfigRouteScreen(
-            onBackClick = { onNavigateBack() },
-            onNavigateToCoverAlbums = {
-                pushRoute(MainRouteSettingsCoverAlbums)
-            },
-        )
+        SettingsDestinationContent(SettingsSearchPage.Cover, onNavigateBack)
     }
 
     entry<MainRouteSettingsCoverAlbums> {
@@ -725,43 +762,23 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteSettingsTheme> {
-        ThemeConfigRouteScreen(
-            onBackClick = { onNavigateBack() },
-            onNavigateToCustomTheme = { pushRoute(MainRouteSettingsCustomTheme) },
-            onNavigateToThemeManage = { pushRoute(MainRouteSettingsThemeManage) }
-        )
+        SettingsDestinationContent(SettingsSearchPage.Theme, onNavigateBack)
     }
 
     entry<MainRouteSettingsBackup> {
-        BackupConfigRouteScreen(onBackClick = { onNavigateBack() })
+        SettingsDestinationContent(SettingsSearchPage.Backup, onNavigateBack)
     }
 
     entry<MainRouteSettingsAi> {
-        AiConfigRouteScreen(
-            onBackClick = { onNavigateBack() },
-            onNavigateToProviderEdit = { providerId ->
-                pushRoute(MainRouteSettingsAiProviderEdit(providerId = providerId))
-            },
-            onNavigateToModelEdit = { providerId, modelProfileId ->
-                pushRoute(
-                    MainRouteSettingsAiModelEdit(
-                        providerId = providerId,
-                        modelProfileId = modelProfileId
-                    )
-                )
-            },
-            onNavigateToTranslation = { pushRoute(MainRouteSettingsTranslation) },
-            onNavigateToAiSummary = { pushRoute(MainRouteSettingsAiSummary) },
-            onNavigateToAiPrompt = { pushRoute(MainRouteSettingsAiPrompt) }
-        )
+        SettingsDestinationContent(SettingsSearchPage.Ai, onNavigateBack)
     }
 
     entry<MainRouteSettingsAiSummary> {
-        AiSummaryConfigRouteScreen(onBackClick = { onNavigateBack() })
+        SettingsDestinationContent(SettingsSearchPage.AiSummary, onNavigateBack)
     }
 
     entry<MainRouteSettingsAiPrompt> {
-        AiPromptConfigRouteScreen(onBackClick = { onNavigateBack() })
+        SettingsDestinationContent(SettingsSearchPage.AiPrompt, onNavigateBack)
     }
 
     entry<MainRouteSettingsAiProviderEdit> { route ->
@@ -809,43 +826,31 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteSettingsDownloadCache> {
-        DownloadCacheConfigRouteScreen(
-            onBackClick = { onNavigateBack() },
-            onNavigateToMaintenance = { onNavigateToRoute(MainRouteCacheMaintenance) },
-        )
+        SettingsDestinationContent(SettingsSearchPage.Download, onNavigateBack)
     }
 
     entry<MainRouteSettingsTranslation> {
-        TranslationConfigRouteScreen(
-            onBackClick = { onNavigateBack() },
-            onNavigateToAi = { pushRoute(MainRouteSettingsAi) }
-        )
+        SettingsDestinationContent(SettingsSearchPage.Translation, onNavigateBack)
     }
 
     entry<MainRouteSettingsLabConfig> {
-        LabConfigRouteScreen(onBackClick = { onNavigateBack() })
+        SettingsDestinationContent(SettingsSearchPage.Lab, onNavigateBack)
     }
 
     entry<MainRouteSettingsPrivate> {
-        // 隐私设置页可以关掉三种验证时机，所以进入前要求确认身份（生物或密码）。
-        // 只校验、不授予：进来一次不该顺带解锁私密内容。
-        PrivateVerifyGate(onCancel = { onNavigateBack() }) {
-            PrivateConfigRouteScreen(onBackClick = { onNavigateBack() })
-        }
+        SettingsDestinationContent(SettingsSearchPage.Private, onNavigateBack)
     }
 
     entry<MainRouteSettingsCustomTheme> {
-        CustomThemeRouteScreen(
-            onBackClick = { onNavigateBack() }
-        )
+        SettingsDestinationContent(SettingsSearchPage.CustomTheme, onNavigateBack)
     }
 
     entry<MainRouteSettingsThemeManage> {
-        ThemeManageRouteScreen(onBackClick = { onNavigateBack() })
+        SettingsDestinationContent(SettingsSearchPage.ThemeManage, onNavigateBack)
     }
 
     entry<MainRouteSettingsBubble> {
-        BubbleConfigRouteScreen(onBackClick = { onNavigateBack() })
+        SettingsDestinationContent(SettingsSearchPage.Bubble, onNavigateBack)
     }
 
     entry<MainRouteImportLocal> {
@@ -891,28 +896,27 @@ fun MainActivity.mainEntryProvider(
     entry<MainRouteReadBook>(
         metadata = readerEntryMetadata(configuration.appShell.predictiveBackEnabled)
     ) { route ->
-        // 私密闸门：阅读记录 / 通知栏 / 深链等直开阅读器的路径全都在这里被拦一次，
-        // 未授权时阅读器根本不会被组合（也就没有加载正文的机会）
+        // A legacy reading intent can carry a book URL or request the last-read book.
+        // Resolve it before composing the text reader so it never starts a manga as text.
+        var routeChecked by remember(route) { mutableStateOf(false) }
+        val isTopRoute = backStack.lastOrNull() == route
+        LaunchedEffect(route, isTopRoute) {
+            if (!isTopRoute || routeChecked) return@LaunchedEffect
+            val book = if (route.bookUrl.isNullOrEmpty()) {
+                bookRepository.getLastReadBookForReader()
+            } else {
+                bookRepository.getBook(route.bookUrl)
+            }
+            if (!MainNavigator.redirectLocalManga(backStack, route, book, navRouteTracker)) {
+                routeChecked = true
+            }
+        }
+        if (!routeChecked) return@entry
+
         PrivateReadGate(
             bookUrl = route.bookUrl,
-            onExit = {
-                if (backStack.size > 1) {
-                    MainNavigator.navigateBack(
-                        this@mainEntryProvider,
-                        backStack,
-                        navRouteTracker,
-                        fromRoute = route,
-                    )
-                } else {
-                    // 通知 / 深链可能让阅读器成为栈里唯一一项：没有"当前页"可退，
-                    // 按约定落到书架，而不是把应用关掉
-                    backStack.clear()
-                    backStack.add(MainRouteHome)
-                }
-            },
-            onOpenLocalPasswordSettings = {
-                onNavigateToRoute(MainRouteSettingsPrivate)
-            },
+            onExit = { exitReaderGate(backStack, route) },
+            onOpenLocalPasswordSettings = { onNavigateToRoute(MainRouteSettingsPrivate) },
         ) {
             ReaderPerfTrace.marker("nav.entry.begin")
             val readBookViewModel = koinViewModel<ReadBookViewModel>(
@@ -1146,69 +1150,75 @@ fun MainActivity.mainEntryProvider(
     entry<MainRouteReadManga>(
         metadata = readerEntryMetadata(configuration.appShell.predictiveBackEnabled)
     ) { route ->
-        val mangaViewModel = koinViewModel<MangaReaderViewModel>(
-            key = "ReadManga:${route.bookUrl ?: "last-read"}",
-        )
-        ConsumeBookPageResult(route, backStack.lastOrNull() == route, navRouteTracker) { result ->
-            when (result) {
-                is BookPageResult.ChapterSelected ->
-                    mangaViewModel.onIntent(
-                        MangaReaderIntent.OpenChapter(
-                            result.index,
-                            result.position
+        PrivateReadGate(
+            bookUrl = route.bookUrl,
+            onExit = { exitReaderGate(backStack, route) },
+            onOpenLocalPasswordSettings = { onNavigateToRoute(MainRouteSettingsPrivate) },
+        ) {
+            val mangaViewModel = koinViewModel<MangaReaderViewModel>(
+                key = "ReadManga:${route.bookUrl ?: "last-read"}",
+            )
+            ConsumeBookPageResult(route, backStack.lastOrNull() == route, navRouteTracker) { result ->
+                when (result) {
+                    is BookPageResult.ChapterSelected ->
+                        mangaViewModel.onIntent(
+                            MangaReaderIntent.OpenChapter(
+                                result.index,
+                                result.position
+                            )
+                        )
+
+                    BookPageResult.BookDeleted -> MainNavigator.navigateBack(
+                        this@mainEntryProvider, backStack, navRouteTracker, fromRoute = route,
+                    )
+
+                    else -> Unit
+                }
+            }
+            MangaReaderRouteScreen(
+                bookUrl = route.bookUrl,
+                inBookshelf = route.inBookshelf,
+                chapterChanged = route.chapterChanged,
+                openRequestId = route.openRequestId,
+                viewModel = mangaViewModel,
+                onOpenMangaTranslationSettings = { pushRoute(MainRouteSettingsManga(openTranslation = true)) },
+                onOpenToc = { bookUrl, page -> onNavigateToRoute(MainRouteToc(bookUrl, page)) },
+                restoreSystemBarsVisible = configuration.appShell.showStatusBar,
+                sharedTransitionScope = sharedTransitionScope.takeIf {
+                    configuration.appShell.readerSharedElementEnabled
+                },
+                animatedVisibilityScope = LocalNavAnimatedContentScope.current,
+                sharedCoverKey = route.sharedCoverKey,
+                isTopRoute = backStack.lastOrNull() == route,
+                onFinish = {
+                    MainNavigator.navigateBack(
+                        this@mainEntryProvider,
+                        backStack,
+                        navRouteTracker,
+                        fromRoute = route,
+                    )
+                },
+                onOpenBookInfo = { name, author, bookUrl ->
+                    onNavigateToRoute(
+                        MainRouteBookInfo(
+                            name, author, bookUrl,
+                            openRequestId = System.nanoTime(),
                         )
                     )
-
-                BookPageResult.BookDeleted -> MainNavigator.navigateBack(
-                    this@mainEntryProvider, backStack, navRouteTracker, fromRoute = route,
-                )
-
-                else -> Unit
-            }
-        }
-        MangaReaderRouteScreen(
-            bookUrl = route.bookUrl,
-            inBookshelf = route.inBookshelf,
-            chapterChanged = route.chapterChanged,
-            openRequestId = route.openRequestId,
-            viewModel = mangaViewModel,
-            onOpenMangaTranslationSettings = { pushRoute(MainRouteSettingsManga(openTranslation = true)) },
-            onOpenToc = { bookUrl, page -> onNavigateToRoute(MainRouteToc(bookUrl, page)) },
-            restoreSystemBarsVisible = configuration.appShell.showStatusBar,
-            sharedTransitionScope = sharedTransitionScope.takeIf {
-                configuration.appShell.readerSharedElementEnabled
-            },
-            animatedVisibilityScope = LocalNavAnimatedContentScope.current,
-            sharedCoverKey = route.sharedCoverKey,
-            isTopRoute = backStack.lastOrNull() == route,
-            onFinish = {
-                MainNavigator.navigateBack(
-                    this@mainEntryProvider,
-                    backStack,
-                    navRouteTracker,
-                    fromRoute = route,
-                )
-            },
-            onOpenBookInfo = { name, author, bookUrl ->
-                onNavigateToRoute(
-                    MainRouteBookInfo(
-                        name, author, bookUrl,
-                        openRequestId = System.nanoTime(),
+                },
+                onOpenSourceLogin = { sourceUrl ->
+                    onNavigateToRoute(MainRouteSourceLogin(SourceLoginType.BookSource, sourceUrl))
+                },
+                onOpenSourceEdit = { sourceUrl ->
+                    onNavigateToRoute(MainRouteBookSourceEdit(sourceUrl))
+                },
+                onOpenWebView = { title, url, sourceOrigin, sourceName, sourceType ->
+                    onNavigateToRoute(
+                        MainRouteWebView(title, url, sourceOrigin, sourceName, sourceType)
                     )
-                )
-            },
-            onOpenSourceLogin = { sourceUrl ->
-                onNavigateToRoute(MainRouteSourceLogin(SourceLoginType.BookSource, sourceUrl))
-            },
-            onOpenSourceEdit = { sourceUrl ->
-                onNavigateToRoute(MainRouteBookSourceEdit(sourceUrl))
-            },
-            onOpenWebView = { title, url, sourceOrigin, sourceName, sourceType ->
-                onNavigateToRoute(
-                    MainRouteWebView(title, url, sourceOrigin, sourceName, sourceType)
-                )
-            },
-        )
+                },
+            )
+        }
     }
 
     entry<MainRouteVideoPlay> { route ->
@@ -1901,16 +1911,7 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteMultiRoleRule> {
-        MultiRoleRuleRouteScreen(
-            onBackClick = { onNavigateBack() },
-            onNavigateToVoicePool = { pushRoute(MainRouteVoicePool) },
-            onNavigateToBgmPool = { pushRoute(MainRouteBgmPool) },
-            onNavigateToVoiceEffect = { pushRoute(MainRouteVoiceEffect) },
-            onNavigateToCapsuleStyle = { pushRoute(MainRouteCastCapsuleStyle) },
-            onNavigateToEngines = { pushRoute(MainRouteCloudTtsEngines()) },
-            onNavigateToRecognition = { pushRoute(MainRouteMultiRoleRecognition) },
-            onNavigateToRegexCast = { pushRoute(MainRouteRegexCastRule) },
-        )
+        SettingsDestinationContent(SettingsSearchPage.ReadAloud, onNavigateBack)
     }
 
     entry<MainRouteCastCapsuleStyle> {
@@ -2160,5 +2161,120 @@ internal fun MainActivity.AudioPlayerMorphOverlay(
                 audioPlayViewModel.addToBookshelf(book, toc)
             },
         )
+    }
+}
+
+/** Shared host wiring keeps search visits on the same privacy gates, DI and callbacks as ordinary visits. */
+@Composable
+private fun MainEntryNavigation.SettingsDestinationContent(
+    page: SettingsSearchPage,
+    onNavigateBack: () -> Unit,
+    startAtMangaTranslation: Boolean = false,
+) {
+    when (page) {
+        SettingsSearchPage.Reading -> {
+            ReadConfigRouteScreen(onBackClick = { onNavigateBack() })
+        }
+        SettingsSearchPage.Theme -> {
+            ThemeConfigRouteScreen(
+                onBackClick = { onNavigateBack() },
+                onNavigateToCustomTheme = { pushRoute(MainRouteSettingsCustomTheme) },
+                onNavigateToThemeManage = { pushRoute(MainRouteSettingsThemeManage) }
+            )
+        }
+        SettingsSearchPage.Other -> {
+            OtherConfigRouteScreen(onBackClick = { onNavigateBack() })
+        }
+        SettingsSearchPage.Manga -> {
+            val translationViewModel: MangaTranslationViewModel = koinViewModel(key = "manga-settings-translation")
+            val translation by translationViewModel.uiState.collectAsStateWithLifecycle()
+            LaunchedEffect(translationViewModel) { translationViewModel.onIntent(MangaTranslationIntent.BindGlobal) }
+            MangaConfigRouteScreen(onBackClick = { onNavigateBack() },
+                onOpenAiSettings = { pushRoute(MainRouteSettingsAi) },
+                translationContent = { MangaTranslationGlobalSettingsContent(translation, translationViewModel::onIntent) },
+                startAtTranslation = startAtMangaTranslation, translationReady = translation.loaded,
+                onOpenCacheSettings = { pushRoute(MainRouteSettingsDownloadCache) })
+        }
+        SettingsSearchPage.ReadAloud -> {
+            MultiRoleRuleRouteScreen(
+                onBackClick = { onNavigateBack() },
+                onNavigateToVoicePool = { pushRoute(MainRouteVoicePool) },
+                onNavigateToBgmPool = { pushRoute(MainRouteBgmPool) },
+                onNavigateToVoiceEffect = { pushRoute(MainRouteVoiceEffect) },
+                onNavigateToCapsuleStyle = { pushRoute(MainRouteCastCapsuleStyle) },
+                onNavigateToEngines = { pushRoute(MainRouteCloudTtsEngines()) },
+                onNavigateToRecognition = { pushRoute(MainRouteMultiRoleRecognition) },
+                onNavigateToRegexCast = { pushRoute(MainRouteRegexCastRule) },
+            )
+        }
+        SettingsSearchPage.Cover -> {
+            CoverConfigRouteScreen(
+                onBackClick = { onNavigateBack() },
+                onNavigateToCoverAlbums = {
+                    pushRoute(MainRouteSettingsCoverAlbums)
+                },
+            )
+        }
+        SettingsSearchPage.Bubble -> {
+            BubbleConfigRouteScreen(onBackClick = { onNavigateBack() })
+        }
+        SettingsSearchPage.Download -> {
+            DownloadCacheConfigRouteScreen(
+                onBackClick = { onNavigateBack() },
+                onNavigateToMaintenance = { onNavigateToRoute(MainRouteCacheMaintenance) },
+            )
+        }
+        SettingsSearchPage.Backup -> {
+            BackupConfigRouteScreen(onBackClick = { onNavigateBack() })
+        }
+        SettingsSearchPage.Ai -> {
+            AiConfigRouteScreen(
+                onBackClick = { onNavigateBack() },
+                onNavigateToProviderEdit = { providerId ->
+                    pushRoute(MainRouteSettingsAiProviderEdit(providerId = providerId))
+                },
+                onNavigateToModelEdit = { providerId, modelProfileId ->
+                    pushRoute(
+                        MainRouteSettingsAiModelEdit(
+                            providerId = providerId,
+                            modelProfileId = modelProfileId
+                        )
+                    )
+                },
+                onNavigateToTranslation = { pushRoute(MainRouteSettingsTranslation) },
+                onNavigateToAiSummary = { pushRoute(MainRouteSettingsAiSummary) },
+                onNavigateToAiPrompt = { pushRoute(MainRouteSettingsAiPrompt) }
+            )
+        }
+        SettingsSearchPage.Translation -> {
+            TranslationConfigRouteScreen(
+                onBackClick = { onNavigateBack() },
+                onNavigateToAi = { pushRoute(MainRouteSettingsAi) }
+            )
+        }
+        SettingsSearchPage.Private -> {
+            // 隐私设置页可以关掉三种验证时机，所以进入前要求确认身份（生物或密码）。
+            // 只校验、不授予：进来一次不该顺带解锁私密内容。
+            PrivateVerifyGate(onCancel = { onNavigateBack() }) {
+                PrivateConfigRouteScreen(onBackClick = { onNavigateBack() })
+            }
+        }
+        SettingsSearchPage.Lab -> {
+            LabConfigRouteScreen(onBackClick = { onNavigateBack() })
+        }
+        SettingsSearchPage.AiSummary -> {
+            AiSummaryConfigRouteScreen(onBackClick = { onNavigateBack() })
+        }
+        SettingsSearchPage.AiPrompt -> {
+            AiPromptConfigRouteScreen(onBackClick = { onNavigateBack() })
+        }
+        SettingsSearchPage.CustomTheme -> {
+            CustomThemeRouteScreen(
+                onBackClick = { onNavigateBack() }
+            )
+        }
+        SettingsSearchPage.ThemeManage -> {
+            ThemeManageRouteScreen(onBackClick = { onNavigateBack() })
+        }
     }
 }

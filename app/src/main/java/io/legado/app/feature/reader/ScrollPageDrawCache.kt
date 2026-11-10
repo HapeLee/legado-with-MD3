@@ -37,31 +37,28 @@ internal class ScrollPageDrawData(val page: ReaderPage) {
  * 重建。超容量按 LRU 淘汰。
  */
 internal class ScrollPageDrawCache(capacity: Int = 8) {
-    /**
-     * 按 elements 的引用而非内容比较。每次查询都会创建新的 key 包装对象，故必须
-     * 显式实现引用相等；Object 默认实现会把包装对象本身作为身份，令缓存永远 miss。
-     */
-    private class ElementsKey(private val elements: List<ReaderElement>) {
-        override fun equals(other: Any?): Boolean =
-            other is ElementsKey && elements === other.elements
-
-        override fun hashCode(): Int = System.identityHashCode(elements)
-    }
-
-    private val entries = object : LinkedHashMap<ElementsKey, ScrollPageDrawData>(16, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<ElementsKey, ScrollPageDrawData>): Boolean =
+    private val entries = object : LinkedHashMap<ReaderPageElementsKey, ScrollPageDrawData>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<ReaderPageElementsKey, ScrollPageDrawData>): Boolean =
             size > capacity
     }
 
     fun put(page: ReaderPage, data: ScrollPageDrawData) {
-        synchronized(this) { entries[ElementsKey(page.elements)] = data }
+        synchronized(this) { entries[ReaderPageElementsKey(page.elements)] = data }
     }
 
     fun peek(page: ReaderPage): ScrollPageDrawData? = synchronized(this) {
-        entries[ElementsKey(page.elements)]
+        entries[ReaderPageElementsKey(page.elements)]
     }
 
     /** draw 期兜底：miss 时主线程同步构建，保正确性不缺字；正常路径由预热先行。 */
     fun ensure(page: ReaderPage): ScrollPageDrawData =
         peek(page) ?: ScrollPageDrawData(page).also { put(page, it) }
+}
+
+/** 按不可变排版元素列表的引用区分页内容，无须逐字计算缓存键。 */
+internal class ReaderPageElementsKey(private val elements: List<ReaderElement>) {
+    override fun equals(other: Any?): Boolean =
+        other is ReaderPageElementsKey && elements === other.elements
+
+    override fun hashCode(): Int = System.identityHashCode(elements)
 }

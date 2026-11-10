@@ -22,6 +22,7 @@
     <item name="menu_replace" type="id" />
     <item name="menu_ai_clean" type="id" />
     <item name="menu_ai_rewrite" type="id" />
+    <item name="menu_extend_selection" type="id" />
     <item name="menu_copy" type="id" />
     <item name="menu_bookmark" type="id" />
     <item name="menu_aloud" type="id" />

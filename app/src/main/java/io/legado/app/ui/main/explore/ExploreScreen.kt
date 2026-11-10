@@ -62,10 +62,10 @@ import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.domain.usecase.ExploreKindUiUseCase
 import io.legado.app.help.source.getExploreInfoMap
 import io.legado.app.ui.book.search.SearchScope
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalBottomOverlayPadding
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
@@ -172,7 +172,7 @@ fun ExploreScreen(
         }
     }
 
-    val composeEngine = ThemeResolver.isMiuixEngine(composeEngine)
+    val isMiuix = composeEngine == ComposeEngine.Miuix
 
     val sourceContent: @Composable (PaddingValues) -> Unit = { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
@@ -217,7 +217,7 @@ fun ExploreScreen(
                             onLogin = { onIntent(ExploreIntent.OpenLogin(item)) },
                             onRefresh = { onIntent(ExploreIntent.RefreshKinds(item)) },
                             onDelete = { sourceToDeleteUrl = item.bookSourceUrl },
-                            isMiuix = composeEngine
+                            isMiuix = isMiuix
                         )
                         }
 
@@ -237,7 +237,7 @@ fun ExploreScreen(
                                             onOpenExploreShow(kind.title, listItem.sourceUrl, url)
                                         },
                                         modifier = Modifier.weight(span.toFloat()),
-                                        isMiuix = composeEngine,
+                                        isMiuix = isMiuix,
                                         displayNameOverride = state.kindDisplayNames[kind.title],
                                         valueOverride = state.kindValues[kind.title],
                                         onValueChange = { value ->

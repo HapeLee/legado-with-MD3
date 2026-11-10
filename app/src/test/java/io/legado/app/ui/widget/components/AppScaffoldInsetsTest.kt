@@ -38,6 +38,7 @@ import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.domain.model.settings.AppUiConfiguration
 import io.legado.app.ui.main.FloatingNavigationContainer
 import io.legado.app.ui.theme.AppTheme
+import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.LocalLegadoThemeColors
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBar
@@ -81,7 +82,7 @@ class AppScaffoldInsetsTest {
                         applyBackground = false
                     ) {
                         val colors =
-                            LocalLegadoThemeColors.current.copy(composeEngine = case.engine)
+                            LocalLegadoThemeColors.current.copy(composeEngine = ThemeResolver.resolveComposeEngine(case.engine))
                         CompositionLocalProvider(LocalLegadoThemeColors provides colors) {
                             Box(
                                 Modifier
@@ -169,7 +170,7 @@ class AppScaffoldInsetsTest {
                     }
                 }
             }
-            for (engine in listOf("material", "miuix")) {
+            for (engine in listOf("material", "miuix", "mochi")) {
                 for (floating in listOf(false, true)) {
                     for (behind in listOf(false, true)) {
                         for (consumed in listOf(false, true)) {
@@ -195,7 +196,7 @@ class AppScaffoldInsetsTest {
                 assertEquals("footer parentConsumed=$consumed", 556f, footerBounds.bottom, 0.5f)
             }
             probe = "topbar"
-            for (engine in listOf("material", "miuix")) {
+            for (engine in listOf("material", "miuix", "mochi")) {
                 for (medium in listOf(false, true)) {
                     for (consumed in listOf(false, true)) {
                         case = Case(engine, false, false, consumed)

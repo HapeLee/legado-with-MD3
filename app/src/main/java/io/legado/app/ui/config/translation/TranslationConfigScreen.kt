@@ -1,7 +1,8 @@
 package io.legado.app.ui.config.translation
 
+import io.legado.app.feature.settings.search.SearchableSetting
+import io.legado.app.feature.settings.search.SearchableSettingsList
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -56,7 +57,7 @@ fun TranslationConfigScreen(
             )
         },
     ) { paddingValues ->
-        LazyColumn(
+        SearchableSettingsList(
             modifier = Modifier.fillMaxSize(),
             contentPadding = adaptiveContentPadding(
                 top = paddingValues.calculateTopPadding(),
@@ -65,44 +66,52 @@ fun TranslationConfigScreen(
         ) {
             item {
                 SplicedColumnGroup(title = stringResource(R.string.translation_provider)) {
-                    DropdownListSettingItem(
-                        title = stringResource(R.string.llm_provider),
-                        selectedValue = settings.provider,
-                        displayEntries = TranslationConstants.providerDisplayNames.toTypedArray(),
-                        entryValues = TranslationConstants.providerValues.toTypedArray(),
-                        onValueChange = { onIntent(TranslationConfigIntent.SetProvider(it)) },
-                    )
+                    SearchableSetting("translation.llm_provider") {
+                        DropdownListSettingItem(
+                            title = stringResource(R.string.llm_provider),
+                            selectedValue = settings.provider,
+                            displayEntries = TranslationConstants.providerDisplayNames.toTypedArray(),
+                            entryValues = TranslationConstants.providerValues.toTypedArray(),
+                            onValueChange = { onIntent(TranslationConfigIntent.SetProvider(it)) },
+                        )
+                    }
                 }
             }
             item {
                 SplicedColumnGroup(title = stringResource(R.string.translation_options)) {
-                    DropdownListSettingItem(
-                        title = stringResource(R.string.llm_target_language),
-                        selectedValue = settings.targetLanguage,
-                        displayEntries = TranslationConstants.targetLanguages.map { it.second }.toTypedArray(),
-                        entryValues = TranslationConstants.targetLanguages.map { it.first }.toTypedArray(),
-                        onValueChange = { onIntent(TranslationConfigIntent.SetTargetLanguage(it)) },
-                    )
-                    SliderSettingItem(
-                        title = stringResource(R.string.llm_max_chars_per_chunk),
-                        value = settings.maxCharsPerChunk.toFloat(),
-                        defaultValue = 10000f,
-                        valueRange = 1000f..10000f,
-                        steps = 17,
-                        onValueChange = {
-                            onIntent(TranslationConfigIntent.SetMaxCharsPerChunk(it.toInt()))
-                        },
-                    )
+                    SearchableSetting("translation.llm_target_language") {
+                        DropdownListSettingItem(
+                            title = stringResource(R.string.llm_target_language),
+                            selectedValue = settings.targetLanguage,
+                            displayEntries = TranslationConstants.targetLanguages.map { it.second }.toTypedArray(),
+                            entryValues = TranslationConstants.targetLanguages.map { it.first }.toTypedArray(),
+                            onValueChange = { onIntent(TranslationConfigIntent.SetTargetLanguage(it)) },
+                        )
+                    }
+                    SearchableSetting("translation.llm_max_chars_per_chunk") {
+                        SliderSettingItem(
+                            title = stringResource(R.string.llm_max_chars_per_chunk),
+                            value = settings.maxCharsPerChunk.toFloat(),
+                            defaultValue = 10000f,
+                            valueRange = 1000f..10000f,
+                            steps = 17,
+                            onValueChange = {
+                                onIntent(TranslationConfigIntent.SetMaxCharsPerChunk(it.toInt()))
+                            },
+                        )
+                    }
                 }
             }
             if (settings.provider == TranslationConstants.PROVIDER_APP_AI) {
                 item {
                     SplicedColumnGroup(title = stringResource(R.string.ai_config)) {
-                        ClickableSettingItem(
-                            title = stringResource(R.string.translation_app_ai_provider),
-                            description = stringResource(R.string.translation_app_ai_provider_summary),
-                            onClick = onNavigateToAi,
-                        )
+                        SearchableSetting("translation.translation_app_ai_provider") {
+                            ClickableSettingItem(
+                                title = stringResource(R.string.translation_app_ai_provider),
+                                description = stringResource(R.string.translation_app_ai_provider_summary),
+                                onClick = onNavigateToAi,
+                            )
+                        }
                     }
                 }
             }

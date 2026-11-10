@@ -651,6 +651,27 @@ object BookHelp {
         }
     }
 
+    /** A validated cached original and its lease; this path never downloads or promotes the cache. */
+    fun openCachedImage(book: Book, chapter: BookChapter, src: String): java.io.InputStream {
+        val file = getImage(book, chapter, src)
+        val lease = pinImageFile(file)
+        try {
+            if (!imageFiles.isValid(file)) throw IOException("Cached comic image is missing or invalid")
+            return object : java.io.FilterInputStream(file.inputStream()) {
+                override fun close() {
+                    try {
+                        super.close()
+                    } finally {
+                        lease.close()
+                    }
+                }
+            }
+        } catch (error: Throwable) {
+            lease.close()
+            throw error
+        }
+    }
+
     fun pinImageFile(file: File): Closeable {
         val lease = imageFiles.pin(file)
         val closed = AtomicBoolean()
@@ -962,6 +983,7 @@ object BookHelp {
      * 读取章节内容
      */
     fun getContent(book: Book, bookChapter: BookChapter): String? {
+        if (book.isLocalManga) return null
         val file = cachedChapterContentFile(book, bookChapter)
         if (file.exists()) {
             val string = file.readText()

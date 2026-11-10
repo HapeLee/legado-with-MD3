@@ -36,6 +36,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -45,6 +46,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -68,6 +72,7 @@ import io.legado.app.base.BaseComposeActivity
 import io.legado.app.constant.AppConst.appInfo
 import io.legado.app.constant.EventBus
 import io.legado.app.core.ui.player.playerUnderlaySemantics
+import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.domain.gateway.BackupSettingsGateway
 import io.legado.app.domain.gateway.MangaSettingsGateway
@@ -370,6 +375,7 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
     private val backupSettingsGateway by inject<BackupSettingsGateway>()
     private val readAloudSettingsRepository by inject<ReadAloudSettingsRepository>()
     internal val navRouteTracker by inject<MainNavRouteTracker>()
+    internal val bookRepository by inject<BookRepository>()
     private val routeEvents = MutableSharedFlow<RouteEvent>(extraBufferCapacity = 1)
     /**
      * Web 服务与「局域网请求」各自持有独立的 launcher：授权结果互不影响，也不需要用一个可变字段
@@ -399,8 +405,13 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
     internal var activeReadBookRoute: MainRouteReadBook? = null
     internal var activeMangaKeyHandler: ((Int) -> Boolean)? = null
 
-    /** 听书/朗读播放浮层是否可见：可见期间由浮层接管系统栏，覆盖阅读器的隐藏策略。 */
+    /** 听书/朗读浮层及其退场动画期间，由浮层接管窗口交互。 */
     private var isPlaybackOverlayVisible = false
+
+    private val foregroundReadBookInputHandler: ReadBookInputHandler?
+        get() = activeReadBookInputHandler?.takeIf {
+            !isPlaybackOverlayVisible && activeReadBookRoute == navRouteTracker.currentRoute
+        }
 
     override fun onPictureInPictureModeChanged(
         isInPictureInPictureMode: Boolean,
@@ -533,6 +544,10 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
     @Composable
     override fun Content() {
         val configuration = LocalAppUiConfiguration.current
+        val navigationAnimationStyle = configuration.appShell.navigationAnimationStyle
+        val navigationLayoutDirection = LocalLayoutDirection.current
+        val navigationDisplayLeft = remember { mutableFloatStateOf(0f) }
+        val navigationSceneDecorators = remember { listOf(NavigationPageSceneDecorator(navigationDisplayLeft)) }
         val predictiveBackEnabled by rememberUpdatedState(configuration.appShell.predictiveBackEnabled)
         val tabletInterface = configuration.appShell.tabletInterface
         val defaultToReadFlow = remember(otherSettingsGateway) {
@@ -752,7 +767,7 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                 playbackCapsuleState.source == null || matchingCapsule,
             )
             if (!pageShellShowCapsule) readAloudMorph.clearStartAnchors()
-            isPlaybackOverlayVisible = playerVisible
+            isPlaybackOverlayVisible = playerVisible || morphPresent
         }
         // 只用于首帧锚点布局，不把尚未启动的朗读伪装成正在播放。
         val capsuleAnchorPreview = if (playerVisible && pageShellShowCapsule) {
@@ -831,7 +846,9 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                             .playerUnderlaySemantics(playerVisible || morphPresent)
                     ) {
                         NavDisplay(
-                            modifier = adaptiveDisplayModifier,
+                            modifier = adaptiveDisplayModifier.onGloballyPositioned {
+                                navigationDisplayLeft.floatValue = it.positionInRoot().x
+                            },
                             backStack = backStack,
                             // 交给 nav3 装上 SharedEntryInSceneNavEntryDecorator：这是跨 scene 保持
                             // 共享元素登记的官方机制。少了它，书架 scene 一被销毁封面的登记就没了——
@@ -864,8 +881,11 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                                 },
                                 SinglePaneSceneStrategy(),
                             ),
+                            sceneDecoratorStrategies = navigationSceneDecorators,
                             transitionSpec = {
-                                if (targetState is ListDetailScene) {
+                                navigationPreset(
+                                    navigationAnimationStyle, true, navigationLayoutDirection
+                                ) ?: if (targetState is ListDetailScene) {
                                     // 双栏自己演形变：左栏从占满窗口收到窗格宽度、右栏从右侧滑进来。
                                     // 场景级再滑一次会让左栏里的首页跟着从头滑入，看起来像换了页面。
                                     EnterTransition.None togetherWith ExitTransition.None
@@ -898,7 +918,9 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                                 }
                             },
                             popTransitionSpec = {
-                                if (initialState is ListDetailScene) {
+                                navigationPreset(
+                                    navigationAnimationStyle, false, navigationLayoutDirection
+                                ) ?: if (initialState is ListDetailScene) {
                                     // 返回时双栏要做「右栏滑出、左栏回满」的收拢动画，所以离场场景
                                     // 必须活到动画结束；淡出叠加在收拢之上，下方已经恢复成单栏的同一页面。
                                     EnterTransition.None togetherWith
@@ -930,15 +952,17 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                                     ) + fadeOut(animationSpec = tween(durationMillis = NAV_FADE_DURATION_MILLIS)))
                                 }
                             },
-                            predictivePopTransitionSpec = { _ ->
-                                (slideIntoContainer(
+                            predictivePopTransitionSpec = { swipeEdge ->
+                                navigationPreset(
+                                    navigationAnimationStyle, false, navigationLayoutDirection, swipeEdge
+                                ) ?: ((slideIntoContainer(
                                     towards = AnimatedContentTransitionScope.SlideDirection.Start,
                                     animationSpec = tween(easing = FastOutSlowInEasing),
                                     initialOffset = { fullWidth -> -fullWidth / 4 }
                                 ) + fadeIn(animationSpec = tween(easing = LinearOutSlowInEasing))) togetherWith (scaleOut(
                                     targetScale = 0.8f,
                                     animationSpec = tween(easing = FastOutSlowInEasing)
-                                ) + fadeOut(animationSpec = tween()))
+                                ) + fadeOut(animationSpec = tween())))
                             },
                             onBack = { MainNavigator.navigateBack(this@MainActivity, backStack) },
                             entryProvider = mainEntryProvider(
@@ -1010,6 +1034,7 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                         awaitCapsuleAnchor = pageShellShowCapsule,
                         predictiveBackEnabled = configuration.appShell.predictiveBackEnabled,
                         onDismiss = { readAloudPlayerVisible = false },
+                        onRestore = { readAloudPlayerVisible = true },
                         onSwitchToClassic = { bookUrl ->
                             // 栈顶是阅读界面：让它直接落在经典朗读控制页；
                             // 否则没有可用的阅读界面，打开一个新的。
@@ -1228,14 +1253,16 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
         val keyCode = event.keyCode
         val isDown = event.action == KeyEvent.ACTION_DOWN
         if (keyCode == KeyEvent.KEYCODE_MENU && isDown) {
-            activeReadBookInputHandler?.toggleMenu()
-            if (activeReadBookInputHandler != null) return true
+            foregroundReadBookInputHandler?.let { controller ->
+                controller.toggleMenu()
+                return true
+            }
         }
         return super.dispatchKeyEvent(event)
     }
 
     override fun onGenericMotionEvent(event: MotionEvent): Boolean {
-        val controller = activeReadBookInputHandler ?: return super.onGenericMotionEvent(event)
+        val controller = foregroundReadBookInputHandler ?: return super.onGenericMotionEvent(event)
         if (0 != (event.source and InputDevice.SOURCE_CLASS_POINTER) &&
             event.action == MotionEvent.ACTION_SCROLL
         ) {
@@ -1261,13 +1288,16 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (activeMangaKeyHandler?.invoke(keyCode) == true) return true
-        if (activeReadBookInputHandler?.onKeyDown(keyCode, event) == true) return true
+        val mangaHandler = activeMangaKeyHandler
+        if (!isPlaybackOverlayVisible && mangaHandler != null &&
+            navRouteTracker.currentRoute is MainRouteReadManga && mangaHandler(keyCode)
+        ) return true
+        if (foregroundReadBookInputHandler?.onKeyDown(keyCode, event) == true) return true
         return super.onKeyDown(keyCode, event)
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
-        if (activeReadBookInputHandler?.onKeyUp(keyCode, event) == true) return true
+        if (foregroundReadBookInputHandler?.onKeyUp(keyCode, event) == true) return true
         return super.onKeyUp(keyCode, event)
     }
 

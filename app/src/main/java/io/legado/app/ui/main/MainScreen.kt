@@ -81,8 +81,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeSource
 import io.legado.app.R
 import io.legado.app.feature.explore.ExploreMainRoute
 import io.legado.app.ui.book.readaloud.ReadAloudBarCapsuleEndPadding
@@ -97,9 +95,19 @@ import io.legado.app.ui.main.home.HomeRouteScreen
 import io.legado.app.ui.main.my.MyRouteScreen
 import io.legado.app.ui.main.my.PrefClickEvent
 import io.legado.app.ui.main.rss.RssRouteScreen
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalBottomOverlayPadding
-import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.theme.LocalMiuixBarBackdrop
+import io.legado.app.ui.theme.ProvideAppContentColor
+import io.legado.app.ui.widget.components.mochi.AppMochiNavigationBar
+import kotlinx.collections.immutable.toImmutableList
+import ui.feice.mochi.basic.MochiTabItem
+import ui.feice.mochi.effect.glass.LocalMochiBackdrop
+import ui.feice.mochi.effect.glass.rememberMochiBackdrop
+import ui.feice.mochi.effect.glass.mochiBackdropSource
+import top.yukonga.miuix.kmp.blur.layerBackdrop as miuixLayerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop as rememberMiuixLayerBackdrop
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.FloatingBottomBar
 import io.legado.app.ui.widget.components.FloatingBottomBarItem
@@ -209,7 +217,6 @@ fun MainScreen(
         }
     }
 
-    val hazeState = remember { HazeState() }
     val customSecondaryColor = if (LegadoTheme.isDark) {
         mainUiState.secondaryThemeColorNight.takeIf { it != 0 }
             ?: mainUiState.secondaryThemeColor
@@ -220,10 +227,6 @@ fun MainScreen(
         Color(customSecondaryColor)
     } else {
         LegadoTheme.colorScheme.surface
-    }
-    val floatingBarBackdrop = rememberLayerBackdrop {
-        drawRect(floatingBarSurfaceColor)
-        drawContent()
     }
     val destinations = mainUiState.destinations
 
@@ -282,6 +285,38 @@ fun MainScreen(
     var floatingFooterHeight by remember { mutableStateOf(0.dp) }
     val alwaysShowLabel = labelVisibilityMode == "labeled"
     val showLabel = !isUnlabeled
+    val engine = LegadoTheme.composeEngine
+    val isMochi = engine == ComposeEngine.Mochi
+    val mochiPageBackdrop = if (isMochi && useLiquidGlass) rememberMochiBackdrop(LegadoTheme.colorScheme.background) else null
+    val miuixPageBackdrop = if (engine == ComposeEngine.Miuix && useLiquidGlass) {
+        rememberMiuixLayerBackdrop {
+            drawRect(floatingBarSurfaceColor)
+            drawContent()
+        }
+    } else null
+    val floatingBarBackdrop = if (engine == ComposeEngine.Material && useLiquidGlass) {
+        rememberLayerBackdrop {
+            drawRect(floatingBarSurfaceColor)
+            drawContent()
+        }
+    } else null
+    val mochiTabs = destinations.map { destination ->
+        val label = stringResource(destination.labelId)
+        val iconPath = mainUiState.customIconPath(destination)
+        val selectedPath = mainUiState.selectedCustomIconPath(destination).ifEmpty { iconPath }
+        MochiTabItem(
+            label = label,
+            selectedIcon = { tint -> ProvideAppContentColor(tint) {
+                NavigationIcon(destination, true, selectedPath, tint = tint)
+            } },
+            icon = { tint -> ProvideAppContentColor(tint) {
+                NavigationIcon(destination, false, iconPath, tint = tint)
+            } },
+        )
+    }.toImmutableList()
+    val onMochiTabSelect: (Int) -> Unit = { index ->
+        destinations.getOrNull(index)?.let { handleMainDestinationClick(index, it) }
+    }
 
     val navState = rememberWideNavigationRailState(
         initialValue = if (mainUiState.navExtended)
@@ -296,7 +331,7 @@ fun MainScreen(
             .windowInsetsPadding(mainAdaptiveInsets.only(WindowInsetsSides.Horizontal))
     ) {
         if (useRail && mainUiState.showBottomView) {
-            if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
+            if (LegadoTheme.composeEngine == ComposeEngine.Miuix) {
                 val miuixNavState = rememberNavigationRailState(
                     initialValue = if (mainUiState.navExtended) {
                         NavigationRailValue.Expanded
@@ -475,50 +510,55 @@ fun MainScreen(
 
         AppScaffold(
             modifier = Modifier.weight(1f),
-            bottomBar = {
-                if (!useRail && mainUiState.showBottomView && !useFloatingBottomBar) {
-                    AppNavigationBar(
-                        showLabel = showLabel,
-                        alwaysShowLabel = alwaysShowLabel
-                    ) {
-                        destinations.forEachIndexed { index, destination ->
-                            val selected = pagerState.targetPage == index
-                            val customIconPath = mainUiState.customIconPath(destination)
-                            val selectedCustomIconPath =
-                                mainUiState.selectedCustomIconPath(destination)
-                            val destinationLabel = stringResource(destination.labelId)
-                            AppNavigationBarItem(
-                                modifier = Modifier.semantics(mergeDescendants = true) {
-                                    contentDescription = destinationLabel
-                                },
-                                selected = selected,
-                                onClick = {
-                                    handleMainDestinationClick(index, destination)
-                                },
-                                labelString = stringResource(destination.labelId),
-                                iconVector = AppIcons.mainDestination(destination, selected),
-                                m3Icon = {
-                                    NavigationIcon(
-                                        destination = destination,
-                                        selected = selected,
-                                        customIconPath = if (selected) {
-                                            selectedCustomIconPath.ifEmpty { customIconPath }
-                                        } else customIconPath,
-                                    )
-                                },
-                                m3IndicatorColor = GlassDefaults.glassColor(
-                                    noBlurColor = LegadoTheme.colorScheme.secondaryContainer,
-                                    blurAlpha = GlassDefaults.ThickBlurAlpha
-                                ),
-                                m3ShowLabel = showLabel,
-                                m3AlwaysShowLabel = alwaysShowLabel,
-                                useCustomIcon =
-                                    customIconPath.isNotEmpty() || selectedCustomIconPath.isNotEmpty(),
-                            )
+            bottomBar = if (!useRail && mainUiState.showBottomView && !useFloatingBottomBar) {
+                {
+                    if (isMochi) AppMochiNavigationBar(
+                        mochiTabs, pagerState.targetPage, onMochiTabSelect,
+                        showLabel = showLabel, alwaysShowLabel = alwaysShowLabel,
+                    ) else {
+                        AppNavigationBar(
+                            showLabel = showLabel,
+                            alwaysShowLabel = alwaysShowLabel
+                        ) {
+                            destinations.forEachIndexed { index, destination ->
+                                val selected = pagerState.targetPage == index
+                                val customIconPath = mainUiState.customIconPath(destination)
+                                val selectedCustomIconPath =
+                                    mainUiState.selectedCustomIconPath(destination)
+                                val destinationLabel = stringResource(destination.labelId)
+                                AppNavigationBarItem(
+                                    modifier = Modifier.semantics(mergeDescendants = true) {
+                                        contentDescription = destinationLabel
+                                    },
+                                    selected = selected,
+                                    onClick = {
+                                        handleMainDestinationClick(index, destination)
+                                    },
+                                    labelString = stringResource(destination.labelId),
+                                    iconVector = AppIcons.mainDestination(destination, selected),
+                                    m3Icon = {
+                                        NavigationIcon(
+                                            destination = destination,
+                                            selected = selected,
+                                            customIconPath = if (selected) {
+                                                selectedCustomIconPath.ifEmpty { customIconPath }
+                                            } else customIconPath,
+                                        )
+                                    },
+                                    m3IndicatorColor = GlassDefaults.glassColor(
+                                        noBlurColor = LegadoTheme.colorScheme.secondaryContainer,
+                                        blurAlpha = GlassDefaults.ThickBlurAlpha
+                                    ),
+                                    m3ShowLabel = showLabel,
+                                    m3AlwaysShowLabel = alwaysShowLabel,
+                                    useCustomIcon =
+                                        customIconPath.isNotEmpty() || selectedCustomIconPath.isNotEmpty(),
+                                )
+                            }
                         }
                     }
                 }
-            },
+            } else null,
             // Floating content draws to the window edge; only scrollable content's end padding
             // reserves the measured overlay (including the system inset it actually handles).
             contentWindowInsets =
@@ -532,15 +572,13 @@ fun MainScreen(
                     .consumeWindowInsets(padding)
             ) {
                 Box(
-                    modifier = Modifier.then(
-                        if (useLiquidGlass) {
-                            Modifier
-                                .hazeSource(hazeState)
-                                .layerBackdrop(floatingBarBackdrop)
-                        } else {
-                            Modifier
-                        }
-                    )
+                    modifier = Modifier.mochiBackdropSource(mochiPageBackdrop).then(
+                        when {
+                            floatingBarBackdrop != null -> Modifier.layerBackdrop(floatingBarBackdrop)
+                            miuixPageBackdrop != null -> Modifier.miuixLayerBackdrop(miuixPageBackdrop)
+                            else -> Modifier
+                        },
+                    ),
                 ) {
                     HorizontalPager(
                         state = pagerState,
@@ -688,122 +726,135 @@ fun MainScreen(
                         ),
                         label = "homePlaybackControls",
                     )
-                    FloatingNavigationContainer(
-                        modifier = Modifier.align(Alignment.BottomCenter),
-                        onHeightChanged = { floatingFooterHeight = it },
+                    CompositionLocalProvider(
+                        LocalMochiBackdrop provides mochiPageBackdrop,
+                        LocalMiuixBarBackdrop provides miuixPageBackdrop,
                     ) {
-                        val gap = ReadAloudBarCapsuleEndPadding
-                        val capsuleReserve by animateDpAsState(
-                            targetValue = if (readAloudCapsuleShown) ReadAloudBarCapsuleSize + gap else 0.dp,
-                            // 入场前立即留出空间；退场后逐步归还，避免停播时导航宽度跳变。
-                            animationSpec = if (readAloudCapsuleShown) snap() else spring(
-                                dampingRatio = 1f,
-                                stiffness = 260f
-                            ),
-                            label = "homePlaybackReserve",
-                        )
-                        val navigationAvailableWidth =
-                            (maxWidth - capsuleReserve).coerceAtLeast(0.dp)
-                        // 保留原导航项的自然宽度和居中位置，不把没有胶囊的底栏拉满。
-                        val normalNavigationWidth =
-                            (MainNavigationTabMinWidth * destinations.size + 8.dp)
-                                .coerceAtMost(navigationAvailableWidth)
-                        val navigationStartInset =
-                            (navigationAvailableWidth - normalNavigationWidth) / 2
-                        val expandedCapsuleWidth = (maxWidth - ReadAloudBarCapsuleSize - gap)
-                            .coerceAtLeast(ReadAloudBarCapsuleSize)
-                        val capsuleWidth = ReadAloudBarCapsuleSize +
-                                (expandedCapsuleWidth - ReadAloudBarCapsuleSize) * expansion
-                        val navigationWidth = normalNavigationWidth +
-                                (ReadAloudBarCapsuleSize.coerceAtMost(maxWidth) - normalNavigationWidth) * expansion
-                        FloatingBottomBar(
-                            modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .offset {
-                                    IntOffset(
-                                        x = (navigationStartInset * (1f - expansion)).roundToPx(),
-                                        y = 0,
-                                    )
-                                }
-                                .width(navigationWidth),
-                            compactProgress = expansion,
-                            expandedWidth = normalNavigationWidth,
-                            onRestoreNavigation = { playbackControlsExpanded = false },
-                            selectedIndex = { pagerState.targetPage },
-                            onSelected = { index ->
-                                destinations.getOrNull(index)?.let { destination ->
-                                    handleMainDestinationClick(index, destination)
-                                }
-                            },
-                            onReselected = { index ->
-                                destinations.getOrNull(index)?.let { destination ->
-                                    handleMainDestinationClick(index, destination)
-                                }
-                            },
-                            backdrop = floatingBarBackdrop,
-                            tabsCount = destinations.size,
-                            isBlurEnabled = useLiquidGlass,
-                            hasCustomIcons = destinations.any { dest ->
-                                mainUiState.customIconPath(dest).isNotEmpty() ||
-                                        mainUiState.selectedCustomIconPath(dest).isNotEmpty()
-                            }
+                        FloatingNavigationContainer(
+                            modifier = Modifier.align(Alignment.BottomCenter),
+                            onHeightChanged = { floatingFooterHeight = it },
                         ) {
-                            destinations.forEachIndexed { index, destination ->
-                                val selected = pagerState.targetPage == index
-                                val customIconPath = mainUiState.customIconPath(destination)
-                                val selectedCustomIconPath =
-                                    mainUiState.selectedCustomIconPath(destination)
-                                val destinationLabel = stringResource(destination.labelId)
-                                FloatingBottomBarItem(
-                                    enabled = !playbackControlsExpanded && expansion <= 0.05f,
-                                    onClick = {
+                            val gap = ReadAloudBarCapsuleEndPadding
+                            val capsuleReserve by animateDpAsState(
+                                targetValue = if (readAloudCapsuleShown) ReadAloudBarCapsuleSize + gap else 0.dp,
+                                // 入场前立即留出空间；退场后逐步归还，避免停播时导航宽度跳变。
+                                animationSpec = if (readAloudCapsuleShown) snap() else spring(
+                                    dampingRatio = 1f,
+                                    stiffness = 260f
+                                ),
+                                label = "homePlaybackReserve",
+                            )
+                            val navigationAvailableWidth =
+                                (maxWidth - capsuleReserve).coerceAtLeast(0.dp)
+                            // 保留原导航项的自然宽度和居中位置，不把没有胶囊的底栏拉满。
+                            val normalNavigationWidth =
+                                (MainNavigationTabMinWidth * destinations.size + 8.dp)
+                                    .coerceAtMost(navigationAvailableWidth)
+                            val navigationStartInset =
+                                (navigationAvailableWidth - normalNavigationWidth) / 2
+                            val expandedCapsuleWidth = (maxWidth - ReadAloudBarCapsuleSize - gap)
+                                .coerceAtLeast(ReadAloudBarCapsuleSize)
+                            val capsuleWidth = ReadAloudBarCapsuleSize +
+                                    (expandedCapsuleWidth - ReadAloudBarCapsuleSize) * expansion
+                            val navigationWidth = normalNavigationWidth +
+                                    (ReadAloudBarCapsuleSize.coerceAtMost(maxWidth) - normalNavigationWidth) * expansion
+                            if (isMochi && !playbackControlsExpanded && expansion <= 0f) {
+                                AppMochiNavigationBar(
+                                    mochiTabs, pagerState.targetPage, onMochiTabSelect,
+                                    Modifier.align(Alignment.BottomStart)
+                                        .offset(x = navigationStartInset).width(navigationWidth),
+                                    showLabel = showLabel, alwaysShowLabel = alwaysShowLabel,
+                                    floating = true, glass = useLiquidGlass,
+                                )
+                            } else FloatingBottomBar(
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .offset {
+                                        IntOffset(
+                                            x = (navigationStartInset * (1f - expansion)).roundToPx(),
+                                            y = 0,
+                                        )
+                                    }
+                                    .width(navigationWidth),
+                                compactProgress = expansion,
+                                expandedWidth = normalNavigationWidth,
+                                onRestoreNavigation = { playbackControlsExpanded = false },
+                                selectedIndex = { pagerState.targetPage },
+                                onSelected = { index ->
+                                    destinations.getOrNull(index)?.let { destination ->
                                         handleMainDestinationClick(index, destination)
-                                    },
-                                    modifier = Modifier
-                                        .defaultMinSize(
-                                            minWidth = MainNavigationTabMinWidth
-                                        )
-                                        .semantics(mergeDescendants = true) {
-                                            contentDescription = destinationLabel
-                                        }
-                                ) {
-                                    NavigationIcon(
-                                        destination = destination,
-                                        customIconPath = if (selected) {
-                                            selectedCustomIconPath.ifEmpty { customIconPath }
-                                        } else customIconPath,
-                                        selected = selected
-                                    )
-                                    if (
-                                        showLabel && (alwaysShowLabel || selected)
+                                    }
+                                },
+                                onReselected = { index ->
+                                    destinations.getOrNull(index)?.let { destination ->
+                                        handleMainDestinationClick(index, destination)
+                                    }
+                                },
+                                backdrop = floatingBarBackdrop,
+                                tabsCount = destinations.size,
+                                isBlurEnabled = useLiquidGlass,
+                                hasCustomIcons = destinations.any { dest ->
+                                    mainUiState.customIconPath(dest).isNotEmpty() ||
+                                            mainUiState.selectedCustomIconPath(dest).isNotEmpty()
+                                }
+                            ) {
+                                destinations.forEachIndexed { index, destination ->
+                                    val selected = pagerState.targetPage == index
+                                    val customIconPath = mainUiState.customIconPath(destination)
+                                    val selectedCustomIconPath =
+                                        mainUiState.selectedCustomIconPath(destination)
+                                    val destinationLabel = stringResource(destination.labelId)
+                                    FloatingBottomBarItem(
+                                        enabled = !playbackControlsExpanded && expansion <= 0.05f,
+                                        onClick = {
+                                            handleMainDestinationClick(index, destination)
+                                        },
+                                        modifier = Modifier
+                                            .defaultMinSize(
+                                                minWidth = MainNavigationTabMinWidth
+                                            )
+                                            .semantics(mergeDescendants = true) {
+                                                contentDescription = destinationLabel
+                                            }
                                     ) {
-                                        AppText(
-                                            text = stringResource(destination.labelId),
-                                            style = LegadoTheme.typography.labelSmall,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                        NavigationIcon(
+                                            destination = destination,
+                                            customIconPath = if (selected) {
+                                                selectedCustomIconPath.ifEmpty { customIconPath }
+                                            } else customIconPath,
+                                            selected = selected
                                         )
+                                        if (
+                                            showLabel && (alwaysShowLabel || selected)
+                                        ) {
+                                            AppText(
+                                                text = stringResource(destination.labelId),
+                                                style = LegadoTheme.typography.labelSmall,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
                                     }
                                 }
                             }
+                            // 打开听书播放页：与阅读器共用同一条全局请求通道。
+                            ReadAloudBarCapsuleSlot(
+                                enabled = homePlaybackCapsuleEnabled,
+                                onOpenPlayer = { ReadAloudPlayerOverlayBus.request(it) },
+                                morph = readAloudMorph,
+                                anchorPreview = capsuleAnchorPreview,
+                                // 与悬浮底栏共用同一份 backdrop，液态玻璃开关一致。
+                                backdrop = floatingBarBackdrop,
+                                isBlurEnabled = useLiquidGlass,
+                                controlsExpanded = playbackControlsExpanded,
+                                expansion = expansion,
+                                width = capsuleWidth,
+                                expandedWidth = expandedCapsuleWidth,
+                                onControlsExpandedChange = { playbackControlsExpanded = it },
+                                onOccupiedWidthChanged = { readAloudCapsuleShown = it > 0 },
+                                modifier = Modifier.align(Alignment.BottomEnd),
+                            )
                         }
-                        // 打开听书播放页：与阅读器共用同一条全局请求通道。
-                        ReadAloudBarCapsuleSlot(
-                            enabled = homePlaybackCapsuleEnabled,
-                            onOpenPlayer = { ReadAloudPlayerOverlayBus.request(it) },
-                            morph = readAloudMorph,
-                            anchorPreview = capsuleAnchorPreview,
-                            // 与悬浮底栏共用同一份 backdrop，液态玻璃开关一致。
-                            backdrop = floatingBarBackdrop,
-                            isBlurEnabled = useLiquidGlass,
-                            controlsExpanded = playbackControlsExpanded,
-                            expansion = expansion,
-                            width = capsuleWidth,
-                            expandedWidth = expandedCapsuleWidth,
-                            onControlsExpandedChange = { playbackControlsExpanded = it },
-                            onOccupiedWidthChanged = { readAloudCapsuleShown = it > 0 },
-                            modifier = Modifier.align(Alignment.BottomEnd),
-                        )
                     }
                 }
             }
@@ -919,7 +970,8 @@ private fun NavigationIcon(
     destination: MainDestination,
     selected: Boolean,
     customIconPath: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    tint: Color = Color.Unspecified,
 ) {
     if (customIconPath.isNotEmpty()) {
         AsyncImage(
@@ -929,6 +981,6 @@ private fun NavigationIcon(
         )
     } else {
         val icon = AppIcons.mainDestination(destination, selected)
-        AppIcon(icon, contentDescription = null, modifier = modifier)
+        AppIcon(icon, contentDescription = null, modifier = modifier, tint = tint)
     }
 }

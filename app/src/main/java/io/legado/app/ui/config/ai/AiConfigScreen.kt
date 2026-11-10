@@ -1,6 +1,9 @@
 package io.legado.app.ui.config.ai
 
 import androidx.compose.foundation.lazy.LazyColumn
+
+import io.legado.app.feature.settings.search.SearchableSetting
+import io.legado.app.feature.settings.search.SearchableSettingsList
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -90,7 +93,7 @@ fun AiConfigScreen(
             )
         }
     ) { paddingValues ->
-        LazyColumn(
+        SearchableSettingsList(
             contentPadding = adaptiveContentPadding(
                 top = paddingValues.calculateTopPadding(),
                 bottom = 120.dp
@@ -106,44 +109,54 @@ fun AiConfigScreen(
                             onClick = { onNavigateToProviderEdit(provider.providerId) }
                         )
                     }
-                    ClickableSettingItem(
-                        title = stringResource(R.string.ai_new_provider),
-                        onClick = { onNavigateToProviderEdit(null) }
-                    )
+                    SearchableSetting("ai.ai_new_provider") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.ai_new_provider),
+                            onClick = { onNavigateToProviderEdit(null) }
+                        )
+                    }
                 }
             }
 
             item {
                 SplicedColumnGroup(title = stringResource(R.string.ai_model_database)) {
-                    ClickableSettingItem(
-                        title = stringResource(R.string.ai_current_model),
-                        description = state.currentModelName.ifBlank { stringResource(R.string.ai_model_not_configured) },
-                        onClick = {
-                            if (state.models.none { it.text && it.enabled }) {
-                                onNavigateToProviderEdit(null)
-                            } else {
-                                showModelSheet = true
+                    SearchableSetting("ai.ai_current_model") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.ai_current_model),
+                            description = state.currentModelName.ifBlank { stringResource(R.string.ai_model_not_configured) },
+                            onClick = {
+                                if (state.models.none { it.text && it.enabled }) {
+                                    onNavigateToProviderEdit(null)
+                                } else {
+                                    showModelSheet = true
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
 
             item {
                 SplicedColumnGroup(title = stringResource(R.string.ai_tasks)) {
-                    ClickableSettingItem(
-                        title = stringResource(R.string.translation_config),
-                        onClick = onNavigateToTranslation
-                    )
-                    ClickableSettingItem(
-                        title = stringResource(R.string.ai_chapter_summary),
-                        onClick = onNavigateToAiSummary
-                    )
-                    ClickableSettingItem(
-                        title = stringResource(R.string.ai_prompt_config),
-                        description = stringResource(R.string.ai_prompt_config_desc),
-                        onClick = onNavigateToAiPrompt
-                    )
+                    SearchableSetting("ai.translation_config") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.translation_config),
+                            onClick = onNavigateToTranslation
+                        )
+                    }
+                    SearchableSetting("ai.ai_chapter_summary") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.ai_chapter_summary),
+                            onClick = onNavigateToAiSummary
+                        )
+                    }
+                    SearchableSetting("ai.ai_prompt_config") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.ai_prompt_config),
+                            description = stringResource(R.string.ai_prompt_config_desc),
+                            onClick = onNavigateToAiPrompt
+                        )
+                    }
                 }
             }
 

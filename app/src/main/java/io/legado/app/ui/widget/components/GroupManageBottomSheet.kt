@@ -80,11 +80,6 @@ fun GroupManageBottomSheet(
         }
     }
 
-    BackHandler(enabled = show && inSelectionMode) {
-        inSelectionMode = false
-        selectedGroups = emptySet()
-    }
-
     AppAlertDialog(
         show = groupToDelete != null,
         onDismissRequest = { groupToDelete = null },
@@ -178,6 +173,10 @@ fun GroupManageBottomSheet(
         startAction = startAction,
         endAction = endAction,
     ) {
+        BackHandler(enabled = show && inSelectionMode) {
+            inSelectionMode = false
+            selectedGroups = emptySet()
+        }
         LazyColumn(
             modifier = Modifier.weight(1f, fill = false),
             verticalArrangement = Arrangement.spacedBy(8.dp)

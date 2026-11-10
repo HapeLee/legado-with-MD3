@@ -228,8 +228,8 @@ object LibArchiveUtils {
         destDir ?: throw NullPointerException("解压路径不能为空")
         val files = arrayListOf<File>()
 
-
         try {
+            val destination = destDir.canonicalFile.toPath()
             var entry: Long
 
             while (Archive.readNextHeader(archive).also { entry = it } != 0L) {
@@ -237,7 +237,7 @@ object LibArchiveUtils {
                     getEntryString(ArchiveEntry.pathnameUtf8(entry), ArchiveEntry.pathname(entry))
                         ?: continue
                 val entryFile = File(destDir, entryName)
-                if (!entryFile.canonicalPath.startsWith(destDir.canonicalPath)) {
+                if (!entryFile.canonicalFile.toPath().startsWith(destination)) {
                     throw SecurityException("压缩文件只能解压到指定路径")
                 }
                 val entryStat = ArchiveEntry.stat(entry)

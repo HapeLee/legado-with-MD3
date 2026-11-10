@@ -425,6 +425,9 @@ class ReadSettingsRepository(
             paragraphBubblePackage = compatDsValue(Keys.ParagraphBubblePackage, "builtin_default"),
             forceSoftwareParagraphBubble =
                 compatDsValue(Keys.ForceSoftwareParagraphBubble, false),
+            paragraphCommentHeightPercent =
+                compatDsValue(Keys.ParagraphCommentHeightPercent, 0)
+                    .takeIf { it in ReadSettings.paragraphCommentHeightOptions } ?: 0,
             preDownloadNum = compatDsValue(Keys.PreDownloadNum, 10),
             preDownloadNumPrev = compatDsValue(Keys.PreDownloadNumPrev, 0),
             prevKeys = compatDsValue(Keys.PrevKeys, ""),
@@ -550,6 +553,8 @@ class ReadSettingsRepository(
         val ParagraphBubblePackage = stringPreferencesKey(PreferKey.paragraphBubblePackage)
         val ForceSoftwareParagraphBubble =
             booleanPreferencesKey(PreferKey.forceSoftwareParagraphBubble)
+        val ParagraphCommentHeightPercent =
+            intPreferencesKey(PreferKey.paragraphCommentHeightPercent)
         val PreDownloadNum = intPreferencesKey(PreferKey.preDownloadNum)
         val PreDownloadNumPrev = intPreferencesKey(PreferKey.preDownloadNumPrev)
         val PrevKeys = stringPreferencesKey(PreferKey.prevKeys)
@@ -686,6 +691,7 @@ internal fun ReadSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.systemTypefaces to systemTypefaces,
     PreferKey.paragraphBubblePackage to paragraphBubblePackage,
     PreferKey.forceSoftwareParagraphBubble to forceSoftwareParagraphBubble,
+    PreferKey.paragraphCommentHeightPercent to paragraphCommentHeightPercent,
     PreferKey.preDownloadNum to preDownloadNum,
     PreferKey.preDownloadNumPrev to preDownloadNumPrev,
     PreferKey.prevKeys to prevKeys,

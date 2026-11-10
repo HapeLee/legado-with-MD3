@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.getAllSemanticsNodes
 import io.legado.app.domain.model.settings.AppUiConfiguration
 import io.legado.app.domain.model.settings.ThemeSettings
 import io.legado.app.ui.theme.AppTheme
+import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.LocalLegadoThemeColors
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
@@ -45,7 +46,7 @@ class TopBarActionButtonInteractionTest {
     fun `long press consumes the click and exposes its action in every button path`() {
         verifyButton("material", "tonal", merged = false)
         verifyButton("material", "tonal", merged = true)
-        verifyButton("miuix", "plain", merged = false)
+        verifyButton("miuix", "liquid", merged = true)
     }
 
     private fun verifyButton(engine: String, style: String, merged: Boolean) {
@@ -66,7 +67,7 @@ class TopBarActionButtonInteractionTest {
                     ) {
                         CompositionLocalProvider(
                             LocalLegadoThemeColors provides
-                                LocalLegadoThemeColors.current.copy(composeEngine = engine),
+                                LocalLegadoThemeColors.current.copy(composeEngine = ThemeResolver.resolveComposeEngine(engine)),
                         ) {
                             Box(Modifier.fillMaxSize()) {
                                 TopBarActionsRow {
@@ -96,6 +97,11 @@ class TopBarActionButtonInteractionTest {
                 decor.layout(0, 0, 1080, 1920)
             }
             assertFalse("$engine/$style/$merged must be laid out", bounds.isEmpty)
+            if (engine == "miuix") {
+                val nativeSize = 40 * activity.resources.displayMetrics.density
+                assertEquals(nativeSize, bounds.width, 0.5f)
+                assertEquals(nativeSize, bounds.height, 0.5f)
+            }
             assertTrue(longClickLabels(decor).contains("Filter bookshelf"))
 
             fun press(holdMillis: Long) {

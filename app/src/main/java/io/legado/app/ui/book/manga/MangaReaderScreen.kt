@@ -199,6 +199,7 @@ fun MangaReaderScreen(
     onRecomposePage: ((String) -> Unit)? = null,
     canRecomposePage: (String) -> Boolean = { false },
     hasTranslatedPage: (String) -> Boolean = { false },
+    onReselectBookDirectory: (() -> Unit)? = null,
     footerStatus: @Composable () -> Unit = {},
 ) {
     val canMorphBack = state.inBookshelf &&
@@ -357,7 +358,7 @@ fun MangaReaderScreen(
                     else -> readerBackground
                 },
             )
-            ReaderStatusOverlay(state, onIntent)
+            ReaderStatusOverlay(state, onIntent, onReselectBookDirectory)
         }
     }
     if (state.activeSheet == MangaReaderSheet.SourceActions) {

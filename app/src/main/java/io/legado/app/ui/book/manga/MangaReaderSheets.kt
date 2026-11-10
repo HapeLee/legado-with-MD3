@@ -142,6 +142,7 @@ internal fun MangaReaderSourceActionsSheet(
         }
         Column(Modifier
             .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp)) {
             actions.chunked(4).forEach { rowActions ->
                 Row(

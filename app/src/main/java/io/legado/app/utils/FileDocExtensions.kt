@@ -13,6 +13,7 @@ import io.legado.app.exception.NoStackTraceException
 import splitties.init.appCtx
 import splitties.systemservices.downloadManager
 import java.io.File
+import java.io.FileNotFoundException
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.charset.Charset
@@ -160,11 +161,18 @@ fun treeChildren(
     context: Context,
     treeUri: Uri,
     documentId: String,
+    requireCursor: Boolean = false,
 ): List<FileDoc> {
     /**
      * DocumentFile 的 listFiles() 非常的慢,所以这里直接从数据库查询
      */
-    val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, documentId)
+    val isTree = DocumentsContract.isTreeUri(treeUri)
+    val authority = requireNotNull(treeUri.authority)
+    val childrenUri = if (isTree) {
+        DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, documentId)
+    } else {
+        DocumentsContract.buildChildDocumentsUri(authority, documentId)
+    }
     val docList = arrayListOf<FileDoc>()
     context.contentResolver.query(
         childrenUri,
@@ -186,14 +194,15 @@ fun treeChildren(
                             DocumentsContract.Document.MIME_TYPE_DIR,
                     size = cursor.getLong(sci),
                     lastModified = cursor.getLong(dci),
-                    uri = DocumentsContract.buildDocumentUriUsingTree(
-                        treeUri,
-                        cursor.getString(ici)
-                    )
+                    uri = if (isTree) {
+                        DocumentsContract.buildDocumentUriUsingTree(treeUri, cursor.getString(ici))
+                    } else {
+                        DocumentsContract.buildDocumentUri(authority, cursor.getString(ici))
+                    }
                 )
             )
         }
-    }
+    } ?: if (requireCursor) throw FileNotFoundException(childrenUri.toString()) else Unit
     return docList
 }
 
@@ -243,24 +252,34 @@ fun FileDoc.find(name: String, depth: Int = 0): FileDoc? {
  * @param depth 查找文件夹深度
  * @param maxFinds 最大查找文件夹数量
  */
-fun FileDoc.find(name: String, depth: Int = 0, maxFinds: Int = Int.MAX_VALUE): FileDoc? {
-    return find(name, depth, AtomicInteger(maxFinds))
+fun FileDoc.find(
+    name: String,
+    depth: Int = 0,
+    maxFinds: Int = Int.MAX_VALUE,
+    isDirectory: Boolean? = null,
+): FileDoc? {
+    return find(name, depth, AtomicInteger(maxFinds), isDirectory)
 }
 
-private fun FileDoc.find(name: String, depth: Int, maxFinds: AtomicInteger): FileDoc? {
+private fun FileDoc.find(
+    name: String,
+    depth: Int,
+    maxFinds: AtomicInteger,
+    isDirectory: Boolean?,
+): FileDoc? {
     if (maxFinds.getAndDecrement() <= 0) {
         return null
     }
     val list = list()
     list?.forEach {
-        if (it.name == name) {
+        if (it.name == name && (isDirectory == null || it.isDir == isDirectory)) {
             return it
         }
     }
     if (depth > 0) {
         list?.forEach {
             if (it.isDir) {
-                val fileDoc = it.find(name, depth - 1, maxFinds)
+                val fileDoc = it.find(name, depth - 1, maxFinds, isDirectory)
                 if (fileDoc != null) {
                     return fileDoc
                 }

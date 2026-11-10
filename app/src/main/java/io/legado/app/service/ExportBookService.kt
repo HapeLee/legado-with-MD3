@@ -18,6 +18,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.domain.gateway.TranslationCacheGateway
 import io.legado.app.domain.gateway.BookExportSettingsGateway
+import io.legado.app.domain.gateway.MangaExportGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.gateway.TranslationSettingsGateway
@@ -28,7 +29,9 @@ import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.MixedContentSegments
 import io.legado.app.help.book.getExportFileName
+import io.legado.app.help.book.isLocalManga
 import io.legado.app.help.book.isLocalModified
+import io.legado.app.help.book.isImage
 import io.legado.app.model.ReadBook
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.ui.main.MainActivity
@@ -114,6 +117,7 @@ class ExportBookService : BaseService(), KoinComponent {
 
     private val translationCacheRepository: TranslationCacheGateway by inject()
     private val bookExportSettingsGateway: BookExportSettingsGateway by inject()
+    private val mangaExportGateway: MangaExportGateway by inject()
     private val translationSettingsGateway: TranslationSettingsGateway by inject()
     private val otherSettingsGateway: OtherSettingsGateway by inject()
     private val readSettingsGateway: ReadSettingsGateway by inject()
@@ -229,14 +233,32 @@ class ExportBookService : BaseService(), KoinComponent {
                 val book = appDb.bookDao.getBook(bookUrl)
                 try {
                     book ?: throw NoStackTraceException("获取${bookUrl}书籍出错")
-                    refreshChapterList(book)
+                    if (!book.isImage) {
+                        if (book.isLocalManga) {
+                            throw NoStackTraceException(getString(R.string.local_manga_requires_reader))
+                        }
+                        refreshChapterList(book)
+                    }
                     notificationContentText = getString(
                         R.string.export_book_notification_content,
                         book.name,
                         waitExportBooks.size
                     )
                     upExportNotification()
-                    if (exportConfig.type == "epub") {
+                    if (book.isImage) {
+                        exportMsg[bookUrl] = getString(R.string.feature_manga_export_checking)
+                        notifyExportBookChanged(bookUrl)
+                        mangaExportGateway.export(
+                            bookUrl = bookUrl,
+                            destination = exportConfig.path,
+                            format = exportConfig.settings.mangaExportFormat,
+                            fileNameTemplate = exportConfig.settings.bookExportFileName,
+                        ) { completed, total ->
+                            exportProgress[bookUrl] = completed
+                            exportMsg[bookUrl] = getString(R.string.feature_manga_export_progress, completed, total)
+                            notifyExportBookChanged(bookUrl)
+                        }
+                    } else if (exportConfig.type == "epub") {
                         if (exportConfig.epubScope.isNullOrBlank()) {
                             exportEpub(exportConfig.path, book)
                             // Also export translation if cache exists

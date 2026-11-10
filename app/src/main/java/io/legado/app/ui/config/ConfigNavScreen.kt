@@ -8,14 +8,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.dropUnlessResumed
 import io.legado.app.R
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
+import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,7 +36,8 @@ fun ConfigNavScreen(
     onNavigateToTranslation: () -> Unit,
     onNavigateToLab: () -> Unit,
     onNavigateToPrivate: () -> Unit,
-    onNavigateToBubble: () -> Unit
+    onNavigateToBubble: () -> Unit,
+    onSearchSettings: () -> Unit,
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
 
@@ -45,6 +49,13 @@ fun ConfigNavScreen(
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     TopBarNavigationButton(onClick = onBackClick)
+                },
+                actions = {
+                    TopBarActionButton(
+                        onClick = dropUnlessResumed(block = onSearchSettings),
+                        imageVector = AppIcons.Search,
+                        contentDescription = stringResource(R.string.settings_search_title),
+                    )
                 }
             )
         }

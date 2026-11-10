@@ -87,6 +87,15 @@ object ParagraphBubbleSource {
         }
     }
 
+    fun isParagraphComment(src: String): Boolean {
+        val value = src.trim()
+        if (value.startsWith(NATIVE_PREFIX, ignoreCase = true) ||
+            value.startsWith(SCHEME_PREFIX, ignoreCase = true)
+        ) return true
+        val options = readOptions(value, value.indexOf(",{")) ?: return false
+        return hasParagraphCommentMetadata(options)
+    }
+
     private fun parseUncached(value: String): Spec? {
         if (value.startsWith(SCHEME_PREFIX, ignoreCase = true)) return parseBubbleScheme(value)
         if (value.startsWith(NATIVE_PREFIX, ignoreCase = true)) return parseNative(value)
@@ -178,20 +187,21 @@ object ParagraphBubbleSource {
         val style = options.valueIgnoreCase("style")
         val styleText = style.equals("TEXT", ignoreCase = true)
         if (!style.isNullOrBlank() && !styleText) return false
+        if (hasParagraphCommentMetadata(options)) return true
+        val head = src.substringBefore(",{").trimStart()
+        return styleText && head.startsWith("data:image/svg+xml", ignoreCase = true)
+    }
+
+    private fun hasParagraphCommentMetadata(options: Map<String, String>): Boolean {
         val type = options.valueIgnoreCase("type").orEmpty().lowercase(Locale.ROOT)
         if (type in forcedBubbleTypes) return true
         val click = listOfNotNull(
             options.valueIgnoreCase("click"),
             options.valueIgnoreCase("pclick")
         ).joinToString(separator = "\n").lowercase(Locale.ROOT)
-        if (click.contains("showcmt(") ||
+        return click.contains("showcmt(") ||
             click.contains("showcomment(") ||
             click.contains("paragraph")
-        ) {
-            return true
-        }
-        val head = src.substringBefore(",{").trimStart()
-        return styleText && head.startsWith("data:image/svg+xml", ignoreCase = true)
     }
 
     private fun firstTextOption(options: Map<String, String>): String? {

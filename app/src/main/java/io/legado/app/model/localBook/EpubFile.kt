@@ -176,6 +176,12 @@ class EpubFile(var book: Book) {
         if (book.getDelTag(tag)) {
             elements.select("rp, rt").remove()
         }
+        if (presentation && elements.size > 1) {
+            // Jsoup merges multiple body tags on reparse. Keep each XHTML's inherited styles scoped.
+            for (element in elements) {
+                if (element.normalName() == "body") element.tagName("section")
+            }
+        }
         val html = elements.outerHtml()
         return if (presentation) html else LocalBookSemanticHtml.plainText(html)
     }

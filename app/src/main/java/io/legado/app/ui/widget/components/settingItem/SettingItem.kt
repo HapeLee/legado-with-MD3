@@ -39,9 +39,12 @@ import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ComposeEngine
+import io.legado.app.ui.widget.components.LocalMochiSettingsGroup
 import io.legado.app.ui.widget.components.card.SettingCard
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.text.AppText
+import ui.feice.mochi.list.mochiListDivider
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -69,13 +72,30 @@ fun SettingItem(
 
     var showMenu by remember { mutableStateOf(false) }
     val isExpandable = expandContent != null && onExpandChange != null
+    val grouped = LocalMochiSettingsGroup.current
+    val useOptionAnchor = LegadoTheme.composeEngine == ComposeEngine.Mochi &&
+        dropdownMenu != null && trailingContent == null && option != null
+    val menu: @Composable () -> Unit = {
+        dropdownMenu?.let {
+            RoundDropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false },
+                mochiAnchorMaxWidth = 48.dp,
+                content = { dismiss -> it(dismiss) },
+            )
+        }
+    }
 
     SettingCard(
         modifier = modifier
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .then(
+                if (grouped) Modifier.mochiListDivider(if (painter != null || imageVector != null) 56.dp else 16.dp)
+                else Modifier
+            ),
         cornerRadius = cornerRadius,
         colors = CardDefaults.cardColors(
-            containerColor = color ?: MaterialTheme.colorScheme.surfaceContainerLow
+            containerColor = color ?: if (grouped) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerLow
         ),
     ) {
         Column {
@@ -132,11 +152,14 @@ fun SettingItem(
                                 )
                             }
                             option?.let {
-                                AppText(
-                                    it,
-                                    style = LegadoTheme.typography.labelMediumEmphasized,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
+                                Box {
+                                    AppText(
+                                        it,
+                                        style = LegadoTheme.typography.labelMediumEmphasized,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    if (useOptionAnchor) menu()
+                                }
                             }
                         }
                     }
@@ -157,13 +180,7 @@ fun SettingItem(
                             trailingContent?.invoke()
                         }
 
-                        dropdownMenu?.let { menu ->
-                            RoundDropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false }) {
-                                menu { showMenu = false }
-                            }
-                        }
+                        if (!useOptionAnchor) menu()
                     }
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),

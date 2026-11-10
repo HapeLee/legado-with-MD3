@@ -26,9 +26,13 @@ fun ReaderPage.remapThemeColors(change: ReaderThemeColorChange, revisionSalt: Lo
                 is ReaderElement.Text -> {
                     val oldColor = if (element.emphasized) change.oldTitleArgb else change.oldBodyArgb
                     val newColor = if (element.emphasized) change.newTitleArgb else change.newBodyArgb
+                    val bookFallback = element.style.bookColorFallbackArgb
                     element.copy(
                         style = element.style.copy(
-                            colorArgb = element.style.colorArgb.mapped(oldColor, newColor),
+                            colorArgb = if (bookFallback == null) {
+                                element.style.colorArgb.mapped(oldColor, newColor)
+                            } else element.style.colorArgb,
+                            bookColorFallbackArgb = bookFallback?.mapped(oldColor, newColor),
                             underline = element.style.underline?.copy(
                                 colorArgb = element.style.underline.colorArgb.mapped(oldColor, newColor),
                             ),

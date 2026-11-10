@@ -11,8 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
-import io.legado.app.ui.theme.ThemeResolver
 import androidx.compose.material3.Slider as M3Slider
 import top.yukonga.miuix.kmp.basic.Slider as MiuixSlider
 
@@ -49,26 +49,29 @@ fun AppVerticalSlider(
             .height(height),
         contentAlignment = Alignment.Center,
     ) {
-        if (ThemeResolver.isMiuixEngine(composeEngine)) {
-            MiuixSlider(
-                value = value,
-                onValueChange = onValueChange,
-                modifier = sliderModifier,
-                enabled = enabled,
-                valueRange = valueRange,
-                steps = steps,
-                onValueChangeFinished = onValueChangeFinished,
-            )
-        } else {
-            M3Slider(
-                value = value,
-                onValueChange = onValueChange,
-                modifier = sliderModifier,
-                enabled = enabled,
-                valueRange = valueRange,
-                steps = steps,
-                onValueChangeFinished = onValueChangeFinished,
-            )
+        when (composeEngine) {
+            ComposeEngine.Miuix -> {
+                MiuixSlider(
+                    value = value,
+                    onValueChange = onValueChange,
+                    modifier = sliderModifier,
+                    enabled = enabled,
+                    valueRange = valueRange,
+                    steps = steps,
+                    onValueChangeFinished = onValueChangeFinished,
+                )
+            }
+            ComposeEngine.Material, ComposeEngine.Mochi -> {
+                M3Slider(
+                    value = value,
+                    onValueChange = onValueChange,
+                    modifier = sliderModifier,
+                    enabled = enabled,
+                    valueRange = valueRange,
+                    steps = steps,
+                    onValueChangeFinished = onValueChangeFinished,
+                )
+            }
         }
     }
 }

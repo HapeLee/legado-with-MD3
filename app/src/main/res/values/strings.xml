@@ -35,6 +35,17 @@
     <string name="manual_contrast_value_label">Manual value [-1, 1]</string>
     <string name="manual_contrast_invalid">Enter a valid number between -1 and 1</string>
     <string name="predictive_back">Predictive Back Gestures</string>
+    <string name="navigation_animation">Navigation Animation</string>
+    <string name="navigation_animation_scale">Scale</string>
+    <string name="text_animation_level">Text animation level</string>
+    <string name="text_animation_slide">Slide (default)</string>
+    <string name="text_animation_subtle">Subtle</string>
+    <string name="text_animation_standard">Standard</string>
+    <string name="text_animation_strong">Pronounced</string>
+    <string name="text_animation_preview">Text animation preview</string>
+    <string name="text_animation_preview_summary">Tap to change the sample text</string>
+    <string name="text_animation_example_reading">Reading</string>
+    <string name="text_animation_example_finished">Finished</string>
     <string name="reader_shared_element">Reader shared element transition</string>
     <string name="reader_shared_element_summary">Expand the cover when opening the reader. Use a fade transition when disabled.</string>
     <string name="predictive_back_summary">Enable system predictive back gestures</string>
@@ -749,6 +760,8 @@
     <string name="black">Black</string>
     <string name="content_empty">No content</string>
     <string name="on_change_source">Changing source, wait please</string>
+    <string name="local_manga_requires_reader">Open local comics in the manga reader.</string>
+    <string name="local_manga_directory_unavailable">Cannot access this local comic. Reselect its folder to grant access.</string>
     <string name="chapter_list_empty">Chapters is empty</string>
     <string name="text_letter_spacing">Word spacing</string>
 
@@ -1988,6 +2001,8 @@
     <string name="show_bottom_nav">Show Navigation Bar</string>
     <string name="floating_bottom_bar">Floating Bottom Bar</string>
     <string name="floating_bottom_bar_summary">Use a detached capsule style for the bottom navigation bar</string>
+    <string name="top_bar_button_liquid_glass">Liquid Glass Top Bar Buttons</string>
+    <string name="top_bar_button_liquid_glass_summary">Enable backdrop blur and refraction on top bar buttons. Requires Android 13 or later.</string>
     <string name="floating_bottom_bar_liquid_glass">Liquid Glass Effect</string>
     <string name="floating_bottom_bar_liquid_glass_summary">Enable the liquid glass highlight for the floating bar. Requires blur and Android 13+</string>
     <string name="nav_label_mode">Navigation Bar Label Mode</string>
@@ -2294,6 +2309,7 @@
     <string name="ai_text_clean_rule_group">AI Clean</string>
     <string name="ai_text_clean_rule_created">AI content edit saved.</string>
     <string name="ai_text_rewrite">AI Rewrite</string>
+    <string name="extend_selection_to_next_page">Extend selection to next page</string>
     <string name="ai_text_rewrite_saved">AI rewrite saved.</string>
     <string name="ai_generate">Generate</string>
     <string name="ai_rewrite_requirements">Requirement</string>
@@ -3874,6 +3890,8 @@
     <string name="read_aloud_audio_download_chapter_bar">Chapters</string>
     <string name="read_aloud_audio_download_chapter_hint">This chapter is downloaded (%1$d sentences); reading aloud plays the local audio</string>
     <string name="read_aloud_audio_download_chapter_none">This chapter is not downloaded yet</string>
+    <string name="read_aloud_audio_download_partial">%1$d/%2$d sentences downloaded</string>
+    <string name="read_aloud_audio_download_unverified">%1$d sentences saved. Run the download again to verify the chapter.</string>
     <string name="read_aloud_audio_download_sentence_bar">Sentences</string>
     <string name="read_aloud_audio_download_downloaded">Downloaded chapters</string>
     <string name="read_aloud_audio_download_empty">Nothing downloaded yet</string>
@@ -3883,6 +3901,8 @@
     <string name="read_aloud_audio_download_deleted_chapters">Deleted downloaded audio of %1$d chapters</string>
     <string name="read_aloud_audio_download_invalid_range">Check the chapter range</string>
     <string name="read_aloud_audio_download_state">Audiobook downloaded</string>
+    <string name="read_aloud_audio_download_partial_state">Audiobook partially downloaded</string>
+    <string name="read_aloud_audio_download_unverified_state">Audiobook audio saved. Chapter completeness unverified</string>
     <string name="read_aloud_audio_download_section_range">Range</string>
     <string name="read_aloud_audio_download_range_count">%1$d chapters</string>
     <string name="read_aloud_audio_download_section_progress">Progress</string>
@@ -3949,6 +3969,9 @@
 
     <string name="bubble_config">Paragraph bubbles</string>
     <string name="bubble_config_entry_summary">Bubble styles used by paragraph comments</string>
+    <string name="paragraph_comment_height">Paragraph comment popup height</string>
+    <string name="paragraph_comment_height_follow_source">Follow book source</string>
+    <string name="paragraph_comment_height_percent">%1$d%%</string>
     <string name="bubble_config_summary">Paragraph bubbles turn the comment counters in a book source into native SVG bubbles. Tap a style to apply it.</string>
     <string name="bubble_force_software">Always draw software bubbles</string>
     <string name="bubble_force_software_desc">Detect comment entries that a book source draws as images and render them with the current bubble style</string>

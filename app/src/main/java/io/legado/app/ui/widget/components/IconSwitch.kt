@@ -14,8 +14,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
+import io.legado.app.ui.widget.components.mochi.AppMochiSwitch
+import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.ThemeResolver
 import top.yukonga.miuix.kmp.basic.Switch as MiuixSwitch
 
 @Composable
@@ -30,30 +31,36 @@ fun AdaptiveSwitch(
     includeStateSemantics: Boolean = true
 ) {
     val composeEngine = LegadoTheme.composeEngine
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        MiuixSwitch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            modifier = if (includeStateSemantics) {
-                modifier.semantics {
-                    toggleableState = if (checked) ToggleableState.On else ToggleableState.Off
-                }
-            } else {
-                modifier
-            },
-            enabled = enabled
-        )
-    } else {
-        IconSwitch(
-            modifier = modifier,
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            enabled = enabled,
-            checkedIcon = checkedIcon,
-            uncheckedIcon = uncheckedIcon,
-            showIcon = showIcon,
-            includeStateSemantics = includeStateSemantics
-        )
+    when (composeEngine) {
+        ComposeEngine.Miuix -> {
+            MiuixSwitch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                modifier = if (includeStateSemantics) {
+                    modifier.semantics {
+                        toggleableState = if (checked) ToggleableState.On else ToggleableState.Off
+                    }
+                } else {
+                    modifier
+                },
+                enabled = enabled
+            )
+        }
+        ComposeEngine.Mochi -> {
+            AppMochiSwitch(checked, onCheckedChange, modifier, enabled, includeStateSemantics)
+        }
+        ComposeEngine.Material -> {
+            IconSwitch(
+                modifier = modifier,
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                enabled = enabled,
+                checkedIcon = checkedIcon,
+                uncheckedIcon = uncheckedIcon,
+                showIcon = showIcon,
+                includeStateSemantics = includeStateSemantics
+            )
+        }
     }
 }
 
@@ -69,32 +76,38 @@ fun TinySwitch(
     includeStateSemantics: Boolean = true
 ) {
     val composeEngine = LegadoTheme.composeEngine
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        MiuixSwitch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            modifier = if (includeStateSemantics) {
-                modifier
-                    .scale(0.9f)
-                    .semantics {
-                        toggleableState = if (checked) ToggleableState.On else ToggleableState.Off
-                    }
-            } else {
-                modifier.scale(0.9f)
-            },
-            enabled = enabled
-        )
-    } else {
-        IconSwitch(
-            modifier = modifier.scale(0.72f),
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            enabled = enabled,
-            checkedIcon = checkedIcon,
-            uncheckedIcon = uncheckedIcon,
-            showIcon = showIcon,
-            includeStateSemantics = includeStateSemantics
-        )
+    when (composeEngine) {
+        ComposeEngine.Miuix -> {
+            MiuixSwitch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                modifier = if (includeStateSemantics) {
+                    modifier
+                        .scale(0.9f)
+                        .semantics {
+                            toggleableState = if (checked) ToggleableState.On else ToggleableState.Off
+                        }
+                } else {
+                    modifier.scale(0.9f)
+                },
+                enabled = enabled
+            )
+        }
+        ComposeEngine.Mochi -> {
+            AppMochiSwitch(checked, onCheckedChange, modifier, enabled, includeStateSemantics)
+        }
+        ComposeEngine.Material -> {
+            IconSwitch(
+                modifier = modifier.scale(0.72f),
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                enabled = enabled,
+                checkedIcon = checkedIcon,
+                uncheckedIcon = uncheckedIcon,
+                showIcon = showIcon,
+                includeStateSemantics = includeStateSemantics
+            )
+        }
     }
 }
 

@@ -34,6 +34,17 @@
     <string name="manual_contrast_value_label">手动值 [-1, 1]</string>
     <string name="manual_contrast_invalid">请输入 -1 到 1 之间的有效数字</string>
     <string name="predictive_back">预见性返回手势</string>
+    <string name="navigation_animation">导航动画</string>
+    <string name="navigation_animation_scale">缩放</string>
+    <string name="text_animation_level">文字动画等级</string>
+    <string name="text_animation_slide">滑动（默认）</string>
+    <string name="text_animation_subtle">轻柔</string>
+    <string name="text_animation_standard">标准</string>
+    <string name="text_animation_strong">明显</string>
+    <string name="text_animation_preview">文字动画示例</string>
+    <string name="text_animation_preview_summary">点按切换示例文字</string>
+    <string name="text_animation_example_reading">正在阅读</string>
+    <string name="text_animation_example_finished">已读完</string>
     <string name="reader_shared_element">阅读界面共享元素动画</string>
     <string name="reader_shared_element_summary">进入阅读界面时从封面展开，关闭后使用渐变过渡</string>
     <string name="predictive_back_summary">启用系统预见性返回手势</string>
@@ -719,6 +730,8 @@
     <string name="black">黑色</string>
     <string name="content_empty">文章内容为空</string>
     <string name="on_change_source">正在换源请等待…</string>
+    <string name="local_manga_requires_reader">请使用漫画阅读器打开本地漫画。</string>
+    <string name="local_manga_directory_unavailable">无法访问本地漫画，请重新选择漫画所在文件夹以授予读取权限。</string>
     <string name="chapter_list_empty">目录列表为空</string>
     <string name="text_letter_spacing">字距</string>
 
@@ -1933,6 +1946,8 @@
     <string name="show_bottom_nav">显示导航栏</string>
     <string name="floating_bottom_bar">悬浮底栏</string>
     <string name="floating_bottom_bar_summary">底部导航栏使用悬浮胶囊样式</string>
+    <string name="top_bar_button_liquid_glass">顶栏按钮液态玻璃</string>
+    <string name="top_bar_button_liquid_glass_summary">为顶栏按钮启用背景模糊和折射，需要 Android 13 或更高版本</string>
     <string name="floating_bottom_bar_liquid_glass">液态玻璃效果</string>
     <string name="floating_bottom_bar_liquid_glass_summary">为悬浮底栏启用液态玻璃高光效果，需要 Android 13 及以上系统</string>
     <string name="nav_label_mode">导航栏标签显示方式</string>
@@ -2350,6 +2365,7 @@
     <string name="ai_text_clean_rule_group">AI 净化</string>
     <string name="ai_text_clean_rule_created">已保存 AI 正文处理。</string>
     <string name="ai_text_rewrite">AI 改写</string>
+    <string name="extend_selection_to_next_page">向后扩展一页</string>
     <string name="ai_text_rewrite_saved">已保存 AI 改写。</string>
     <string name="ai_generate">生成</string>
     <string name="ai_rewrite_requirements">改写要求</string>
@@ -3870,6 +3886,8 @@
     <string name="read_aloud_audio_download_chapter_bar">章节进度</string>
     <string name="read_aloud_audio_download_chapter_hint">本章已下载 %1$d 句，点朗读直接播本地音频</string>
     <string name="read_aloud_audio_download_chapter_none">本章还没有下载</string>
+    <string name="read_aloud_audio_download_partial">已下载 %1$d/%2$d 句</string>
+    <string name="read_aloud_audio_download_unverified">已保存 %1$d 句，再次下载可核对整章</string>
     <string name="read_aloud_audio_download_sentence_bar">句子进度</string>
     <string name="read_aloud_audio_download_downloaded">已下载章节</string>
     <string name="read_aloud_audio_download_empty">还没有下载过章节</string>
@@ -3879,10 +3897,12 @@
     <string name="read_aloud_audio_download_deleted_chapters">已删除 %1$d 章的听书音频</string>
     <string name="read_aloud_audio_download_invalid_range">章范围填得不对</string>
     <string name="read_aloud_audio_download_state">已下载听书音频</string>
+    <string name="read_aloud_audio_download_partial_state">听书音频已部分下载</string>
+    <string name="read_aloud_audio_download_unverified_state">已保存听书音频，整章完整性未核验</string>
     <string name="read_aloud_audio_download_section_range">下载范围</string>
     <string name="read_aloud_audio_download_range_count">共 %1$d 章</string>
     <string name="read_aloud_audio_download_section_progress">下载进度</string>
-    <string name="read_aloud_audio_download_downloaded_count">已下载 %1$d 章 · %2$d 句</string>
+    <string name="read_aloud_audio_download_downloaded_count">音频记录 %1$d 章 · %2$d 句</string>
     <string name="read_aloud_audio_download_cancel_hint">已取消，正在合成的这句完成后停止</string>
     <string name="read_aloud_audio_download_failed_count">%1$d 句合成失败，未下载</string>
     <string name="cast_assignment_state">本章已分配角色</string>
@@ -3946,6 +3966,9 @@
 
     <string name="bubble_config">段评气泡</string>
     <string name="bubble_config_entry_summary">段评入口使用的气泡样式</string>
+    <string name="paragraph_comment_height">段评弹窗高度</string>
+    <string name="paragraph_comment_height_follow_source">跟随书源</string>
+    <string name="paragraph_comment_height_percent">%1$d%%</string>
     <string name="bubble_config_summary">段评气泡把书源里的段评数字转成原生 SVG 气泡。点一下某个样式即可应用。</string>
     <string name="bubble_force_software">强制使用软件气泡</string>
     <string name="bubble_force_software_desc">识别正文图片形式的段评入口，并使用当前气泡样式渲染</string>
