@@ -58,6 +58,7 @@ object LegacyReaderPaginationStyleFactory : KoinComponent {
         val bodyPaint = ReaderAndroidPaintFactory.createTextPaint(bodyStyle).apply { this.letterSpacing = letterSpacing }
         val titlePaint = ReaderAndroidPaintFactory.createTextPaint(titleStyle).apply { this.letterSpacing = letterSpacing }
         return ReaderAndroidPaginationStyle(
+            density = appCtx.resources.displayMetrics.density,
             columnMode = ReaderColumnMode.fromPreference(settings.doubleHorizontalPage),
             isTablet = appCtx.isPad,
             isScroll = ReadBook.pageAnim() == 3,

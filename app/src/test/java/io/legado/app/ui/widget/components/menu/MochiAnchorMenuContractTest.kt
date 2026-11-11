@@ -55,11 +55,13 @@ class MochiAnchorMenuContractTest {
             compat.contains("startsWith('mochi-compose-')"),
         )
         val settings = projectFileOf("settings.gradle")
-        assertTrue("本地联调需要 mavenLocal", settings.contains("mavenLocal"))
+        assertTrue("fork 依赖必须使用项目专用 Maven 仓库", settings.contains("build/ui-forks/maven"))
         assertTrue(
-            "mavenLocal 应只对 mochi group 生效，避免影响正式依赖",
-            settings.contains("includeGroupByRegex"),
+            "Mochi 必须独占路由到固定 fork，避免回落上游或命中开发机旧包",
+            settings.contains("exclusiveContent") &&
+                settings.contains("includeModule('io.github.feice11', 'mochi-compose')"),
         )
+        assertFalse("固定 fork 不应再读取开发机 Maven Local", settings.contains("mavenLocal {"))
     }
 
     private fun sourceOf(path: String) = projectFileOf("app/src/main/java/$path")

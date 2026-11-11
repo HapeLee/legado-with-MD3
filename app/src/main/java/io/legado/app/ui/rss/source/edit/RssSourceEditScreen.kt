@@ -73,7 +73,8 @@ import kotlinx.collections.immutable.toImmutableList
         tabs.map { stringResource(it.title) },
         state.selectedTab.ordinal,
         { p -> onIntent(RssSourceEditIntent.SelectTab(tabs[p])) },
-        Modifier.fillMaxWidth()
+        Modifier.fillMaxWidth(),
+        horizontalPadding = 12.dp,
     )
     }
     },

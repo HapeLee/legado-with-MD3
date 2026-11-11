@@ -47,6 +47,7 @@ internal fun AppCouiTabRow(
     onTabSelected: (Int) -> Unit,
     modifier: Modifier,
     scrollable: Boolean,
+    contentPadding: PaddingValues = PaddingValues(vertical = 8.dp),
 ) {
     if (titles.isEmpty()) return
     val selectedIndex = selectedTabIndex.coerceIn(titles.indices)
@@ -68,7 +69,7 @@ internal fun AppCouiTabRow(
         LazyRow(
             modifier = rowModifier,
             state = listState,
-            contentPadding = PaddingValues(vertical = 8.dp),
+            contentPadding = contentPadding,
             horizontalArrangement = spacing,
         ) {
             items(titles.size) { index ->
@@ -76,7 +77,7 @@ internal fun AppCouiTabRow(
             }
         }
     } else {
-        Row(rowModifier.padding(vertical = 8.dp), horizontalArrangement = spacing) {
+        Row(rowModifier.padding(contentPadding), horizontalArrangement = spacing) {
             titles.forEachIndexed { index, title ->
                 AppCouiTab(title, selectedIndex == index, { onTabSelected(index) }, backdrop, Modifier.weight(1f))
             }

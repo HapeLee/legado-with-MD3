@@ -1456,17 +1456,6 @@
     <issue
         id="LocalContextGetResourceValueCall"
         message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes"
-        errorLine1="                                if (success) context.getString(R.string.save_success)"
-        errorLine2="                                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/io/legado/app/ui/book/read/sheet/PhotoSheet.kt"
-            line="92"
-            column="46"/>
-    </issue>
-
-    <issue
-        id="LocalContextGetResourceValueCall"
-        message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes"
         errorLine1="                    snackbarHostState.showSnackbar(context.getString(effect.messageRes))"
         errorLine2="                                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
         <location
@@ -1495,17 +1484,6 @@
             file="src/main/java/io/legado/app/ui/replace/ReplaceRuleScreen.kt"
             line="391"
             column="56"/>
-    </issue>
-
-    <issue
-        id="LocalContextGetResourceValueCall"
-        message="Querying resource values using LocalContext.current is not configuration-aware and may return stale values if the Configuration changes"
-        errorLine1="                            context.getString(R.string.font_scale_summary, it / 10f)"
-        errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/io/legado/app/ui/config/themeConfig/ThemeConfigScreen.kt"
-            line="294"
-            column="29"/>
     </issue>
 
     <issue

@@ -70,7 +70,7 @@ data class PageEstimateConfig(
 
     private companion object {
         // 富文本范围、结构块与正文对齐改变测量结果，旧精确页数及校准桶均不可复用。
-        const val TEXT_ENGINE_VERSION = 16
+        const val TEXT_ENGINE_VERSION = 17
     }
 }
 

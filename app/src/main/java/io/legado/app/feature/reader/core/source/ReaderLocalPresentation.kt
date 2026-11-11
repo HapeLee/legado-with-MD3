@@ -15,8 +15,10 @@ data class ReaderLocalPresentation(
     val rules: List<Int>,
     val anchors: Map<String, Int>,
     val chapterStartAnchors: Set<String> = emptySet(),
+    val images: List<Image> = emptyList(),
 ) {
     data class Span(val start: Int, val endExclusive: Int, val style: ReaderInlineSourceStyle)
+    data class Image(val start: Int, val endExclusive: Int, val presentation: ReaderLocalImagePresentation)
     /** Geometry uses the parser's neutral 10px font and is scaled only while measuring. */
     data class Paragraph(
         val start: Int,
@@ -74,7 +76,14 @@ data class ReaderLocalPresentation(
         val mappedAnchors = anchors.mapNotNull { (id, position) ->
             (if (id in chapterStartAnchors) 0 else projection.boundary(position, keepDeletedAnchors))?.takeIf { ReaderSemanticLocation.isValidOffset(text, it) }?.let { id to it }
         }.toMap()
-        return copy(content = text, spans = merged, paragraphs = mappedParagraphs,
+        val mappedImages = images.flatMap { image ->
+            projection.ranges(image.start, image.endExclusive, styling = true).mapNotNull { range ->
+                val value = text.substring(range.first, range.last + 1)
+                if (value == "\uFFFC" || value.startsWith("<img", ignoreCase = true) && value.endsWith(">"))
+                    image.copy(start = range.first, endExclusive = range.last + 1) else null
+            }
+        }
+        return copy(content = text, spans = merged, paragraphs = mappedParagraphs, images = mappedImages,
             rules = rules.mapNotNull { projection.boundary(it, keepDeleted = true) }, anchors = mappedAnchors)
     }
 
@@ -110,7 +119,11 @@ data class ReaderLocalPresentation(
                     originalHint.copy(decorations = originalHint.decorations.filterNot { it.kind == ReaderParagraphDecorationKind.BULLET })
                 } else originalHint
                 val items = block.items.flatMap { item ->
-                    if (item !is ReaderChapterInlineSource.Text) return@flatMap if (item.chapterPosition in from until until) listOf(item) else emptyList()
+                    if (item !is ReaderChapterInlineSource.Text) return@flatMap if (item.chapterPosition in from until until) {
+                        if (item is ReaderChapterInlineSource.Image) listOf(item.copy(presentation = images.singleOrNull {
+                            it.start == item.chapterPosition && it.endExclusive == item.chapterPosition + 1
+                        }?.presentation)) else listOf(item)
+                    } else emptyList()
                     val start = maxOf(from, item.chapterPosition)
                     val stop = minOf(until, item.chapterPosition + item.value.length)
                     if (start >= stop) return@flatMap emptyList()

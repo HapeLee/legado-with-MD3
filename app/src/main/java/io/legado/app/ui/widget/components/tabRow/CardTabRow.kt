@@ -1,6 +1,5 @@
 package io.legado.app.ui.widget.components.tabRow
 
-import android.os.Build
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
@@ -44,15 +43,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.LayoutDirection
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.LocalMiuixBarBackdrop
 import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.theme.isMiuixHyperOs4Enabled
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.collections.immutable.toImmutableList
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.glass.GlassSegmentedTabRow
-import top.yukonga.miuix.kmp.glass.GlassTabRow
-import top.yukonga.miuix.kmp.glass.GlassTabRowDefaults
 import ui.feice.mochi.basic.MochiSegmentedControl
 import ui.feice.mochi.effect.elastic.mochiPressDeform
 
@@ -74,31 +72,20 @@ fun CardTabRow(
     }
 
     val simpleTabs = !scrollable && onTabLongClick == null && tabEndContent == null
-    if (simpleTabs && LegadoTheme.composeEngine == ComposeEngine.Miuix &&
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-        LocalAppUiConfiguration.current.theme.useHyperOs4Components &&
+    if (simpleTabs && isMiuixHyperOs4Enabled() &&
         tabTitles.distinct().size == tabTitles.size
     ) {
         val backdrop = LocalMiuixBarBackdrop.current
-        if (backdrop != null) {
-            GlassSegmentedTabRow(
-                tabs = tabTitles,
-                selectedIndex = selectedTabIndex,
-                onSelect = onTabSelected,
-                backdrop = backdrop,
-                modifier = modifier.fillMaxWidth(),
-            )
-        } else {
-            GlassTabRow(
-                tabs = tabTitles,
-                selectedIndex = selectedTabIndex,
-                onSelect = onTabSelected,
-                backdrop = null,
-                modifier = modifier.fillMaxWidth(),
-                height = GlassTabRowDefaults.NeutralHeight,
-                colors = GlassTabRowDefaults.neutralColors(),
-            )
-        }
+        GlassSegmentedTabRow(
+            tabs = tabTitles,
+            selectedIndex = selectedTabIndex,
+            onSelect = onTabSelected,
+            // The library requires a backdrop even for its static resting track. Without a
+            // host recording, surfaceAlpha = 0 disables sampling, glass effects and shadow.
+            backdrop = backdrop ?: rememberLayerBackdrop(),
+            surfaceAlpha = if (backdrop != null) 1f else 0f,
+            modifier = modifier.fillMaxWidth(),
+        )
         return
     }
 

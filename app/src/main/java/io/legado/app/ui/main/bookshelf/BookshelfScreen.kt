@@ -764,7 +764,7 @@ fun BookshelfScreen(
                                 scope.launch { pagerState.animateScrollToPage(index) }
                             },
                             horizontalPadding = 12.dp,
-                            leadingAction = if (uiState.settings.shouldShowExpandButton) {
+                            trailingAction = if (uiState.settings.shouldShowExpandButton) {
                                 {
                                     AppTabRowIconButton(
                                         checked = showGroupMenu,
