@@ -308,3 +308,68 @@ COUI / Mochi 的库级 `Indication` 还不存在（现在只有 Modifier 扩展�
 
 **未验证**：真机上 COUI 引擎下首页分组筛选弹层的实际位置。契约只保证 modifier 到位，
 `CouiMenuAnchor.getPositionInWindow()` 的运行时行为仍归 §5.1 真机回归。
+
+## 11. 多选悬浮栏「更多」菜单原生化（2026-11-12 第五轮续作）
+
+用户真机反馈：发现 / 订阅项目长按菜单、书源管理等悬浮栏的菜单还不是原生。
+查清后**拆成两刀**，本轮只做第一刀。
+
+### 本刀范围：`SelectionBottomBar`
+
+- 老形态：`SelectionBottomBar.kt` 两个分支（Miuix / Material+Mochi+COUI）各有一处
+  `Box { IconButton; RoundDropdownMenu { 自绘行 } }`；Miuix 下即使命中玻璃也是
+  `GlassDropdownPopup` + 自绘行、**没有 morph**，而同页顶栏与书源行内菜单早已是
+  `AppActionMenu`，观感不一致。「悬浮栏」指 `SelectionBottomBar`，不是 `FloatingBottomBar`
+  （后者是底部导航 tab 栏，内部没有下拉菜单）。
+- 该菜单是**点击触发**，落在 `AppActionMenu` 已有能力内，不需要新入口能力。新增私有
+  `SelectionMoreMenu`：把 `List<ActionItem>` 按 index 映射成稳定 ID 的 `AppActionGroup`，
+  `onAction` 回查 `secondaryActions[index].onClick`，**调用方零改动**（复用
+  `ListScaffold` / `RuleListScaffold` 的十几个页面都不动）。
+- `anchor = AppMenuAnchor.Row` 是刻意的：Miuix 的玻璃 morph 只有 `MiuixRowActions` 走
+  `isMiuixGlassMenuAvailable()` + `MiuixGlassMenuHost` 才拿得到；Icon 锚点的玻璃门禁
+  依赖 `LocalMiuixGlassTopBar`，底栏处默认 false。
+- 栏上所有非主按钮（全选 / 反选 / 前导动作 / 更多）两分支共 7 处统一为
+  `MediumPlainButton`（40dp，`IconButtonDefaults.extraSmallRoundShape`）；菜单 trigger
+  用 `onClick = null` 的纯展示形态并透传 `this.modifier` 保留 COUI 锚点，
+  `triggerShape` 取同一形状，避免波纹按 `CircleShape` 裁、和按钮轮廓对不上。
+  菜单项刻意不带 icon：旧 `RoundDropdownMenuItem` 只用了 text，`ActionItem.icon`
+  默认是 `ExpandMore` 占位符。
+- 契约 `SelectionBottomBarMenuContractTest`（4 用例）：两分支都走原生入口、不再手画
+  `RoundDropdownMenu` / 自持 `showMenu`、`ActionItem` API 保持稳定、trigger 纯展示且
+  透传 modifier、非主按钮全部是 medium 档位。
+- 全仓 `RoundDropdownMenu(` 调用点 main 38 → 36，业务点 34 → 32。`native-menu-engines-plan.md`
+  的沿革数字是过程性快照，保留不回改。
+
+### 已知边界
+
+- **Material 引擎下外观基本不变**：`AppActionMenu.LegacyActions` 本就复用
+  `RoundDropdownMenu` + `RoundDropdownMenuItem`（自绘行），M3 分支的「原生」是统一入口
+  与声明式条目，不是换成别的面板。Miuix / Mochi / COUI 才有明显观感变化。
+- **按钮尺寸已统一**：Miuix 原非主按钮本就是 40dp（纯圆），换 medium 后形状变成
+  `extraSmallRoundShape`；M3 原 48dp → 40dp，工具栏会略矮。主操作仍是 64dp
+  `FilledIconButton` / `MiuixIconButton`，未动。
+- **玻璃 morph 起点仍有偏差**：`AppActionMenu.MiuixRowActions` 写死
+  `glassPopupAnchor(anchor, cornerRadius = 16.dp)`，注释说明是按 32dp 圆按钮
+  （`SmallPlainButton`）设计的；medium 是 40dp + `extraSmallRoundShape`，起点圆角不再同源。
+  该常量被所有 Row 锚点共用，本轮未为这一处开参数；若真机上 morph 起点明显不贴合，
+  再给 `AppActionMenu` 加 morph 半径参数（带默认值，其它调用点零改动）。
+- **COUI 下栏体本身不是原生**：Material/Mochi/COUI 分支用 M3
+  `HorizontalFloatingToolbar`，本刀只改菜单、不动栏体。
+- 未验证：真机上四引擎的弹层定位、morph 起点圆角、TalkBack 是否把「更多」读成单个
+  可点节点。
+
+### 第二刀：长按菜单（本轮未做，属入口能力扩展）
+
+`ExploreScreen.kt:452`、`RssScreen.kt:345` 是 `combinedClickable(onLongClick)` + 外部
+`Boolean` + 独立 `RoundDropdownMenu`，不是「调用方没迁」：
+
+- `AppActionMenu` 各分支自持 `expanded`，只暴露 trigger 内的 `open()`，且 Miuix 分支
+  该调用是 no-op；`embeddedExpanded` 只存在于单选的 `AppChoiceDropdown`。
+- `AppMenuAnchor` 只有 Row / Icon，都要求 trigger 是可点节点；长按需要触点坐标或项目
+  bounds。仓库唯一「外部置位 + 自由 bounds」链路是 `GlassMenuAnchor(Rect)` +
+  `AppAnchoredPanel`，承载的是自绘面板，不是四引擎原生菜单。
+- COUI 的触点由被点击的锚点节点采样，全仓无 `clickPosition` 注入先例。
+
+要迁需先给 `AppActionMenu` 补受控开合 + bounds 锚点，不宜与本刀混做。另有两处长按
+菜单不在任何「刻意保留」清单：`BookInfoScreen.kt:1368`（书名长按）、
+`MainScreen.kt:1020`（导航 Rail 长按），入口补齐后可一起迁。
