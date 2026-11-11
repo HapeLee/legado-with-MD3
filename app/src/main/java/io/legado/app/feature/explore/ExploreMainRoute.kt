@@ -160,7 +160,7 @@ fun ExploreMainRoute(
                                             scope.launch { pagerState.animateScrollToPage(index) }
                                         },
                                         horizontalPadding = 12.dp,
-                                        leadingAction = {
+                                        trailingAction = {
                                             AppTabRowIconButton(
                                                 onClick = { kindSheetVisible = true },
                                                 icon = Icons.AutoMirrored.Outlined.FormatListBulleted,

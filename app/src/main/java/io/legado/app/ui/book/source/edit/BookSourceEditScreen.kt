@@ -118,6 +118,7 @@ fun BookSourceEditScreen(
                         onIntent(BookSourceEditIntent.SelectTab(tabs[page]))
                     },
                     modifier = Modifier.fillMaxWidth(),
+                    horizontalPadding = 12.dp,
                 )
             }
         },

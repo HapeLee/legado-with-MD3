@@ -14,7 +14,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 
 /**
@@ -23,8 +25,8 @@ import androidx.compose.ui.unit.dp
  * The alphas are passed as [State] and read inside the draw cache block, so a running
  * fade animation invalidates the gradient without recomposing the caller.
  *
- * @param leftAlpha  0f = fully faded, 1f = fully visible
- * @param rightAlpha 0f = fully faded, 1f = fully visible
+ * @param leftAlpha Fade strength: 0f = fully visible, 1f = fully faded
+ * @param rightAlpha Fade strength: 0f = fully visible, 1f = fully faded
  * @param gradientWidth width of the fade gradient on each side
  */
 fun Modifier.fadingEdge(
@@ -106,15 +108,19 @@ fun Modifier.fadingEdge(
     scrollState: ScrollState,
     gradientWidth: Dp = 24.dp
 ): Modifier {
-    val leftAlpha = animateFloatAsState(
+    val startAlpha = animateFloatAsState(
         targetValue = if (scrollState.canScrollBackward) 1f else 0f,
         animationSpec = tween(300),
-        label = "LeftFadeAlpha"
+        label = "StartFadeAlpha"
     )
-    val rightAlpha = animateFloatAsState(
+    val endAlpha = animateFloatAsState(
         targetValue = if (scrollState.canScrollForward) 1f else 0f,
         animationSpec = tween(300),
-        label = "RightFadeAlpha"
+        label = "EndFadeAlpha"
     )
-    return fadingEdge(leftAlpha, rightAlpha, gradientWidth)
+    return if (LocalLayoutDirection.current == LayoutDirection.Rtl) {
+        fadingEdge(endAlpha, startAlpha, gradientWidth)
+    } else {
+        fadingEdge(startAlpha, endAlpha, gradientWidth)
+    }
 }

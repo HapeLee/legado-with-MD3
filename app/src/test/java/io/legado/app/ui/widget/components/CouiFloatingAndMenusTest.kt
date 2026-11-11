@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -28,6 +29,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.longClick
@@ -36,6 +38,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.sp
 import com.itos.coui.scroll.CouiOverscrollEffect
 import io.legado.app.R
@@ -257,7 +260,7 @@ class CouiFloatingAndMenusTest {
             AppScaffold(topBar = {
                 AppTabRow(
                     titles, selected.value, { clicks.add(it) }, Modifier.width(200.dp),
-                    leadingAction = {
+                    trailingAction = {
                         AppTabRowIconButton(Icons.Filled.Menu, "Categories", { clicks.add(-1) })
                     },
                 )
@@ -272,7 +275,7 @@ class CouiFloatingAndMenusTest {
     }
 
     @Test
-    fun tabLeadingActionsHaveTheirOwnClickTargetAndKeepBothEdgesInset() {
+    fun tabTrailingActionsHaveTheirOwnClickTargetAndKeepBothEdgesInset() {
         val engines = listOf("material", "miuix", "mochi", "coui")
         val activeEngine = mutableStateOf(engines.first())
         val showAction = mutableStateOf(true)
@@ -280,17 +283,20 @@ class CouiFloatingAndMenusTest {
         RuntimeEnvironment.getApplication().injectAsAppCtx()
         compose.setContent {
             val engine = activeEngine.value
-            AppTheme(AppUiConfiguration(appShell = AppShellSettings(composeEngine = engine))) {
+            AppTheme(AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = engine),
+                theme = ThemeSettings(useHyperOs4Components = engine == "miuix"),
+            )) {
                 // The test compiler cannot render the Miuix squircle shader.
                 CompositionLocalProvider(LocalSquircleEnabled provides false) {
                     Box(Modifier.width(280.dp).testTag("Header")) {
                         AppTabRow(
                             tabTitles = listOf("First", "Last"),
                             selectedTabIndex = 0,
-                            onTabSelected = { error("Leading action must not change tabs") },
+                            onTabSelected = { error("Trailing action must not change tabs") },
                             isScrollable = false,
                             horizontalPadding = 12.dp,
-                            leadingAction = if (showAction.value) {
+                            trailingAction = if (showAction.value) {
                                 {
                                     AppTabRowIconButton(
                                         icon = Icons.Filled.Menu,
@@ -307,6 +313,7 @@ class CouiFloatingAndMenusTest {
 
         val margin = with(compose.density) { 12.dp.toPx() }
         for (engine in engines) {
+            val expectedMargin = if (engine == "material") 0f else margin
             compose.runOnIdle {
                 activeEngine.value = engine
                 showAction.value = true
@@ -316,18 +323,68 @@ class CouiFloatingAndMenusTest {
             val button = action.fetchSemanticsNode().boundsInRoot
             val first = compose.onNodeWithText("First").fetchSemanticsNode().boundsInRoot
             val last = compose.onNodeWithText("Last").fetchSemanticsNode().boundsInRoot
-            assertTrue("$engine button left edge: $button in $header", button.left >= header.left + margin - 1f)
-            assertTrue("$engine action overlaps first tab: $button, $first", button.right <= first.left)
-            assertTrue("$engine last tab right edge: $last in $header", last.right <= header.right - margin + 1f)
+            assertTrue("$engine button left edge: $button in $header", button.left >= header.left + expectedMargin - 1f)
+            assertTrue("$engine action overlaps last tab: $button, $last", button.left >= last.right)
+            assertTrue("$engine first tab left edge: $first in $header", first.left >= header.left + expectedMargin - 1f)
+            assertTrue("$engine button right edge: $button in $header", button.right <= header.right - expectedMargin + 1f)
+            assertTrue("$engine last tab right edge: $last in $header", last.right <= header.right - expectedMargin + 1f)
+            if (engine != "mochi") {
+                assertEquals(expectedMargin, first.left - header.left, 1f)
+                assertEquals(expectedMargin, header.right - button.right, 1f)
+                assertEquals(with(compose.density) { 8.dp.toPx() }, button.left - last.right, 1f)
+            }
             action.performClick()
             compose.runOnIdle { showAction.value = false }
             compose.onNode(hasContentDescription("Browse")).assertDoesNotExist()
             val firstWithoutAction = compose.onNodeWithText("First").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
             val lastWithoutAction = compose.onNodeWithText("Last").fetchSemanticsNode().boundsInRoot
-            assertTrue("$engine first tab left edge", firstWithoutAction.left >= header.left + margin - 1f)
-            assertTrue("$engine last tab right edge", lastWithoutAction.right <= header.right - margin + 1f)
+            assertTrue("$engine first tab left edge", firstWithoutAction.left >= header.left + expectedMargin - 1f)
+            assertTrue("$engine last tab right edge", lastWithoutAction.right <= header.right - expectedMargin + 1f)
+            if (engine != "mochi") {
+                assertEquals(expectedMargin, firstWithoutAction.left - header.left, 1f)
+                assertEquals(expectedMargin, header.right - lastWithoutAction.right, 1f)
+            }
         }
         compose.runOnIdle { assertEquals(engines, actions) }
+    }
+
+    @Test
+    fun materialAndCouiScrollViewportsUseContentInsetsInsteadOfOuterMargins() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        val engine = mutableStateOf("material")
+        val direction = mutableStateOf(LayoutDirection.Ltr)
+        val selected = mutableStateOf(0)
+        val requestedPadding = mutableStateOf(12.dp)
+        val titles = List(8) { "Tab $it" }
+        compose.setContent {
+            AppTheme(AppUiConfiguration(appShell = AppShellSettings(composeEngine = engine.value))) {
+                CompositionLocalProvider(LocalLayoutDirection provides direction.value) {
+                    Box(Modifier.width(240.dp).testTag("header")) {
+                        AppTabRow(titles, selected.value, { selected.value = it }, horizontalPadding = requestedPadding.value)
+                    }
+                }
+            }
+        }
+        for (value in listOf("material", "coui")) {
+            for (layoutDirection in listOf(LayoutDirection.Ltr, LayoutDirection.Rtl)) {
+                compose.runOnIdle {
+                    engine.value = value
+                    direction.value = layoutDirection
+                    selected.value = 0
+                    requestedPadding.value = if (value == "material") 12.dp else 0.dp
+                }
+                val header = compose.onNodeWithTag("header").fetchSemanticsNode().boundsInRoot
+                val viewport = compose.onNode(hasScrollAction()).fetchSemanticsNode().boundsInRoot
+                assertEquals(header.left, viewport.left, 1f)
+                assertEquals(header.right, viewport.right, 1f)
+                val inset = with(compose.density) { (if (value == "coui") 12.dp else 0.dp).toPx() }
+                val first = compose.onNodeWithText(titles.first()).assertIsDisplayed().assertIsSelected().fetchSemanticsNode().boundsInRoot
+                assertEquals(inset, if (layoutDirection == LayoutDirection.Ltr) first.left - header.left else header.right - first.right, 1f)
+                compose.runOnIdle { selected.value = titles.lastIndex }
+                val last = compose.onNodeWithText(titles.last()).assertIsDisplayed().assertIsSelected().fetchSemanticsNode().boundsInRoot
+                assertEquals(inset, if (layoutDirection == LayoutDirection.Ltr) header.right - last.right else last.left - header.left, 1f)
+            }
+        }
     }
 
     @Test

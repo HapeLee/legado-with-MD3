@@ -70,7 +70,8 @@ import io.legado.app.ui.widget.components.variable.VariableEditorSheet
         tabs.map { stringResource(it.title) },
         state.selectedTab.ordinal,
         { p -> onIntent(RssSourceEditIntent.SelectTab(tabs[p])) },
-        Modifier.fillMaxWidth()
+        Modifier.fillMaxWidth(),
+        horizontalPadding = 12.dp,
     )
     }
     },
