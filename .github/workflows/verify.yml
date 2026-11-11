@@ -48,6 +48,9 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Prepare pinned UI forks
+        uses: ./.github/actions/prepare-ui-forks
+
       # 与 auto-release.yml 同一处理：settings.gradle 里的 aliyun 镜像面向国内开发机，
       # 在 GitHub runner 上会 502，且 Gradle 一旦判定某仓库失败就整个禁用它。
       - name: Remove Aliyun mirrors (unreliable in CI)

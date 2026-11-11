@@ -1,3 +1,9 @@
 [submodule "modules/miuix"]
 	path = modules/miuix
 	url = https://github.com/compose-miuix-ui/miuix.git
+[submodule "modules/coui"]
+	path = modules/coui
+	url = https://github.com/HapeLee/COUI-Kit.git
+[submodule "modules/mochi"]
+	path = modules/mochi
+	url = https://github.com/HapeLee/mochi-compose.git

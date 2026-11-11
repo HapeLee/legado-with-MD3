@@ -42,6 +42,9 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Prepare pinned UI forks
+        uses: ./.github/actions/prepare-ui-forks
+
       - name: Clear 18PlusList.txt
         run: |
           echo "清空18PlusList.txt"

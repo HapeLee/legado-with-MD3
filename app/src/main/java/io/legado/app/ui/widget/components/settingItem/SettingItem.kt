@@ -184,7 +184,7 @@ fun SettingItem(
                 description?.let {
                     AppText(
                         it,
-                        style = if (isCoui) rememberCouiTextStyle(CouiTextKind.PreferenceSummary)
+                        style = if (isCoui) rememberCouiTextStyle(CouiTextKind.ItemSummary)
                         else LegadoTheme.typography.bodySmallEmphasized,
                         fontFamily = if (isCoui) LegadoTheme.typography.bodySmallEmphasized.fontFamily else null,
                         color = if (couiColors != null) {
@@ -218,7 +218,7 @@ fun SettingItem(
                 AppText(
                     text = trailingOption,
                     modifier = Modifier.widthIn(max = 162.dp),
-                    style = rememberCouiTextStyle(CouiTextKind.PreferenceValue),
+                    style = rememberCouiTextStyle(CouiTextKind.ItemValue),
                     fontFamily = LegadoTheme.typography.labelMediumEmphasized.fontFamily,
                     color = if (enabled) couiColors.summary else couiColors.disabled,
                     maxLines = 2,
@@ -233,7 +233,7 @@ fun SettingItem(
     val titleContent: @Composable () -> Unit = {
         AppText(
             text = title,
-            style = if (isCoui) rememberCouiTextStyle(CouiTextKind.PreferenceTitle)
+            style = if (isCoui) rememberCouiTextStyle(CouiTextKind.ItemTitle)
             else LegadoTheme.typography.titleMedium,
             fontFamily = if (isCoui) LegadoTheme.typography.titleMedium.fontFamily else null,
             color = if (couiColors != null) {

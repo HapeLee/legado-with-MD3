@@ -19,10 +19,21 @@ plugins {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        // 本地联调：mochi 的本地发布（publishToMavenLocal）只对这一个 group 生效，正式版还是走 Maven Central
-        mavenLocal {
-            content {
-                includeGroupByRegex("io\\.github\\.feice11.*")
+        // 固定 fork 只读取本项目生成的 Maven 产物，避免命中开发机旧包或回落到上游。
+        // 首次构建运行 python scripts/prepare-ui-forks.py，CI 由公共 action 执行。
+        exclusiveContent {
+            forRepository {
+                maven {
+                    name = 'pinnedUiForks'
+                    url = uri(file('build/ui-forks/maven'))
+                }
+            }
+            filter {
+                includeModule('io.github.feice11', 'mochi-compose')
+                includeModule('io.github.feice11', 'mochi-ios')
+                includeModule('io.github.itoseo', 'coui')
+                includeModule('io.github.itoseo', 'coui-material3')
+                includeModule('io.github.itoseo', 'coui-icons')
             }
         }
         google {
