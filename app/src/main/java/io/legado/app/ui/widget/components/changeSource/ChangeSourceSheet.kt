@@ -59,13 +59,17 @@ import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.conflict.BookshelfConflictSheet
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.toastOnUi
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
 
@@ -127,7 +131,6 @@ fun ChangeSourceSheet(
     var shelfConflict by remember { mutableStateOf<PendingShelfConflict?>(null) }
     var showMigrationOptions by remember { mutableStateOf(false) }
     var loadingAction by remember { mutableStateOf(false) }
-    var showOptionsMenu by rememberSaveable { mutableStateOf(false) }
     var showFilterSheet by rememberSaveable { mutableStateOf(false) }
     val bookAddedToShelfText = stringResource(R.string.book_added_to_shelf)
     // 不在书架的书换源，只是给这本还没上架的书换个源，不存在「新增还是替换」的歧义，直接替换即可。
@@ -244,60 +247,36 @@ fun ChangeSourceSheet(
         title = stringResource(R.string.change_origin),
         startAction = {
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Box {
-                    MediumTonalButton(
-                        onClick = { showOptionsMenu = true },
-                icon = Icons.Default.MoreVert,
-                contentDescription = stringResource(R.string.more_menu)
+                AppActionMenu(
+                    groups = persistentListOf(
+                        AppActionGroup(
+                            id = "change_source_toggles",
+                            actions = persistentListOf(
+                                AppAction("check_author", "校验作者", checked = checkAuthor),
+                                AppAction("load_info", "加载详情", checked = loadInfo),
+                                AppAction("load_toc", "加载目录", checked = loadToc),
+                                AppAction("load_word_count", "显示更多信息", checked = loadWordCount),
+                                AppAction("open_source_manage", stringResource(R.string.book_source_manage)),
+                            ),
+                        ),
+                    ),
+                    onAction = { id ->
+                        when (id) {
+                            "check_author" -> viewModel.onCheckAuthorChange(!checkAuthor)
+                            "load_info" -> viewModel.onLoadInfoChange(!loadInfo)
+                            "load_toc" -> viewModel.onLoadTocChange(!loadToc)
+                            "load_word_count" -> viewModel.onLoadWordCountChange(!loadWordCount)
+                            "open_source_manage" -> context.startActivity(
+                                MainActivity.createBookSourceManageIntent(context)
+                            )
+                        }
+                    },
+                ) {
+                    AppIcon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = stringResource(R.string.more_menu),
+                        modifier = this.modifier,
                     )
-                    RoundDropdownMenu(
-                        expanded = showOptionsMenu,
-                        onDismissRequest = { showOptionsMenu = false }
-                    ) { dismiss ->
-                        RoundDropdownMenuItem(
-                            text = "校验作者",
-                            isSelected = checkAuthor,
-                            onClick = {
-                                viewModel.onCheckAuthorChange(!checkAuthor)
-                                dismiss()
-                            }
-                        )
-                        RoundDropdownMenuItem(
-                            text = "加载详情",
-                            isSelected = loadInfo,
-                            onClick = {
-                                viewModel.onLoadInfoChange(!loadInfo)
-                                dismiss()
-                            }
-                        )
-                        RoundDropdownMenuItem(
-                            text = "加载目录",
-                            isSelected = loadToc,
-                            onClick = {
-                                viewModel.onLoadTocChange(!loadToc)
-                                dismiss()
-                            }
-                        )
-                        RoundDropdownMenuItem(
-                            text = "显示更多信息",
-                            isSelected = loadWordCount,
-                            onClick = {
-                                viewModel.onLoadWordCountChange(!loadWordCount)
-                                dismiss()
-                            }
-                        )
-                        RoundDropdownMenuItem(
-                            text = stringResource(R.string.book_source_manage),
-                            onClick = {
-                                context.startActivity(
-                                    MainActivity.createBookSourceManageIntent(
-                                        context
-                                    )
-                                )
-                                dismiss()
-                            }
-                        )
-                    }
                 }
                 MediumTonalButton(
                     onClick = { showMigrationOptions = true },

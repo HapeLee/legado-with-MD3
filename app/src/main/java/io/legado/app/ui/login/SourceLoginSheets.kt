@@ -53,11 +53,14 @@ import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.explore.ExploreKindMultiTypeItem
 import io.legado.app.ui.widget.components.explore.FlexItemLayout
 import io.legado.app.ui.widget.components.explore.calculateFlexRows
+import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.log.AppLogSheet
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import kotlinx.collections.immutable.persistentListOf
 import top.yukonga.miuix.kmp.squircle.LocalSquircleEnabled
 
 @Composable
@@ -114,29 +117,35 @@ private fun SourceLoginFormSheet(
     state: SourceLoginUiState,
     onIntent: (SourceLoginIntent) -> Unit,
 ) {
-    var menuExpanded by remember { mutableStateOf(false) }
     AppModalBottomSheet(
         show = state.activeSheet == SourceLoginSheet.Form,
         onDismissRequest = { onIntent(SourceLoginIntent.Back) },
         title = state.title,
         startAction = {
-            Box {
-                MediumTonalButton(
-                    icon = AppIcons.MoreVert,
+            AppActionMenu(
+                groups = persistentListOf(
+                    AppActionGroup(
+                        id = "source_login_commands",
+                        actions = persistentListOf(
+                            AppAction("show_login_header", stringResource(R.string.show_login_header)),
+                            AppAction("delete_login_header", stringResource(R.string.del_login_header)),
+                            AppAction("show_log", stringResource(R.string.log)),
+                        ),
+                    ),
+                ),
+                onAction = { id ->
+                    when (id) {
+                        "show_login_header" -> onIntent(SourceLoginIntent.ShowLoginHeader)
+                        "delete_login_header" -> onIntent(SourceLoginIntent.DeleteLoginHeader)
+                        "show_log" -> onIntent(SourceLoginIntent.ShowLog)
+                    }
+                },
+            ) {
+                AppIcon(
+                    imageVector = AppIcons.MoreVert,
                     contentDescription = stringResource(R.string.menu),
-                    onClick = { menuExpanded = true },
+                    modifier = this.modifier,
                 )
-                RoundDropdownMenu(menuExpanded, { menuExpanded = false }) { dismiss ->
-                    RoundDropdownMenuItem(stringResource(R.string.show_login_header), onClick = {
-                        dismiss(); onIntent(SourceLoginIntent.ShowLoginHeader)
-                    })
-                    RoundDropdownMenuItem(stringResource(R.string.del_login_header), onClick = {
-                        dismiss(); onIntent(SourceLoginIntent.DeleteLoginHeader)
-                    })
-                    RoundDropdownMenuItem(stringResource(R.string.log), onClick = {
-                        dismiss(); onIntent(SourceLoginIntent.ShowLog)
-                    })
-                }
             }
         },
         endAction = {

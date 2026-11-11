@@ -83,7 +83,9 @@ import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.list.ListScaffold
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import kotlinx.collections.immutable.persistentListOf
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
@@ -286,31 +288,28 @@ fun RemoteBookScreen(
                 contentDescription = stringResource(R.string.a11y_server_list)
             )
         },
-        dropDownMenuContent = { dismiss ->
-            RoundDropdownMenuItem(
-                text = "按名称排序",
-                onClick = {
-                    onIntent(RemoteBookIntent.SortToggle(RemoteBookSort.Name))
-                    dismiss()
-                },
-                trailingIcon = {
-                    if (state.sortKey == RemoteBookSort.Name) {
-                        Icon(Icons.Default.Check, null)
-                    }
-                }
-            )
-            RoundDropdownMenuItem(
-                text = "按时间排序",
-                onClick = {
-                    onIntent(RemoteBookIntent.SortToggle(RemoteBookSort.Default))
-                    dismiss()
-                },
-                trailingIcon = {
-                    if (state.sortKey == RemoteBookSort.Default) {
-                        Icon(Icons.Default.Check, null)
-                    }
-                }
-            )
+        menuGroups = persistentListOf(
+            AppActionGroup(
+                id = "remote_book_sort",
+                actions = persistentListOf(
+                    AppAction(
+                        "sort_name",
+                        "按名称排序",
+                        selected = state.sortKey == RemoteBookSort.Name,
+                    ),
+                    AppAction(
+                        "sort_default",
+                        "按时间排序",
+                        selected = state.sortKey == RemoteBookSort.Default,
+                    ),
+                ),
+            ),
+        ),
+        onMenuAction = { id ->
+            when (id) {
+                "sort_name" -> onIntent(RemoteBookIntent.SortToggle(RemoteBookSort.Name))
+                "sort_default" -> onIntent(RemoteBookIntent.SortToggle(RemoteBookSort.Default))
+            }
         },
         bottomContent = {
             PathNavigationBar(

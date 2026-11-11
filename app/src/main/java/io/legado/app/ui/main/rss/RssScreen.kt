@@ -57,7 +57,10 @@ import io.legado.app.ui.theme.LocalBottomOverlayPadding
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.coui.rememberAppVerticalOverscrollEffect
 import io.legado.app.ui.widget.components.card.GlassCard
-import io.legado.app.ui.widget.components.divider.PillDivider
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import io.legado.app.ui.widget.components.divider.PillHeaderDivider
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.image.sourceIcon.SourceIcon
@@ -170,30 +173,28 @@ fun RssScreen(
             onSearchToggle = { onIntent(RssIntent.ToggleSearch(it)) },
             onSearchQueryChange = { onIntent(RssIntent.Search(it)) },
             searchPlaceholder = stringResource(R.string.search_rss_source),
-            dropDownMenuContent = { dismiss ->
-                RoundDropdownMenuItem(
-                    onClick = {
-                        onIntent(RssIntent.OpenSourceManage)
-                        dismiss()
-                    },
-                    text = stringResource(R.string.rss_feed_management),
-                )
-                PillDivider()
-                RoundDropdownMenuItem(
-                    text = stringResource(R.string.all),
-                    onClick = {
-                        onIntent(RssIntent.SetGroup(""))
-                        dismiss()
-                    }
-                )
-                state.groups.forEach { group ->
-                    RoundDropdownMenuItem(
-                        text = group,
-                        onClick = {
-                            onIntent(RssIntent.SetGroup(group))
-                            dismiss()
+            menuGroups = persistentListOf(
+                AppActionGroup(
+                    id = "rss_manage",
+                    actions = persistentListOf(
+                        AppAction("source_manage", stringResource(R.string.rss_feed_management)),
+                    ),
+                ),
+                AppActionGroup(
+                    id = "rss_groups",
+                    actions = buildList {
+                        add(AppAction("group:", stringResource(R.string.all)))
+                        state.groups.forEach { group ->
+                            add(AppAction("group:$group", group))
                         }
-                    )
+                    }.toImmutableList(),
+                ),
+            ),
+            onMenuAction = { id ->
+                when {
+                    id == "source_manage" -> onIntent(RssIntent.OpenSourceManage)
+                    id.startsWith("group:") ->
+                        onIntent(RssIntent.SetGroup(id.removePrefix("group:")))
                 }
             },
             contentWindowInsets = WindowInsets(0)

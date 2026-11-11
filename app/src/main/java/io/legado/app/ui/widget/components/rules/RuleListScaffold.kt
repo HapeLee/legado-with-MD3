@@ -32,8 +32,10 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.list.ListScaffold
 import io.legado.app.ui.widget.components.list.ListUiState
+import io.legado.app.ui.widget.components.menu.AppActionGroup
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarScrollBehavior
+import kotlinx.collections.immutable.ImmutableList
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -48,6 +50,9 @@ fun <T> RuleListScaffold(
     topBarActions: @Composable RowScope.() -> Unit = {},
     bottomContent: @Composable (ColumnScope.(GlassTopAppBarScrollBehavior) -> Unit)? = null,
     dropDownMenuContent: (@Composable ColumnScope.(dismiss: () -> Unit) -> Unit)? = null,
+    /** 声明式溢出菜单；与 [dropDownMenuContent] 二选一，非空时优先。 */
+    menuGroups: ImmutableList<AppActionGroup>? = null,
+    onMenuAction: (String) -> Unit = {},
     onClearSelection: () -> Unit,
     onSelectAll: () -> Unit,
     onSelectInvert: () -> Unit,
@@ -97,6 +102,8 @@ fun <T> RuleListScaffold(
         topBarActions = topBarActions,
         bottomContent = bottomContent,
         dropDownMenuContent = dropDownMenuContent,
+        menuGroups = menuGroups,
+        onMenuAction = onMenuAction,
         onAddClick = onAddClick,
         floatingActionButton = floatingActionButton,
         snackbarHostState = snackbarHostState,

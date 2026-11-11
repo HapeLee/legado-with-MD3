@@ -77,7 +77,13 @@ fun SettingItem(
     semanticToggleState: Boolean? = null,
     expanded: Boolean = false,
     onExpandChange: ((Boolean) -> Unit)? = null,
-    expandContent: (@Composable ColumnScope.() -> Unit)? = null
+    expandContent: (@Composable ColumnScope.() -> Unit)? = null,
+    /**
+     * false 表示这一行是纯展示内容，不挂 `combinedClickable`。
+     * 统一菜单入口用它作为 trigger，由主题分支包装出唯一的可点控件，
+     * 避免与库的 Press 手势/点击语义重复。默认 true 保持既有调用方行为。
+     */
+    interactive: Boolean = true,
 ) {
 
     var showMenu by remember { mutableStateOf(false) }
@@ -113,7 +119,7 @@ fun SettingItem(
         .then(if (interactionSource != null) {
             Modifier.couiButtonFeedback(interactionSource = interactionSource, enabled = enabled, list = true)
         } else Modifier)
-        .then(if (!isCoui || hasAction) {
+        .then(if (interactive && (!isCoui || hasAction)) {
             Modifier.combinedClickable(
                 interactionSource = interactionSource,
                 indication = if (isCoui) null else LocalIndication.current,

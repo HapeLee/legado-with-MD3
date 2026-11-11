@@ -35,8 +35,12 @@ import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.AdaptiveSwitch
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.icon.AppIcons
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
+import kotlinx.collections.immutable.persistentListOf
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.launch
@@ -62,7 +66,6 @@ fun HighlightTagRuleEditSheet(
     var pattern by remember(show, rule) { mutableStateOf(initial.pattern) }
     var enabled by remember(show, rule) { mutableStateOf(initial.enabled) }
 
-    var showMenu by remember(show, rule) { mutableStateOf(false) }
 
     fun getCurrentRule(): HighlightTagRule {
         return initial.copy(
@@ -86,36 +89,42 @@ fun HighlightTagRuleEditSheet(
             )
         },
         endAction = {
-            Box {
-                MediumTonalButton(
-                    onClick = { showMenu = true },
-                    icon = Icons.Default.MoreVert,
-                    contentDescription = stringResource(R.string.more_menu)
-                )
-                RoundDropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.copy_rule),
-                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.NoteAdd, null) },
-                        onClick = {
-                            onCopy(getCurrentRule())
-                            showMenu = false
-                        }
-                    )
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.paste_rule),
-                        leadingIcon = { Icon(Icons.Default.ContentPaste, null) },
-                        onClick = {
-                            scope.launch {
-                                onPaste()?.let { pasted ->
-                                    title = pasted.title
-                                    pattern = pasted.pattern
-                                    enabled = pasted.enabled
-                                }
+            AppActionMenu(
+                groups = persistentListOf(
+                    AppActionGroup(
+                        id = "highlight_tag_clipboard",
+                        actions = persistentListOf(
+                            AppAction(
+                                "copy_rule",
+                                stringResource(R.string.copy_rule),
+                                icon = Icons.AutoMirrored.Filled.NoteAdd,
+                            ),
+                            AppAction(
+                                "paste_rule",
+                                stringResource(R.string.paste_rule),
+                                icon = Icons.Default.ContentPaste,
+                            ),
+                        ),
+                    ),
+                ),
+                onAction = { id ->
+                    when (id) {
+                        "copy_rule" -> onCopy(getCurrentRule())
+                        "paste_rule" -> scope.launch {
+                            onPaste()?.let { pasted ->
+                                title = pasted.title
+                                pattern = pasted.pattern
+                                enabled = pasted.enabled
                             }
-                            showMenu = false
                         }
-                    )
-                }
+                    }
+                },
+            ) {
+                AppIcon(
+                    imageVector = AppIcons.MoreVert,
+                    contentDescription = stringResource(R.string.more_menu),
+                    modifier = this.modifier,
+                )
             }
         },
         show = show,

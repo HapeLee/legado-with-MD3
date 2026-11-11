@@ -32,8 +32,8 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.GlassCard
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppChoiceDropdown
+import io.legado.app.ui.widget.components.menu.AppChoiceOption
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.text.AnimatedTextLine
 import io.legado.app.ui.widget.components.text.AppText
@@ -42,6 +42,7 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.toastOnUi
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 
@@ -192,7 +193,9 @@ private fun KnowledgeTypeSelector(
     selectedType: String,
     onTypeSelected: (String) -> Unit,
 ) {
-    var showDropdown by remember { mutableStateOf(false) }
+    val choices = KNOWLEDGE_TYPE_LABELS
+        .map { (type, labelRes) -> AppChoiceOption(id = type, label = stringResource(labelRes)) }
+        .toImmutableList()
     val currentLabel = KNOWLEDGE_TYPE_LABELS[selectedType]?.let { stringResource(it) } ?: "—"
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -200,9 +203,15 @@ private fun KnowledgeTypeSelector(
             text = stringResource(R.string.knowledge_type),
             style = LegadoTheme.typography.titleMedium,
         )
-        Box {
+        AppChoiceDropdown(
+            options = choices,
+            selectedId = selectedType,
+            onSelect = onTypeSelected,
+            title = stringResource(R.string.knowledge_type),
+            compact = true,
+        ) {
             GlassCard(
-                onClick = { showDropdown = true },
+                modifier = this.modifier,
                 containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
             ) {
                 AnimatedTextLine(
@@ -210,20 +219,6 @@ private fun KnowledgeTypeSelector(
                     style = LegadoTheme.typography.bodyMedium,
                     modifier = Modifier.padding(16.dp),
                 )
-            }
-            RoundDropdownMenu(
-                expanded = showDropdown,
-                onDismissRequest = { showDropdown = false },
-            ) {
-                KNOWLEDGE_TYPE_LABELS.forEach { (type, labelRes) ->
-                    RoundDropdownMenuItem(
-                        text = stringResource(labelRes),
-                        onClick = {
-                            onTypeSelected(type)
-                            showDropdown = false
-                        },
-                    )
-                }
             }
         }
     }

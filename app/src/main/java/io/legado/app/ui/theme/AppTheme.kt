@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.Density
+import com.itos.coui.menu.ProvideCouiMenuBackdrop
 import com.materialkolor.PaletteStyle
 import io.legado.app.domain.model.settings.AppUiConfiguration
 import io.legado.app.domain.model.settings.customColors
@@ -214,7 +215,15 @@ private fun AppThemeActual(
                     applyBackground = applyBackground,
                 ) {
                     if (themeColors.composeEngine == ComposeEngine.Coui && ThemeResolver.isCouiSupported()) {
-                        ProvideCouiTheme(themeColors.isDark, useCouiDefaultColors, content)
+                        ProvideCouiTheme(themeColors.isDark, useCouiDefaultColors) {
+                            // COUI 菜单的玻璃材质要采样所属窗口的内容根；单参数版保留隔离，
+                            // 与 Mochi 分支一样用 propagateMinConstraints 保持内容测量不变。
+                            ProvideCouiMenuBackdrop { backdropModifier ->
+                                Box(backdropModifier, propagateMinConstraints = true) {
+                                    content()
+                                }
+                            }
+                        }
                     } else {
                         content()
                     }

@@ -51,6 +51,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import com.itos.coui.menu.ProvideCouiMenuBackdrop
 import com.kyant.capsule.ContinuousRoundedRectangle
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
@@ -61,6 +62,7 @@ import io.legado.app.ui.theme.LocalMochiBackdropRegistry
 import io.legado.app.ui.theme.LocalLegadoThemeColors
 import io.legado.app.ui.theme.ProvideAppContentColor
 import io.legado.app.ui.theme.ProvideAppDensity
+import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.rememberMochiOverlayBackdrop
 import io.legado.app.ui.widget.components.LocalAppGlassOverlay
 import io.legado.app.ui.widget.components.mochi.MochiOverlayAccessibility
@@ -337,78 +339,91 @@ fun AppModalBottomSheet(
                         contentWindowInsets = contentWindowInsets,
                         sheetGesturesEnabled = sheetGesturesEnabled,
                     ) {
-                        ProvideAppDensity {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .let {
-                                        if (contentPaddingEnabled) {
-                                            it.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
-                                        } else {
-                                            it
-                                        }
-                                    }
-                                    .heightIn(max = maxHeight)
-                                    .let { contentModifier ->
-                                        if (animateContentSize) contentModifier.animateContentSize() else contentModifier
-                                    }
-                                    .then(modifier)
-                            ) {
-                                val hasHeader =
-                                    !title.isNullOrEmpty() || startAction != null || endAction != null
-
-                                if (hasHeader) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(bottom = 16.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        if (startAction != null) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .align(Alignment.CenterStart)
-                                                    .let {
-                                                        if (contentPaddingEnabled) it else it.padding(
-                                                            start = 16.dp
-                                                        )
-                                                    }
-                                            ) {
-                                                startAction()
+                        val sheetBody: @Composable () -> Unit = {
+                            ProvideAppDensity {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .let {
+                                            if (contentPaddingEnabled) {
+                                                it.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                                            } else {
+                                                it
                                             }
                                         }
-
-                                        if (!title.isNullOrEmpty()) {
-                                            Text(
-                                                text = title,
-                                                style = if (isMochi) MochiTheme.textStyles.navTitle
-                                                    else LegadoTheme.typography.titleMediumEmphasized,
-                                                color = sheetContentColor,
-                                                textAlign = TextAlign.Center,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                                modifier = Modifier.padding(horizontal = 56.dp)
-                                            )
+                                        .heightIn(max = maxHeight)
+                                        .let { contentModifier ->
+                                            if (animateContentSize) contentModifier.animateContentSize() else contentModifier
                                         }
+                                        .then(modifier)
+                                ) {
+                                    val hasHeader =
+                                        !title.isNullOrEmpty() || startAction != null || endAction != null
 
-                                        if (endAction != null) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .align(Alignment.CenterEnd)
-                                                    .let {
-                                                        if (contentPaddingEnabled) it else it.padding(
-                                                            end = 16.dp
-                                                        )
-                                                    }
-                                            ) {
-                                                endAction()
+                                    if (hasHeader) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(bottom = 16.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (startAction != null) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .align(Alignment.CenterStart)
+                                                        .let {
+                                                            if (contentPaddingEnabled) it else it.padding(
+                                                                start = 16.dp
+                                                            )
+                                                        }
+                                                ) {
+                                                    startAction()
+                                                }
+                                            }
+
+                                            if (!title.isNullOrEmpty()) {
+                                                Text(
+                                                    text = title,
+                                                    style = if (isMochi) MochiTheme.textStyles.navTitle
+                                                        else LegadoTheme.typography.titleMediumEmphasized,
+                                                    color = sheetContentColor,
+                                                    textAlign = TextAlign.Center,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    modifier = Modifier.padding(horizontal = 56.dp)
+                                                )
+                                            }
+
+                                            if (endAction != null) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .align(Alignment.CenterEnd)
+                                                        .let {
+                                                            if (contentPaddingEnabled) it else it.padding(
+                                                                end = 16.dp
+                                                            )
+                                                        }
+                                                ) {
+                                                    endAction()
+                                                }
                                             }
                                         }
                                     }
+
+                                    content()
                                 }
-
-                                content()
                             }
+                        }
+                        // COUI 菜单的玻璃材质采样所属窗口的内容根；Sheet 是独立窗口，
+                        // AppTheme 页面根的 ProvideCouiMenuBackdrop 覆盖不到这里。
+                        if (composeEngine == ComposeEngine.Coui && ThemeResolver.isCouiSupported()) {
+                            ProvideCouiMenuBackdrop { backdropModifier ->
+                                Box(backdropModifier, propagateMinConstraints = true) {
+                                    sheetBody()
+                                }
+                            }
+                        } else {
+                            sheetBody()
                         }
                     }
                 }

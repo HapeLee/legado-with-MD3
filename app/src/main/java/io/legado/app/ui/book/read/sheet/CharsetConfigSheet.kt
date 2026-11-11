@@ -1,6 +1,5 @@
 package io.legado.app.ui.book.read.sheet
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -16,9 +15,10 @@ import io.legado.app.constant.AppConst
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.series.SmallPlainButton
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.menu.AppChoiceDropdown
+import io.legado.app.ui.widget.components.menu.AppChoiceOption
+import kotlinx.collections.immutable.toImmutableList
 
 @Composable
 fun CharsetConfigSheet(
@@ -26,8 +26,10 @@ fun CharsetConfigSheet(
     onDismissRequest: () -> Unit,
 ) {
     var charset by remember { mutableStateOf(ReadBook.book?.charset ?: "UTF-8") }
-    val charsetEntries = remember { AppConst.charsets }
-    var expanded by remember { mutableStateOf(false) }
+    val options = remember {
+        AppConst.charsets.map { entry -> AppChoiceOption(id = entry, label = entry) }
+            .toImmutableList()
+    }
     val title = stringResource(R.string.set_charset)
 
     AppAlertDialog(
@@ -35,38 +37,29 @@ fun CharsetConfigSheet(
         onDismissRequest = onDismissRequest,
         title = title,
         content = {
-            Box {
-                AppTextField(
-                    value = charset,
-                    onValueChange = { charset = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = title,
-                    singleLine = true,
-                    trailingIcon = {
-                        SmallPlainButton(
-                            onClick = { expanded = !expanded },
-                            selected = expanded,
-                            icon = Icons.Default.KeyboardArrowDown,
+            AppTextField(
+                value = charset,
+                onValueChange = { charset = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = title,
+                singleLine = true,
+                trailingIcon = {
+                    // compact 形态让四套引擎各自渲染按钮与整组条目；trigger 只提供纯展示图标。
+                    AppChoiceDropdown(
+                        options = options,
+                        selectedId = charset,
+                        onSelect = { charset = it },
+                        title = title,
+                        compact = true,
+                    ) {
+                        AppIcon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
                             contentDescription = title,
-                        )
-                    },
-                )
-                RoundDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
-                ) {
-                    charsetEntries.forEach { entry ->
-                        RoundDropdownMenuItem(
-                            text = entry,
-                            isSelected = charset == entry,
-                            onClick = {
-                                charset = entry
-                                expanded = false
-                            },
+                            modifier = this.modifier,
                         )
                     }
-                }
-            }
+                },
+            )
         },
         confirmText = stringResource(R.string.ok),
         onConfirm = {

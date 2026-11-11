@@ -48,7 +48,8 @@ import io.legado.app.ui.widget.components.DraggableSelectionHandler
 import io.legado.app.ui.widget.components.GroupManageBottomSheet
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
-import io.legado.app.ui.widget.components.divider.PillDivider
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
@@ -57,6 +58,7 @@ import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -355,44 +357,44 @@ fun ReplaceRuleScreen(
             )
         },
         snackbarHostState = snackbarHostState,
-        dropDownMenuContent = { dismiss ->
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.import_str),
-                onClick = { showImportSheet = true; dismiss() }
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.group_management),
-                onClick = { showGroupManageSheet = true; dismiss() }
-            )
-            PillDivider()
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.sort_old_first),
-                onClick = { onIntent(ReplaceRuleIntent.SetSortMode("asc")); dismiss() }
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.sort_new_first),
-                onClick = { onIntent(ReplaceRuleIntent.SetSortMode("desc")); dismiss() }
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.sort_name_asc),
-                onClick = {
-                    onIntent(ReplaceRuleIntent.SetSortMode("name_asc"))
-                    dismiss()
-                    scope.launch {
-                        snackbarHostState.showSnackbar(context.getString(R.string.drag_disabled_in_sort_mode))
+        menuGroups = persistentListOf(
+            AppActionGroup(
+                id = "rule_actions",
+                actions = persistentListOf(
+                    AppAction("import", stringResource(R.string.import_str)),
+                    AppAction("group_management", stringResource(R.string.group_management)),
+                ),
+            ),
+            AppActionGroup(
+                id = "rule_sort",
+                actions = persistentListOf(
+                    AppAction("sort_old_first", stringResource(R.string.sort_old_first)),
+                    AppAction("sort_new_first", stringResource(R.string.sort_new_first)),
+                    AppAction("sort_name_asc", stringResource(R.string.sort_name_asc)),
+                    AppAction("sort_name_desc", stringResource(R.string.sort_name_desc)),
+                ),
+            ),
+        ),
+        onMenuAction = { id ->
+            val sortMode = when (id) {
+                "sort_old_first" -> "asc"
+                "sort_new_first" -> "desc"
+                "sort_name_asc" -> "name_asc"
+                "sort_name_desc" -> "name_desc"
+                else -> null
+            }
+            when {
+                id == "import" -> showImportSheet = true
+                id == "group_management" -> showGroupManageSheet = true
+                sortMode != null -> {
+                    onIntent(ReplaceRuleIntent.SetSortMode(sortMode))
+                    if (id == "sort_name_asc" || id == "sort_name_desc") {
+                        scope.launch {
+                            snackbarHostState.showSnackbar(context.getString(R.string.drag_disabled_in_sort_mode))
+                        }
                     }
                 }
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.sort_name_desc),
-                onClick = {
-                    onIntent(ReplaceRuleIntent.SetSortMode("name_desc"))
-                    dismiss()
-                    scope.launch {
-                        snackbarHostState.showSnackbar(context.getString(R.string.drag_disabled_in_sort_mode))
-                    }
-                }
-            )
+            }
         }
     ) { padding ->
         Box(

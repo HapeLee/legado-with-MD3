@@ -51,7 +51,10 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import kotlinx.collections.immutable.persistentListOf
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.showDialogFragment
@@ -127,17 +130,20 @@ fun RuleSubScreen(
         snackbarHostState = snackbarHostState,
         selectionSecondaryActions = emptyList(),
         topBarActions = {},
-        dropDownMenuContent = { dismiss ->
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.sort),
-                leadingIcon = {
-                    Icon(Icons.AutoMirrored.Filled.Sort, null, modifier = Modifier.size(18.dp))
-                },
-                onClick = {
-                    onIntent(RuleSubIntent.ResetOrder)
-                    dismiss()
-                }
-            )
+        menuGroups = persistentListOf(
+            AppActionGroup(
+                id = "rule_sub_sort",
+                actions = persistentListOf(
+                    AppAction(
+                        "reset_order",
+                        stringResource(R.string.sort),
+                        icon = Icons.AutoMirrored.Filled.Sort,
+                    ),
+                ),
+            ),
+        ),
+        onMenuAction = { id ->
+            if (id == "reset_order") onIntent(RuleSubIntent.ResetOrder)
         },
         floatingActionButton = {
             AppFloatingActionButton(

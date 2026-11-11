@@ -63,10 +63,18 @@ internal enum class SeriesIconButtonStyle {
     Outlined
 }
 
+/**
+ * 系列按钮的公共外壳。
+ *
+ * [onClick] 为 `null` 时只画容器与内容，不安装点击节点、涟漪和 `Role.Button` 语义：
+ * 用于 `AppChoiceDropdown` 一类「入口自己包唯一可点节点」的 trigger 槽，
+ * 避免内外两层可点节点（重复播报、锚点触点被吞）。这类调用方必须把锚点
+ * modifier 透传给内容根节点。
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun SeriesButton(
-    onClick: () -> Unit,
+    onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     selected: Boolean = false,
@@ -130,14 +138,20 @@ internal fun SeriesButton(
             .then(if (clipToShape) Modifier.clip(shape) else Modifier)
             .background(containerColor, shape)
             .then(if (border != null) Modifier.border(border, shape) else Modifier)
-            .combinedClickable(
-                interactionSource = interactionSource,
-                indication = indication,
-                enabled = enabled,
-                role = Role.Button,
-                onLongClickLabel = onLongClickLabel,
-                onLongClick = onLongClick,
-                onClick = onClick
+            .then(
+                if (onClick != null) {
+                    Modifier.combinedClickable(
+                        interactionSource = interactionSource,
+                        indication = indication,
+                        enabled = enabled,
+                        role = Role.Button,
+                        onLongClickLabel = onLongClickLabel,
+                        onLongClick = onLongClick,
+                        onClick = onClick
+                    )
+                } else {
+                    Modifier
+                }
             )
             .semantics {
                 if (selected) {

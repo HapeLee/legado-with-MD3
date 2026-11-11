@@ -1,10 +1,10 @@
 package io.legado.app.ui.book.source.edit
 
 import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,7 +35,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.ui.widget.components.modalBottomSheet.MarkdownSheet
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
@@ -45,9 +44,13 @@ import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.log.AppLogSheet
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
+import io.legado.app.ui.widget.components.menu.AppChoiceDropdown
+import io.legado.app.ui.widget.components.menu.AppChoiceOption
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.MarkdownSheet
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
@@ -55,13 +58,13 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.widget.components.variable.VariableEditorSheet
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookSourceEditScreen(
     state: BookSourceEditUiState,
-    menuExpanded: Boolean,
-    onMenuExpandedChange: (Boolean) -> Unit,
     onIntent: (BookSourceEditIntent) -> Unit,
 ) {
     BackHandler(enabled = state.dirty) {
@@ -103,12 +106,7 @@ fun BookSourceEditScreen(
                             imageVector = Icons.Default.BugReport,
                             contentDescription = stringResource(R.string.debug_source),
                         )
-                        TopBarActionButton(
-                            onClick = { onMenuExpandedChange(true) },
-                            imageVector = AppIcons.MoreVert,
-                            contentDescription = stringResource(R.string.more_menu),
-                        )
-                        BookSourceEditMenu(menuExpanded, onMenuExpandedChange, state, onIntent)
+                        BookSourceEditMenu(state, onIntent)
                     },
                 )
                 AppTabRow(
@@ -257,30 +255,25 @@ private fun BookSourceOptions(
     onIntent: (BookSourceEditIntent) -> Unit,
 ) {
     val sourceTypes = stringArrayResource(R.array.book_type)
-    var typeMenuExpanded by remember { mutableStateOf(false) }
+    val typeOptions = sourceTypes.mapIndexed { index, label ->
+        AppChoiceOption(id = index.toString(), label = label)
+    }.toImmutableList()
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(modifier = Modifier.weight(1f)) {
+            AppChoiceDropdown(
+                options = typeOptions,
+                selectedId = state.bookSourceType.toString(),
+                onSelect = { onIntent(BookSourceEditIntent.SetSourceType(it.toInt())) },
+                title = stringResource(R.string.book_type),
+                modifier = Modifier.weight(1f),
+                compact = true,
+            ) {
                 SourceEditOptionCard(
                     title = stringResource(R.string.book_type),
+                    onClick = null,
                     subtitle = sourceTypes.getOrNull(state.bookSourceType),
-                    onClick = { typeMenuExpanded = true },
+                    modifier = this.modifier,
                 )
-                RoundDropdownMenu(
-                    expanded = typeMenuExpanded,
-                    onDismissRequest = { typeMenuExpanded = false },
-                ) {
-                    sourceTypes.forEachIndexed { index, title ->
-                        RoundDropdownMenuItem(
-                            text = title,
-                            isSelected = state.bookSourceType == index,
-                            onClick = {
-                                typeMenuExpanded = false
-                                onIntent(BookSourceEditIntent.SetSourceType(index))
-                            },
-                        )
-                    }
-                }
             }
             SourceEditOptionCard(
                 title = stringResource(R.string.is_enable),
@@ -318,10 +311,14 @@ private fun BookSourceOptions(
     }
 }
 
+/**
+ * [onClick] 传 null 时为纯展示 trigger，由统一菜单入口包装出唯一可点控件。
+ * 保持必填，避免 [modifier] 不再是首个可选参数（Compose `ModifierParameter` 规则）。
+ */
 @Composable
 fun SourceEditOptionCard(
     title: String,
-    onClick: () -> Unit,
+    onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
     checked: Boolean? = null,
@@ -369,47 +366,60 @@ fun SourceEditOptionCard(
     }
 }
 
+/** 书源编辑命令菜单的稳定 ID 与文案：UI 条目与 ID → Intent 映射共用这一份定义。 */
+internal enum class BookSourceEditMenuAction(
+    val id: String,
+    @param:StringRes val labelRes: Int,
+) {
+    Login("login", R.string.login),
+    Search("search", R.string.search),
+    ClearCookie("cookie", R.string.cookie),
+    AutoComplete("auto_complete", R.string.auto_complete),
+    Copy("copy_source", R.string.copy_source),
+    Paste("paste_source", R.string.paste_source),
+    Variable("set_source_variable", R.string.set_source_variable),
+    Share("str_share", R.string.str_share),
+    Log("log", R.string.log),
+    Help("help", R.string.help),
+}
+
+/** 未知 ID 不产生动作，避免入口回调拼错时误触发其它 Intent。 */
+internal fun bookSourceEditIntentFor(id: String): BookSourceEditIntent? = when (id) {
+    BookSourceEditMenuAction.Login.id -> BookSourceEditIntent.SaveAndLogin
+    BookSourceEditMenuAction.Search.id -> BookSourceEditIntent.SaveAndSearch
+    BookSourceEditMenuAction.ClearCookie.id -> BookSourceEditIntent.ClearCookie
+    BookSourceEditMenuAction.AutoComplete.id -> BookSourceEditIntent.ToggleAutoComplete
+    BookSourceEditMenuAction.Copy.id -> BookSourceEditIntent.Copy
+    BookSourceEditMenuAction.Paste.id -> BookSourceEditIntent.Paste
+    BookSourceEditMenuAction.Variable.id -> BookSourceEditIntent.SaveAndSetVariable
+    BookSourceEditMenuAction.Share.id -> BookSourceEditIntent.Share
+    BookSourceEditMenuAction.Log.id -> BookSourceEditIntent.ShowLog
+    BookSourceEditMenuAction.Help.id -> BookSourceEditIntent.ShowHelp
+    else -> null
+}
+
 @Composable
 private fun BookSourceEditMenu(
-    expanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit,
     state: BookSourceEditUiState,
     onIntent: (BookSourceEditIntent) -> Unit,
 ) {
-    fun click(intent: BookSourceEditIntent) {
-        onExpandedChange(false); onIntent(intent)
-    }
-    RoundDropdownMenu(expanded = expanded, onDismissRequest = { onExpandedChange(false) }) {
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.login),
-            onClick = { click(BookSourceEditIntent.SaveAndLogin) })
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.search),
-            onClick = { click(BookSourceEditIntent.SaveAndSearch) })
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.cookie),
-            onClick = { click(BookSourceEditIntent.ClearCookie) })
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.auto_complete),
-            isSelected = state.autoComplete,
-            onClick = { click(BookSourceEditIntent.ToggleAutoComplete) })
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.copy_source),
-            onClick = { click(BookSourceEditIntent.Copy) })
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.paste_source),
-            onClick = { click(BookSourceEditIntent.Paste) })
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.set_source_variable),
-            onClick = { click(BookSourceEditIntent.SaveAndSetVariable) })
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.str_share),
-            onClick = { click(BookSourceEditIntent.Share) })
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.log),
-            onClick = { click(BookSourceEditIntent.ShowLog) })
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.help),
-            onClick = { click(BookSourceEditIntent.ShowHelp) })
+    val actions = BookSourceEditMenuAction.entries.map { action ->
+        AppAction(
+            id = action.id,
+            label = stringResource(action.labelRes),
+            selected = action == BookSourceEditMenuAction.AutoComplete && state.autoComplete,
+        )
+    }.toImmutableList()
+    AppActionMenu(
+        groups = persistentListOf(
+            AppActionGroup(id = "book_source_edit_more", actions = actions)
+        ),
+        onAction = { id -> bookSourceEditIntentFor(id)?.let(onIntent) },
+    ) {
+        AppIcon(
+            imageVector = AppIcons.MoreVert,
+            contentDescription = stringResource(R.string.more_menu),
+            modifier = this.modifier,
+        )
     }
 }

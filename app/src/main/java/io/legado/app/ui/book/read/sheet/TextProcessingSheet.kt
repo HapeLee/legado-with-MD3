@@ -63,8 +63,9 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumToggleButton
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppChoiceDropdown
+import io.legado.app.ui.widget.components.menu.AppChoiceOption
+import kotlinx.collections.immutable.toImmutableList
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.reorderAccessibility
@@ -245,7 +246,6 @@ private fun ReplaceRulesPage(
             }
         )
     }
-    var filterExpanded by remember { mutableStateOf(false) }
     var lastMove by remember { mutableStateOf<ReplaceMove?>(null) }
     val listState = rememberLazyListState()
     val reorderState = rememberReorderableLazyListState(listState) { from, to ->
@@ -284,28 +284,23 @@ private fun ReplaceRulesPage(
                 contentDescription = stringResource(R.string.replace_purify),
                 onClick = { onIntent(ReadBookIntent.ChangeReplaceRule(!replaceEnabled)) },
             )
-            Box {
+            val filterOptions = ReplaceFilter.entries.map { option ->
+                AppChoiceOption(id = option.name, label = stringResource(option.labelRes))
+            }.toImmutableList()
+            AppChoiceDropdown(
+                options = filterOptions,
+                selectedId = filter.name,
+                onSelect = { onFilterChange(ReplaceFilter.valueOf(it)) },
+                title = stringResource(R.string.replace_filter),
+                compact = true,
+            ) {
+                // 省略 onClick：工具方块保持纯展示，由入口包装唯一可点控件。
                 CompactTextProcessTool(
                     selected = filter != ReplaceFilter.Effective,
                     icon = Icons.Default.FilterList,
                     contentDescription = stringResource(R.string.replace_filter),
-                    onClick = { filterExpanded = true },
+                    modifier = this.modifier,
                 )
-                RoundDropdownMenu(
-                    expanded = filterExpanded,
-                    onDismissRequest = { filterExpanded = false },
-                ) { dismiss ->
-                    ReplaceFilter.entries.forEach { option ->
-                        RoundDropdownMenuItem(
-                            text = stringResource(option.labelRes),
-                            isSelected = option == filter,
-                            onClick = {
-                                onFilterChange(option)
-                                dismiss()
-                            },
-                        )
-                    }
-                }
             }
         }
         if (rules.isEmpty()) {
@@ -550,17 +545,19 @@ private fun CompactTextProcessTool(
     selected: Boolean,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     contentDescription: String,
-    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
 ) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .size(32.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(
                 if (selected) LegadoTheme.colorScheme.secondaryContainer
                 else LegadoTheme.colorScheme.surfaceContainerLow
             )
-            .clickable(onClick = onClick),
+            // 省略 onClick 时为纯展示 trigger，由统一菜单入口包装唯一可点控件。
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, contentDescription, modifier = Modifier.size(16.dp))

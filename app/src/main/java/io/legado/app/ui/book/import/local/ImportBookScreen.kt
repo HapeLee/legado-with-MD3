@@ -67,7 +67,9 @@ import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.list.ListScaffold
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import kotlinx.collections.immutable.persistentListOf
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -116,64 +118,43 @@ private fun ImportBookContent(
                 contentDescription = stringResource(R.string.select_folder)
             )
         },
-        dropDownMenuContent = { dismiss ->
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.import_current_folder_as_manga),
-                onClick = {
-                    onImportCurrentFolderAsManga()
-                    dismiss()
-                },
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.sort_by_name),
-                onClick = {
-                    onSortChange(0)
-                    dismiss()
-                },
-                trailingIcon = {
-                    if (state.sort == 0) {
-                        Icon(Icons.Default.Check, null)
-                    }
-                }
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.sort_by_size),
-                onClick = {
-                    onSortChange(1)
-                    dismiss()
-                },
-                trailingIcon = {
-                    if (state.sort == 1) {
-                        Icon(Icons.Default.Check, null)
-                    }
-                }
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.sort_by_time),
-                onClick = {
-                    onSortChange(2)
-                    dismiss()
-                },
-                trailingIcon = {
-                    if (state.sort == 2) {
-                        Icon(Icons.Default.Check, null)
-                    }
-                }
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.scan_folder),
-                onClick = {
-                    onScanFolder()
-                    dismiss()
-                }
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.import_file_name),
-                onClick = {
-                    onImportFileName()
-                    dismiss()
-                }
-            )
+        menuGroups = persistentListOf(
+            AppActionGroup(
+                id = "import_book_actions",
+                actions = persistentListOf(
+                    AppAction(
+                        "import_as_manga",
+                        stringResource(R.string.import_current_folder_as_manga),
+                    ),
+                    AppAction(
+                        "sort_name",
+                        stringResource(R.string.sort_by_name),
+                        selected = state.sort == 0,
+                    ),
+                    AppAction(
+                        "sort_size",
+                        stringResource(R.string.sort_by_size),
+                        selected = state.sort == 1,
+                    ),
+                    AppAction(
+                        "sort_time",
+                        stringResource(R.string.sort_by_time),
+                        selected = state.sort == 2,
+                    ),
+                    AppAction("scan_folder", stringResource(R.string.scan_folder)),
+                    AppAction("import_file_name", stringResource(R.string.import_file_name)),
+                ),
+            ),
+        ),
+        onMenuAction = { id ->
+            when (id) {
+                "import_as_manga" -> onImportCurrentFolderAsManga()
+                "sort_name" -> onSortChange(0)
+                "sort_size" -> onSortChange(1)
+                "sort_time" -> onSortChange(2)
+                "scan_folder" -> onScanFolder()
+                "import_file_name" -> onImportFileName()
+            }
         },
         bottomContent = {
             ImportPathNavigationBar(

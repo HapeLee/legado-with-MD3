@@ -25,6 +25,8 @@ import io.legado.app.ui.theme.isMiuixHyperOs4Enabled
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.list.ListUiState
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import kotlinx.collections.immutable.ImmutableList
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,6 +62,13 @@ fun <T> DynamicTopAppBar(
      */
     selectionTitle: String? = null,
     dropDownMenuContent: @Composable (ColumnScope.(dismiss: () -> Unit) -> Unit)? = null,
+    /**
+     * 声明式溢出菜单：与 [dropDownMenuContent] 二选一，非空时优先走 `TopBarActionMenu`，
+     * 让纯命令 + 分段线的菜单拿到四引擎原生分支。含搜索框 / 伪子菜单 / 动态长列表的
+     * 复杂面板仍用 [dropDownMenuContent]。
+     */
+    menuGroups: ImmutableList<AppActionGroup>? = null,
+    onMenuAction: (String) -> Unit = {},
     bottomContent: @Composable (ColumnScope.(GlassTopAppBarScrollBehavior) -> Unit)? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -105,12 +114,16 @@ fun <T> DynamicTopAppBar(
 
                 topBarActions()
 
-                dropDownMenuContent?.let { content ->
-                    TopBarOverflowMenu(
-                        expanded = showMenu,
-                        onExpandedChange = { showMenu = it },
-                        content = content,
-                    )
+                if (menuGroups != null) {
+                    TopBarActionMenu(groups = menuGroups, onAction = onMenuAction)
+                } else {
+                    dropDownMenuContent?.let { content ->
+                        TopBarOverflowMenu(
+                            expanded = showMenu,
+                            onExpandedChange = { showMenu = it },
+                            content = content,
+                        )
+                    }
                 }
             }
         },

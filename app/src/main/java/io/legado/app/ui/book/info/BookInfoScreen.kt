@@ -175,6 +175,10 @@ import io.legado.app.utils.ColorUtils
 import io.legado.app.utils.HtmlFormatter
 import io.legado.app.utils.openUrl
 import kotlinx.collections.immutable.ImmutableList
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.topbar.TopBarActionMenu
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -899,6 +903,9 @@ private fun resolveBookInfoBackdropStyle(
     return resolveBookInfoBackdropStyle(backgroundMode)
 }
 
+/** 详情页更多菜单的稳定 ID 前缀：`book_` + `BookInfoMenuAction.name`。 */
+private const val MENU_PREFIX = "book_"
+
 @Composable
 private fun BookInfoTopBarActions(
     state: BookInfoUiState,
@@ -929,24 +936,164 @@ private fun BookInfoOverflowAction(
     state: BookInfoUiState,
     onMenuAction: (BookInfoMenuAction) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Box {
-        TopBarActionButton(
-            onClick = { expanded = true },
-            imageVector = AppIcons.MoreVert,
-            contentDescription = stringResource(R.string.more_actions),
-        )
-        BookInfoOverflowMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            state = state,
-            onMenuAction = {
-                expanded = false
-                onMenuAction(it)
-            },
-        )
-    }
+    val book = state.book
+    val source = state.bookSourceUi
+    // 条件项保留原有顺序与可见性；ID = 前缀 + 枚举名，分派时无歧义还原成动作。
+    TopBarActionMenu(
+        groups = persistentListOf(
+            AppActionGroup(
+                id = "book_info_menu",
+                actions = buildList {
+                    if (source?.hasCustomButton == true) {
+                        add(
+                            AppAction(
+                                id = "$MENU_PREFIX${BookInfoMenuAction.CustomButton.name}",
+                                label = stringResource(R.string.custom_button),
+                            )
+                        )
+                    }
+                    if (state.inBookshelf) {
+                        add(
+                            AppAction(
+                                id = "$MENU_PREFIX${BookInfoMenuAction.Edit.name}",
+                                label = stringResource(R.string.edit),
+                            )
+                        )
+                    }
+                    add(
+                        AppAction(
+                            id = "$MENU_PREFIX${BookInfoMenuAction.Refresh.name}",
+                            label = stringResource(R.string.refresh),
+                        )
+                    )
+                    add(
+                        AppAction(
+                            id = "$MENU_PREFIX${BookInfoMenuAction.ReadRecord.name}",
+                            label = stringResource(R.string.read_record),
+                        )
+                    )
+                    if (state.inBookshelf && book != null) {
+                        add(
+                            AppAction(
+                                id = "$MENU_PREFIX${BookInfoMenuAction.ToggleReadRecordDisabled.name}",
+                                label = stringResource(R.string.book_disable_read_record),
+                                checked = book.disableReadRecord,
+                            )
+                        )
+                    }
+                    if (book?.isLocal == true) {
+                        add(
+                            AppAction(
+                                id = "$MENU_PREFIX${BookInfoMenuAction.SyncRemote.name}",
+                                label = stringResource(R.string.re_sync_webdav),
+                            )
+                        )
+                        add(
+                            AppAction(
+                                id = "$MENU_PREFIX${BookInfoMenuAction.Upload.name}",
+                                label = stringResource(R.string.upload_to_remote),
+                            )
+                        )
+                    }
+                    if (source?.hasLogin == true) {
+                        add(
+                            AppAction(
+                                id = "$MENU_PREFIX${BookInfoMenuAction.Login.name}",
+                                label = stringResource(R.string.login),
+                            )
+                        )
+                    }
+                    if (source != null) {
+                        add(
+                            AppAction(
+                                id = "$MENU_PREFIX${BookInfoMenuAction.SetSourceVariable.name}",
+                                label = stringResource(R.string.set_source_variable),
+                            )
+                        )
+                        add(
+                            AppAction(
+                                id = "$MENU_PREFIX${BookInfoMenuAction.SetBookVariable.name}",
+                                label = stringResource(R.string.set_book_variable),
+                            )
+                        )
+                        add(
+                            AppAction(
+                                id = "$MENU_PREFIX${BookInfoMenuAction.CopyBookUrl.name}",
+                                label = stringResource(R.string.copy_book_url),
+                            )
+                        )
+                        add(
+                            AppAction(
+                                id = "$MENU_PREFIX${BookInfoMenuAction.CopyTocUrl.name}",
+                                label = stringResource(R.string.copy_toc_url),
+                            )
+                        )
+                    }
+                    add(
+                        AppAction(
+                            id = "$MENU_PREFIX${BookInfoMenuAction.Top.name}",
+                            label = stringResource(R.string.to_top),
+                        )
+                    )
+                    if (book?.isLocal == false) {
+                        add(
+                            AppAction(
+                                id = "$MENU_PREFIX${BookInfoMenuAction.ToggleCanUpdate.name}",
+                                label = stringResource(R.string.allow_update),
+                                checked = book.canUpdate,
+                            )
+                        )
+                    }
+                    if (book?.isLocal == true && book.type and BookType.text > 0) {
+                        add(
+                            AppAction(
+                                id = "$MENU_PREFIX${BookInfoMenuAction.ToggleSplitLongChapter.name}",
+                                label = stringResource(R.string.split_long_chapter),
+                                checked = book.splitLongChapter,
+                            )
+                        )
+                    }
+                    add(
+                        AppAction(
+                            id = "$MENU_PREFIX${BookInfoMenuAction.ToggleDeleteAlert.name}",
+                            label = stringResource(R.string.delete_alert),
+                            checked = state.deleteAlertEnabled,
+                        )
+                    )
+                    add(
+                        AppAction(
+                            id = "$MENU_PREFIX${BookInfoMenuAction.ClearCache.name}",
+                            label = stringResource(R.string.clear_cache),
+                        )
+                    )
+                    add(
+                        AppAction(
+                            id = "$MENU_PREFIX${BookInfoMenuAction.ShowLog.name}",
+                            label = stringResource(R.string.log),
+                        )
+                    )
+                    add(
+                        AppAction(
+                            id = "$MENU_PREFIX${BookInfoMenuAction.TogglePrivate.name}",
+                            label = stringResource(
+                                if (state.bookPrivate) {
+                                    R.string.private_unmark_book
+                                } else {
+                                    R.string.private_mark_book
+                                }
+                            ),
+                            checked = state.bookPrivate,
+                        )
+                    )
+                }.toImmutableList(),
+            ),
+        ),
+        onAction = { id ->
+            BookInfoMenuAction.entries
+                .firstOrNull { id == "$MENU_PREFIX${it.name}" }
+                ?.let(onMenuAction)
+        },
+    )
 }
 
 @Composable
@@ -1054,117 +1201,6 @@ private data class BookInfoBackdropState(
     val sourceOrigin: String?,
     val style: BookInfoBackdropStyle,
 )
-
-@Composable
-private fun BookInfoOverflowMenu(
-    expanded: Boolean,
-    onDismissRequest: () -> Unit,
-    state: BookInfoUiState,
-    onMenuAction: (BookInfoMenuAction) -> Unit,
-) {
-    val book = state.book
-    RoundDropdownMenu(expanded = expanded, onDismissRequest = onDismissRequest) {
-        if (state.bookSourceUi?.hasCustomButton == true) {
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.custom_button),
-                onClick = { onMenuAction(BookInfoMenuAction.CustomButton) }
-            )
-        }
-        if (state.inBookshelf) {
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.edit),
-                onClick = { onMenuAction(BookInfoMenuAction.Edit) }
-            )
-        }
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.refresh),
-            onClick = { onMenuAction(BookInfoMenuAction.Refresh) }
-        )
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.read_record),
-            onClick = { onMenuAction(BookInfoMenuAction.ReadRecord) }
-        )
-        if (state.inBookshelf && book != null) {
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.book_disable_read_record),
-                onClick = { onMenuAction(BookInfoMenuAction.ToggleReadRecordDisabled) },
-                isSelected = book.disableReadRecord,
-            )
-        }
-        if (book?.isLocal == true) {
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.re_sync_webdav),
-                onClick = { onMenuAction(BookInfoMenuAction.SyncRemote) }
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.upload_to_remote),
-                onClick = { onMenuAction(BookInfoMenuAction.Upload) }
-            )
-        }
-        if (state.bookSourceUi?.hasLogin == true) {
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.login),
-                onClick = { onMenuAction(BookInfoMenuAction.Login) }
-            )
-        }
-        if (state.bookSourceUi != null) {
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.set_source_variable),
-                onClick = { onMenuAction(BookInfoMenuAction.SetSourceVariable) }
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.set_book_variable),
-                onClick = { onMenuAction(BookInfoMenuAction.SetBookVariable) }
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.copy_book_url),
-                onClick = { onMenuAction(BookInfoMenuAction.CopyBookUrl) }
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.copy_toc_url),
-                onClick = { onMenuAction(BookInfoMenuAction.CopyTocUrl) }
-            )
-        }
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.to_top),
-            onClick = { onMenuAction(BookInfoMenuAction.Top) }
-        )
-        if (book?.isLocal == false ){
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.allow_update),
-                onClick = { onMenuAction(BookInfoMenuAction.ToggleCanUpdate) },
-                isSelected = book.canUpdate
-            )
-        }
-        if (book?.isLocal == true && book.type and BookType.text > 0) {
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.split_long_chapter),
-                onClick = { onMenuAction(BookInfoMenuAction.ToggleSplitLongChapter) },
-                isSelected = book.splitLongChapter
-            )
-        }
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.delete_alert),
-            onClick = { onMenuAction(BookInfoMenuAction.ToggleDeleteAlert) },
-            isSelected = state.deleteAlertEnabled
-        )
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.clear_cache),
-            onClick = { onMenuAction(BookInfoMenuAction.ClearCache) }
-        )
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.log),
-            onClick = { onMenuAction(BookInfoMenuAction.ShowLog) }
-        )
-        RoundDropdownMenuItem(
-            text = stringResource(
-                if (state.bookPrivate) R.string.private_unmark_book else R.string.private_mark_book
-            ),
-            onClick = { onMenuAction(BookInfoMenuAction.TogglePrivate) },
-            isSelected = state.bookPrivate
-        )
-    }
-}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable

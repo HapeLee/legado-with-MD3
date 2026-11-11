@@ -16,8 +16,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
@@ -30,8 +28,7 @@ import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.ImportItemWrapper
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.settingItem.SettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.collections.immutable.toImmutableList
@@ -74,7 +71,6 @@ private fun RssSourceImportContent(
     onIntent: (RssSourceImportIntent) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var showMenu by remember { mutableStateOf(false) }
     var showGroup by rememberSaveable(source) { mutableStateOf(false) }
     val importState = when (state.phase) {
         ImportPhase.Idle, ImportPhase.Complete -> BaseImportUiState.Idle
@@ -102,35 +98,30 @@ private fun RssSourceImportContent(
         onToggleAll = { onIntent(RssSourceImportIntent.SelectAll(it)) },
         onConfirm = { onIntent(RssSourceImportIntent.Confirm) },
         onEditItem = { onIntent(RssSourceImportIntent.Edit(it)) },
-        topBarActions = {
-            Box {
-                MediumTonalButton(
-                    icon = AppIcons.MoreVert,
-                    contentDescription = stringResource(R.string.menu),
-                    onClick = { showMenu = true },
-                )
-                RoundDropdownMenu(showMenu, { showMenu = false }) { dismiss ->
-                    val groupLabel = if (state.customGroup.isBlank()) {
-                        stringResource(R.string.diy_source_group)
-                    } else {
-                        val group = stringResource(R.string.diy_edit_source_group_title, state.customGroup)
-                        if (state.appendGroup) "+$group" else group
-                    }
-                    RoundDropdownMenuItem(groupLabel, onClick = {
-                        dismiss()
-                        showGroup = true
-                    })
-                    ImportOption(R.string.keep_original_name, state.keepName) {
-                        onIntent(RssSourceImportIntent.KeepName(!state.keepName))
-                    }
-                    ImportOption(R.string.keep_group, state.keepGroup) {
-                        onIntent(RssSourceImportIntent.KeepGroup(!state.keepGroup))
-                    }
-                    ImportOption(R.string.keep_enable, state.keepEnable) {
-                        onIntent(RssSourceImportIntent.KeepEnable(!state.keepEnable))
-                    }
-                }
-            }
+        configContent = {
+            SwitchSettingItem(
+                title = stringResource(R.string.keep_original_name),
+                checked = state.keepName,
+                onCheckedChange = { onIntent(RssSourceImportIntent.KeepName(it)) },
+            )
+            SwitchSettingItem(
+                title = stringResource(R.string.keep_group),
+                checked = state.keepGroup,
+                onCheckedChange = { onIntent(RssSourceImportIntent.KeepGroup(it)) },
+            )
+            SwitchSettingItem(
+                title = stringResource(R.string.keep_enable),
+                checked = state.keepEnable,
+                onCheckedChange = { onIntent(RssSourceImportIntent.KeepEnable(it)) },
+            )
+            SettingItem(
+                title = stringResource(R.string.diy_source_group),
+                option = state.customGroup.takeIf { it.isNotBlank() }?.let { group ->
+                    val label = stringResource(R.string.diy_edit_source_group_title, group)
+                    if (state.appendGroup) "+$label" else label
+                },
+                onClick = { showGroup = true },
+            )
         },
         itemTitle = { it.name },
         itemSubtitle = { it.url },
@@ -173,16 +164,6 @@ private fun RssSourceImportContent(
             onConfirm = dismiss,
         )
     }
-}
-
-@Composable
-private fun ImportOption(label: Int, checked: Boolean, onClick: () -> Unit) {
-    RoundDropdownMenuItem(
-        text = stringResource(label),
-        isSelected = checked,
-        modifier = Modifier.semantics { selected = checked },
-        onClick = onClick,
-    )
 }
 
 @Composable

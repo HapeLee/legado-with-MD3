@@ -45,7 +45,9 @@ import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import kotlinx.collections.immutable.persistentListOf
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
 import kotlinx.coroutines.flow.Flow
 import org.koin.androidx.compose.koinViewModel
@@ -285,12 +287,13 @@ fun HighlightTagRuleScreen(
             showEditSheet = true
         },
         snackbarHostState = snackbarHostState,
-        dropDownMenuContent = { dismiss ->
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.import_str),
-                onClick = { showImportSheet = true; dismiss() }
-            )
-        }
+        menuGroups = persistentListOf(
+            AppActionGroup(
+                id = "highlight_tag_rule_import",
+                actions = persistentListOf(AppAction("import", stringResource(R.string.import_str))),
+            ),
+        ),
+        onMenuAction = { id -> if (id == "import") showImportSheet = true },
     ) { paddingValues ->
         Box(
             modifier = Modifier

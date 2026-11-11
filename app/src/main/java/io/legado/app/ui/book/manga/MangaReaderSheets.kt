@@ -52,9 +52,12 @@ import io.legado.app.ui.book.read.sheet.ReaderBookHeader
 import io.legado.app.ui.book.read.sheet.ReaderBookHeaderState
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.NormalCard
+import io.legado.app.ui.widget.components.menu.AppChoiceDropdown
+import io.legado.app.ui.widget.components.menu.AppChoiceOption
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import kotlinx.collections.immutable.toImmutableList
 import io.legado.app.ui.widget.components.reader.ReaderMenuActionSquare
 import io.legado.app.ui.widget.components.text.AppText
 
@@ -446,11 +449,21 @@ private fun MangaClickAreaCell(
     onPick: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    Box(modifier = modifier) {
+    val choices = MangaClickActionEntries
+        .map { (value, labelRes) ->
+            AppChoiceOption(id = value.toString(), label = stringResource(labelRes))
+        }
+        .toImmutableList()
+    AppChoiceDropdown(
+        options = choices,
+        selectedId = action.toString(),
+        onSelect = { id -> onPick(id.toInt()) },
+        title = stringResource(R.string.manga_reader_click_areas),
+        compact = true,
+        modifier = modifier,
+    ) {
         NormalCard(
-            onClick = { expanded = true },
-            modifier = Modifier.fillMaxSize(),
+            modifier = this.modifier.fillMaxSize(),
             cornerRadius = 16.dp,
             containerColor = LegadoTheme.colorScheme.surfaceContainer.copy(alpha = 0.9f),
         ) {
@@ -462,21 +475,6 @@ private fun MangaClickAreaCell(
                     text = stringResource(mangaClickActionLabelRes(action)),
                     style = LegadoTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
-                )
-            }
-        }
-        RoundDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) { dismiss ->
-            MangaClickActionEntries.forEach { (value, labelRes) ->
-                RoundDropdownMenuItem(
-                    text = stringResource(labelRes),
-                    isSelected = value == action,
-                    onClick = {
-                        onPick(value)
-                        dismiss()
-                    },
                 )
             }
         }

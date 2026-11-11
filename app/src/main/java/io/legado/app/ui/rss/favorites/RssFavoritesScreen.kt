@@ -2,7 +2,6 @@ package io.legado.app.ui.rss.favorites
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -15,7 +14,6 @@ import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -36,10 +34,13 @@ import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.dialog.TextListInputDialog
-import io.legado.app.ui.widget.components.divider.PillDivider
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
 import io.legado.app.ui.widget.components.image.sourceIcon.SourceIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import org.koin.androidx.compose.koinViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
@@ -134,63 +135,47 @@ fun RssFavoritesScreen(
             )
         ),
         topBarActions = {},
-        dropDownMenuContent = { dismiss ->
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.all),
-                leadingIcon = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Group, null, modifier = Modifier.size(18.dp))
-                    }
-                },
-                onClick = {
-                    onIntent(RssFavoritesIntent.ChangeGroup(""))
-                    dismiss()
-                }
-            )
-            groups.forEach { group ->
-                RoundDropdownMenuItem(
-                    text = group,
-                    leadingIcon = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.AutoMirrored.Outlined.Label,
-                                null,
-                                modifier = Modifier.size(18.dp)
+        menuGroups = persistentListOf(
+            AppActionGroup(
+                id = "favorite_groups",
+                actions = buildList {
+                    add(AppAction("group:", stringResource(R.string.all), icon = Icons.Default.Group))
+                    groups.forEach { group ->
+                        add(
+                            AppAction(
+                                "group:$group",
+                                group,
+                                icon = Icons.AutoMirrored.Outlined.Label,
                             )
-                        }
-                    },
-                    onClick = {
-                        onIntent(RssFavoritesIntent.ChangeGroup(group))
-                        dismiss()
+                        )
                     }
-                )
-            }
-            PillDivider()
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.delete_select_group),
-                leadingIcon = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.DeleteSweep, null, modifier = Modifier.size(18.dp))
-                    }
-                },
-                onClick = {
+                }.toImmutableList(),
+            ),
+            AppActionGroup(
+                id = "favorite_cleanup",
+                actions = persistentListOf(
+                    AppAction(
+                        "delete_select_group",
+                        stringResource(R.string.delete_select_group),
+                        icon = Icons.Default.DeleteSweep,
+                    ),
+                    AppAction(
+                        "delete_all",
+                        stringResource(R.string.all),
+                        icon = Icons.Default.DeleteForever,
+                    ),
+                ),
+            ),
+        ),
+        onMenuAction = { id ->
+            when {
+                id == "delete_select_group" ->
                     onIntent(RssFavoritesIntent.DeleteGroup(state.currentGroup))
-                    dismiss()
-                }
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.all),
-                leadingIcon = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.DeleteForever, null, modifier = Modifier.size(18.dp))
-                    }
-                },
-                onClick = {
-                    onIntent(RssFavoritesIntent.DeleteAll)
-                    dismiss()
-                }
-            )
-        }
+                id == "delete_all" -> onIntent(RssFavoritesIntent.DeleteAll)
+                id.startsWith("group:") ->
+                    onIntent(RssFavoritesIntent.ChangeGroup(id.removePrefix("group:")))
+            }
+        },
     ) { paddingValues ->
         if (state.items.isEmpty()) {
             Box(

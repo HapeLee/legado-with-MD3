@@ -3,9 +3,6 @@ package io.legado.app.ui.book.source.edit
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -32,7 +29,6 @@ fun BookSourceEditRoute(
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var menuExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(sourceUrl, viewModel) {
         viewModel.onIntent(BookSourceEditIntent.Load(sourceUrl))
@@ -64,8 +60,6 @@ fun BookSourceEditRoute(
 
     BookSourceEditScreen(
         state = state,
-        menuExpanded = menuExpanded,
-        onMenuExpandedChange = { menuExpanded = it },
         onIntent = viewModel::onIntent,
     )
     AppAlertDialog(

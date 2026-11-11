@@ -37,16 +37,21 @@ abstract class MochiBackdrop2Transform implements TransformAction<TransformParam
     @Override
     void transform(TransformOutputs outputs) {
         File input = inputArtifact.get().asFile
-        if (input.name != 'mochi-compose-0.2.0.aar') {
+        // 按文件名前缀判断，不认版本号：升级 mochi 不用再改这里
+        if (!input.name.startsWith('mochi-compose-') || !input.name.endsWith('.aar')) {
             outputs.file(input)
             return
         }
         int[] replacements = [0] as int[]
         byte[] patched = rewriteArchive(input.bytes, false, replacements)
         if (replacements[0] != 1) {
-            throw new IllegalStateException("Mochi 0.2.0 Backdrop patch expected one call; found ${replacements[0]}. Review the published artifact.")
+            throw new IllegalStateException(
+                "Mochi Backdrop patch expected exactly one RenderEffectKt.effect call in ${input.name}; " +
+                    "found ${replacements[0]}. If the artifact moved to Backdrop 2.x, delete this transform " +
+                    "and MochiBackdropCompat."
+            )
         }
-        outputs.file('mochi-compose-0.2.0.aar').bytes = patched
+        outputs.file(input.name).bytes = patched
     }
 
     private static byte[] rewriteArchive(byte[] bytes, boolean jar, int[] replacements) {

@@ -109,12 +109,12 @@ import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.conflict.BookshelfConflictSheet
-import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.image.cover.BookshelfCover
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
@@ -122,6 +122,8 @@ import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.utils.isContentScheme
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
@@ -412,7 +414,6 @@ fun HomeScreen(
         selectedSets.size.coerceAtLeast(1)
     })
 
-    var showPageMenu by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val currentPageSourceName by remember(selectedSets, pagerState) {
@@ -450,37 +451,46 @@ fun HomeScreen(
                         imageVector = AppIcons.Settings,
                         contentDescription = stringResource(R.string.homepage_module_manage),
                     )
-                    Box {
-                        TopBarActionButton(
-                            onClick = { showPageMenu = true },
+                    AppActionMenu(
+                        groups = persistentListOf(
+                            AppActionGroup(
+                                id = "home_settings",
+                                actions = persistentListOf(
+                                    AppAction(
+                                        "dashboard_settings",
+                                        stringResource(R.string.home_dashboard_settings),
+                                    ),
+                                ),
+                            ),
+                            AppActionGroup(
+                                id = "home_pages",
+                                actions = selectedSets.mapIndexed { index, source ->
+                                    AppAction(
+                                        id = "page:$index",
+                                        label = source.sourceName,
+                                        selected = index == pagerState.currentPage,
+                                    )
+                                }.toImmutableList(),
+                            ),
+                        ),
+                        onAction = { id ->
+                            when {
+                                id == "dashboard_settings" ->
+                                    onIntent(HomeIntent.DashboardSettingsClick)
+                                id.startsWith("page:") -> {
+                                    val index = id.removePrefix("page:").toIntOrNull()
+                                    if (index != null && index in selectedSets.indices) {
+                                        scope.launch { pagerState.animateScrollToPage(index) }
+                                    }
+                                }
+                            }
+                        },
+                    ) {
+                        AppIcon(
                             imageVector = AppIcons.MoreVert,
                             contentDescription = stringResource(R.string.more_menu),
+                            modifier = this.modifier,
                         )
-                        RoundDropdownMenu(
-                            expanded = showPageMenu,
-                            onDismissRequest = { showPageMenu = false },
-                        ) {
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.home_dashboard_settings),
-                                onClick = {
-                                    showPageMenu = false
-                                    onIntent(HomeIntent.DashboardSettingsClick)
-                                },
-                            )
-                            PillDivider()
-                            selectedSets.forEachIndexed { index, source ->
-                                RoundDropdownMenuItem(
-                                    text = source.sourceName,
-                                    isSelected = index == pagerState.currentPage,
-                                    onClick = {
-                                        showPageMenu = false
-                                        scope.launch {
-                                            pagerState.animateScrollToPage(index)
-                                        }
-                                    },
-                                )
-                            }
-                        }
                     }
                 },
             )

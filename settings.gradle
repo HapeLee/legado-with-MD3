@@ -19,6 +19,12 @@ plugins {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        // 本地联调：mochi 的本地发布（publishToMavenLocal）只对这一个 group 生效，正式版还是走 Maven Central
+        mavenLocal {
+            content {
+                includeGroupByRegex("io\\.github\\.feice11.*")
+            }
+        }
         google {
             content {
                 includeGroupByRegex("com\\.android.*")

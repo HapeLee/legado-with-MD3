@@ -99,7 +99,8 @@ import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.card.TextCard
-import io.legado.app.ui.widget.components.divider.PillDivider
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
@@ -125,6 +126,7 @@ import io.legado.app.utils.move
 import io.legado.app.utils.startService
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.verificationField
+import kotlinx.collections.immutable.persistentListOf
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -494,30 +496,29 @@ private fun BookshelfManageScreen(
                 }
             }
         },
-        dropDownMenuContent = { dismiss ->
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.download_all),
-                onClick = {
-                    dismiss()
-                    if (state.isDownloadRunning) {
-                        viewModel.dispatch(BookshelfManageScreenIntent.StopDownload)
-                    } else {
-                        showDownloadAllConfirmDialog = true
-                    }
+        menuGroups = persistentListOf(
+            AppActionGroup(
+                id = "manage_actions",
+                actions = persistentListOf(
+                    AppAction("download_all", stringResource(R.string.download_all)),
+                    AppAction("export_all", stringResource(R.string.export_all)),
+                ),
+            ),
+            AppActionGroup(
+                id = "manage_log",
+                actions = persistentListOf(AppAction("log", stringResource(R.string.log))),
+            ),
+        ),
+        onMenuAction = { id ->
+            when (id) {
+                "download_all" -> if (state.isDownloadRunning) {
+                    viewModel.dispatch(BookshelfManageScreenIntent.StopDownload)
+                } else {
+                    showDownloadAllConfirmDialog = true
                 }
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.export_all),
-                onClick = { dismiss(); exportAll() }
-            )
-            PillDivider()
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.log),
-                onClick = {
-                    dismiss()
-                    showLogSheet = true
-                }
-            )
+                "export_all" -> exportAll()
+                "log" -> showLogSheet = true
+            }
         },
         floatingActionButton = {
             AppFloatingActionButtonMenu(

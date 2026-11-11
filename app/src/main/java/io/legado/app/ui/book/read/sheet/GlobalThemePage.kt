@@ -69,8 +69,9 @@ import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.icon.AppIcon
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppChoiceDropdown
+import io.legado.app.ui.widget.components.menu.AppChoiceOption
+import kotlinx.collections.immutable.toImmutableList
 import io.legado.app.ui.widget.components.settingItem.TinySettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.text.AppText
@@ -361,8 +362,10 @@ fun GlobalThemePage(
             R.string.page_anim_fade to PageAnim.fadePageAnim,
             R.string.page_anim_none to PageAnim.noAnim,
         )
-        var showPageAnimMenu by remember { mutableStateOf(false) }
         val pageAnimEntries = pageAnimOptions.map { stringResource(it.first) to it.second }
+        val pageAnimChoices = pageAnimEntries
+            .map { (display, value) -> AppChoiceOption(id = value.toString(), label = display) }
+            .toImmutableList()
         val currentPageAnimDisplay = pageAnimEntries.firstOrNull { it.second == pageAnim }?.first ?: ""
 
         val pageAnimSpeedOptions = listOf(
@@ -371,17 +374,29 @@ fun GlobalThemePage(
             R.string.page_anim_speed_moderate,
             R.string.page_anim_speed_elegant,
         )
-        var showPageAnimSpeedMenu by remember { mutableStateOf(false) }
-        val pageAnimSpeedEntries = pageAnimSpeedOptions.map { stringResource(it) }.toTypedArray()
+        val pageAnimSpeedLabels = pageAnimSpeedOptions.map { stringResource(it) }
+        val pageAnimSpeedChoices = pageAnimSpeedLabels.mapIndexed { index, label ->
+            AppChoiceOption(id = index.toString(), label = label)
+        }.toImmutableList()
 
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Box(modifier = Modifier.weight(1f)) {
+            AppChoiceDropdown(
+                options = pageAnimChoices,
+                selectedId = pageAnim.toString(),
+                onSelect = { id ->
+                    ReadBook.book?.setPageAnim(-1)
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.PageAnim(id.toInt())))
+                },
+                title = stringResource(R.string.page_anim),
+                compact = true,
+                modifier = Modifier.weight(1f),
+            ) {
                 TinySettingItem(
                     title = stringResource(R.string.page_anim),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = this.modifier.fillMaxWidth(),
                     trailingContent = {
                         TextCard(
                             cornerRadius = 8.dp,
@@ -392,29 +407,23 @@ fun GlobalThemePage(
                             contentColor = LegadoTheme.colorScheme.onSurface,
                         )
                     },
-                    onClick = { showPageAnimMenu = true },
                 )
-                RoundDropdownMenu(
-                    expanded = showPageAnimMenu,
-                    onDismissRequest = { showPageAnimMenu = false },
-                ) { dismiss ->
-                    pageAnimEntries.forEach { (display, value) ->
-                        RoundDropdownMenuItem(
-                            text = display,
-                            onClick = {
-                                ReadBook.book?.setPageAnim(-1)
-                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.PageAnim(value)))
-                                dismiss()
-                            },
-                        )
-                    }
-                }
             }
             // 翻页动画速度挡位：与右侧 SpaceBar 卡片同款方卡，点开选极速 / 快速 / 适中 / 优雅。
-            Box {
+            AppChoiceDropdown(
+                options = pageAnimSpeedChoices,
+                selectedId = pageAnimSpeed.toString(),
+                onSelect = { id ->
+                    onIntent(
+                        ReadBookIntent.UpdateConfig(ConfigUpdate.PageAnimSpeed(id.toInt()))
+                    )
+                },
+                title = stringResource(R.string.page_anim_speed),
+                compact = true,
+            ) {
+                // 省略 onClick：方卡保持纯展示，由入口包装唯一可点控件。
                 NormalCard(
-                    onClick = { showPageAnimSpeedMenu = true },
-                    modifier = Modifier
+                    modifier = this.modifier
                         .height(56.dp)
                         .aspectRatio(1f),
                     containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
@@ -425,23 +434,6 @@ fun GlobalThemePage(
                             imageVector = Icons.Default.Speed,
                             contentDescription = stringResource(R.string.page_anim_speed),
                             tint = LegadoTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                RoundDropdownMenu(
-                    expanded = showPageAnimSpeedMenu,
-                    onDismissRequest = { showPageAnimSpeedMenu = false },
-                ) { dismiss ->
-                    pageAnimSpeedEntries.forEachIndexed { index, display ->
-                        RoundDropdownMenuItem(
-                            text = display,
-                            onClick = {
-                                onIntent(
-                                    ReadBookIntent.UpdateConfig(ConfigUpdate.PageAnimSpeed(index))
-                                )
-                                dismiss()
-                            },
-                            isSelected = index == pageAnimSpeed,
                         )
                     }
                 }

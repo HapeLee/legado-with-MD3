@@ -64,7 +64,11 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.ToggleChip
 import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
+import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.text.AppText
@@ -73,6 +77,7 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.toastOnUi
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
 
@@ -116,7 +121,6 @@ fun ReplaceEditScreen(
     onBack: () -> Unit,
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
-    var showMenu by remember { mutableStateOf(false) }
     val isKeyboardVisible by keyboardAsState()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -159,28 +163,32 @@ fun ReplaceEditScreen(
                             contentDescription = stringResource(R.string.action_save)
                         )
                     }
-                    TopBarActionButton(
-                        onClick = { showMenu = true },
-                        imageVector = AppIcons.MoreVert,
-                        contentDescription = stringResource(R.string.more_actions)
-                    )
-                    RoundDropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
+                    AppActionMenu(
+                        groups = persistentListOf(
+                            AppActionGroup(
+                                id = "replace_edit_menu",
+                                actions = persistentListOf(
+                                    AppAction(
+                                        id = "copy_rule",
+                                        label = stringResource(R.string.copy_rule),
+                                    ),
+                                    AppAction(
+                                        id = "paste_rule",
+                                        label = stringResource(R.string.paste_rule),
+                                    ),
+                                ),
+                            ),
+                        ),
+                        onAction = { id ->
+                            when (id) {
+                                "copy_rule" -> onIntent(ReplaceEditIntent.CopyRule)
+                                "paste_rule" -> onIntent(ReplaceEditIntent.PasteRule)
+                            }
+                        },
                     ) {
-                        RoundDropdownMenuItem(
-                            text = stringResource(R.string.copy_rule),
-                            onClick = {
-                                showMenu = false
-                                onIntent(ReplaceEditIntent.CopyRule)
-                            }
-                        )
-                        RoundDropdownMenuItem(
-                            text = stringResource(R.string.paste_rule),
-                            onClick = {
-                                showMenu = false
-                                onIntent(ReplaceEditIntent.PasteRule)
-                            }
+                        AppIcon(
+                            imageVector = AppIcons.MoreVert,
+                            contentDescription = stringResource(R.string.more_actions),
                         )
                     }
                 },

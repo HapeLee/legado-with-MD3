@@ -76,7 +76,11 @@ import io.legado.app.ui.widget.components.explore.ExploreKindMultiTypeItem
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.list.ListScaffold
 import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
 import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
@@ -308,18 +312,32 @@ fun ExploreScreen(
             onSearchQueryChange = { onIntent(ExploreIntent.Search(it)) },
             onSearchToggle = { onIntent(ExploreIntent.ToggleSearch(it)) },
             searchPlaceholder = stringResource(R.string.search),
-            dropDownMenuContent = { dismiss ->
-                RoundDropdownMenuItem(
-                    leadingIcon = { MenuItemIcon(Icons.Default.Group) },
-                    text = stringResource(R.string.all),
-                    onClick = { onIntent(ExploreIntent.SetGroup("")); dismiss() }
-                )
-                state.groups.forEach { group ->
-                    RoundDropdownMenuItem(
-                        leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Outlined.Label) },
-                        text = group,
-                        onClick = { onIntent(ExploreIntent.SetGroup(group)); dismiss() }
-                    )
+            menuGroups = persistentListOf(
+                AppActionGroup(
+                    id = "explore_groups",
+                    actions = buildList {
+                        add(
+                            AppAction(
+                                "group:",
+                                stringResource(R.string.all),
+                                icon = Icons.Default.Group,
+                            )
+                        )
+                        state.groups.forEach { group ->
+                            add(
+                                AppAction(
+                                    "group:$group",
+                                    group,
+                                    icon = Icons.AutoMirrored.Outlined.Label,
+                                )
+                            )
+                        }
+                    }.toImmutableList(),
+                ),
+            ),
+            onMenuAction = { id ->
+                if (id.startsWith("group:")) {
+                    onIntent(ExploreIntent.SetGroup(id.removePrefix("group:")))
                 }
             },
             contentWindowInsets = WindowInsets(0)

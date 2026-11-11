@@ -45,7 +45,9 @@ import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import kotlinx.collections.immutable.persistentListOf
 import io.legado.app.ui.widget.components.rules.RuleEditFields
 import io.legado.app.ui.widget.components.rules.RuleEditSheet
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
@@ -367,16 +369,21 @@ fun TxtRuleScreen(
             showEditSheet = true
         },
         snackbarHostState = snackbarHostState,
-        dropDownMenuContent = { dismiss ->
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.import_str),
-                onClick = { showImportSheet = true; dismiss() }
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.import_built_in_rules),
-                onClick = { onIntent(TxtTocRuleIntent.ImportBuiltInRules); dismiss() }
-            )
-        }
+        menuGroups = persistentListOf(
+            AppActionGroup(
+                id = "txt_toc_rule_import",
+                actions = persistentListOf(
+                    AppAction("import", stringResource(R.string.import_str)),
+                    AppAction("import_built_in", stringResource(R.string.import_built_in_rules)),
+                ),
+            ),
+        ),
+        onMenuAction = { id ->
+            when (id) {
+                "import" -> showImportSheet = true
+                "import_built_in" -> onIntent(TxtTocRuleIntent.ImportBuiltInRules)
+            }
+        },
     ) { paddingValues ->
         Box(
             modifier = Modifier

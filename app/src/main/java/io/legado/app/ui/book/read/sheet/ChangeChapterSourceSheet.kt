@@ -41,12 +41,16 @@ import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.SelectionItemCard
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
+import kotlinx.collections.immutable.persistentListOf
 
 @Composable
 fun ChangeChapterSourceSheet(
@@ -59,7 +63,6 @@ fun ChangeChapterSourceSheet(
     onBookScoreClick: (SearchBook) -> Unit,
     onEditSource: (String) -> Unit,
 ) {
-    var showOptionsMenu by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
 
     AppModalBottomSheet(
@@ -68,49 +71,36 @@ fun ChangeChapterSourceSheet(
         title = if (state.showToc) state.selectedSourceName else stringResource(R.string.chapter_change_source),
         startAction = {
             if (!state.showToc) {
-                Box {
-                    MediumTonalButton(
-                        onClick = { showOptionsMenu = true },
-                icon = Icons.Default.MoreVert,
-                contentDescription = stringResource(R.string.more_menu)
-                    )
-                    RoundDropdownMenu(
-                        expanded = showOptionsMenu,
-                        onDismissRequest = { showOptionsMenu = false }
-                    ) { dismiss ->
-                        RoundDropdownMenuItem(
-                            text = "校验作者",
-                            isSelected = state.checkAuthor,
-                            onClick = {
+                AppActionMenu(
+                    groups = persistentListOf(
+                        AppActionGroup(
+                            id = "change_chapter_source_toggles",
+                            actions = persistentListOf(
+                                AppAction("check_author", "校验作者", checked = state.checkAuthor),
+                                AppAction("load_info", "加载详情", checked = state.loadInfo),
+                                AppAction("load_toc", "加载目录", checked = state.loadToc),
+                                AppAction("load_word_count", "显示更多信息", checked = state.loadWordCount),
+                            ),
+                        ),
+                    ),
+                    onAction = { id ->
+                        when (id) {
+                            "check_author" ->
                                 onIntent(ChangeChapterSourceIntent.SetCheckAuthor(!state.checkAuthor))
-                                dismiss()
-                            }
-                        )
-                        RoundDropdownMenuItem(
-                            text = "加载详情",
-                            isSelected = state.loadInfo,
-                            onClick = {
+                            "load_info" ->
                                 onIntent(ChangeChapterSourceIntent.SetLoadInfo(!state.loadInfo))
-                                dismiss()
-                            }
-                        )
-                        RoundDropdownMenuItem(
-                            text = "加载目录",
-                            isSelected = state.loadToc,
-                            onClick = {
+                            "load_toc" ->
                                 onIntent(ChangeChapterSourceIntent.SetLoadToc(!state.loadToc))
-                                dismiss()
-                            }
-                        )
-                        RoundDropdownMenuItem(
-                            text = "显示更多信息",
-                            isSelected = state.loadWordCount,
-                            onClick = {
+                            "load_word_count" ->
                                 onIntent(ChangeChapterSourceIntent.SetLoadWordCount(!state.loadWordCount))
-                                dismiss()
-                            }
-                        )
-                    }
+                        }
+                    },
+                ) {
+                    AppIcon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = stringResource(R.string.more_menu),
+                        modifier = this.modifier,
+                    )
                 }
             }
         },

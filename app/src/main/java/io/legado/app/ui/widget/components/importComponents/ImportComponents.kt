@@ -17,12 +17,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -120,6 +123,12 @@ fun <T> BatchImportDialog(
     onUpdateItem: (index: Int, data: T) -> Unit = { _, _ -> },
     onEditItem: ((index: Int) -> Unit)? = null,
     topBarActions: @Composable RowScope.() -> Unit = {},
+    /**
+     * 可选的配置页内容。非 null 时顶栏出现「配置 ↔ 列表」切换按钮，配置页隐藏全选与导入按钮；
+     * 列表页保持原有行为。用于把「多选开关」这类需要常驻可见、可连续切换的项从下拉菜单里拿出来，
+     * 避免为了少数页面给命令菜单扩展「动作后保持展开」语义。
+     */
+    configContent: (@Composable () -> Unit)? = null,
     itemTitle: (data: T) -> String,
     itemSubtitle: (data: T) -> String? = { null }
 ) {
@@ -162,11 +171,15 @@ fun <T> BatchImportDialog(
     var editingIndex by remember(currentState.source) { mutableStateOf<Int?>(null) }
     val editingItem = editingIndex?.let { currentState.items.getOrNull(it) }
     val isEditing = editingItem != null
+    val config = configContent
+    var showConfig by remember(currentState.source) { mutableStateOf(false) }
+    val showConfigPage = showConfig && config != null && !isEditing
     val selectedCount = currentState.items.count { it.isSelected }
     val totalCount = currentState.items.size
     val allSelected = selectedCount == totalCount
     val sheetTitle = when {
         isEditing -> itemTitle(editingItem.data)
+        showConfigPage -> stringResource(R.string.setting)
         selectedCount > 0 -> {
             stringResource(
                 R.string.select_count,
@@ -191,11 +204,30 @@ fun <T> BatchImportDialog(
                     contentDescription = stringResource(R.string.back)
                 )
             }
+        } else if (showConfigPage) {
+            {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    MediumTonalButton(
+                        onClick = { showConfig = false },
+                        icon = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.back)
+                    )
+                }
+            }
         } else {
             {
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    if (config != null) {
+                        MediumTonalButton(
+                            onClick = { showConfig = true },
+                            icon = Icons.Default.Settings,
+                            contentDescription = stringResource(R.string.setting)
+                        )
+                    }
                     topBarActions()
                     MediumTonalButton(
                         onClick = { onToggleAll(!allSelected) },
@@ -205,7 +237,7 @@ fun <T> BatchImportDialog(
                 }
             }
         },
-        endAction = if (!isEditing && selectedCount > 0) {
+        endAction = if (!isEditing && !showConfigPage && selectedCount > 0) {
             {
                 MediumTonalButton(
                     onClick = {
@@ -226,6 +258,15 @@ fun <T> BatchImportDialog(
                 version = currentState.version
             ) { data ->
                 editingIndex?.let { onUpdateItem(it, data) }
+            }
+        } else if (showConfigPage) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.58f)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                config()
             }
         } else {
             Box(

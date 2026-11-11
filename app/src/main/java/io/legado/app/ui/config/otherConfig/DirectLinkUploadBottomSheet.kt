@@ -1,6 +1,5 @@
 package io.legado.app.ui.config.otherConfig
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,14 +13,8 @@ import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -34,8 +27,11 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.icon.AppIcons
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.GSON
@@ -43,6 +39,7 @@ import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.getClipText
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.toastOnUi
+import kotlinx.collections.immutable.persistentListOf
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,7 +50,6 @@ fun DirectLinkUploadBottomSheet(
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
-    var showMenu by remember { mutableStateOf(false) }
 
     AppModalBottomSheet(
         show = show,
@@ -68,21 +64,32 @@ fun DirectLinkUploadBottomSheet(
             )
         },
         endAction = {
-            Box {
-                MediumTonalButton(
-                    onClick = { showMenu = true },
-                icon = Icons.Default.MoreVert,
-                contentDescription = stringResource(R.string.more_menu)
-                )
-                RoundDropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
-                ) {
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.import_default_rule),
-                        leadingIcon = { Icon(Icons.Default.Download, null) },
-                        onClick = {
-                            showMenu = false
+            AppActionMenu(
+                groups = persistentListOf(
+                    AppActionGroup(
+                        id = "direct_link_rule_menu",
+                        actions = persistentListOf(
+                            AppAction(
+                                id = "import_default_rule",
+                                label = stringResource(R.string.import_default_rule),
+                                icon = Icons.Default.Download,
+                            ),
+                            AppAction(
+                                id = "copy_direct_link_rule",
+                                label = stringResource(R.string.copy_rule),
+                                icon = Icons.Default.ContentCopy,
+                            ),
+                            AppAction(
+                                id = "paste_direct_link_rule",
+                                label = stringResource(R.string.paste_rule),
+                                icon = Icons.Default.ContentPaste,
+                            ),
+                        ),
+                    ),
+                ),
+                onAction = { id ->
+                    when (id) {
+                        "import_default_rule" ->
                             context.selector(state.directRulePresets) { _, rule, _ ->
                                 onIntent(
                                     OtherConfigIntent.DirectRuleChanged(
@@ -93,13 +100,8 @@ fun DirectLinkUploadBottomSheet(
                                     )
                                 )
                             }
-                        }
-                    )
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.copy_rule),
-                        leadingIcon = { Icon(Icons.Default.ContentCopy, null) },
-                        onClick = {
-                            showMenu = false
+
+                        "copy_direct_link_rule" -> {
                             val rule = DirectLinkRuleUi(
                                 uploadUrl = state.directUploadUrl,
                                 downloadUrlRule = state.directDownloadUrlRule,
@@ -108,34 +110,32 @@ fun DirectLinkUploadBottomSheet(
                             )
                             context.sendToClip(GSON.toJson(rule))
                         }
-                    )
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.paste_rule),
-                        leadingIcon = { Icon(Icons.Default.ContentPaste, null) },
-                        onClick = {
-                            showMenu = false
-                            runCatching {
-                                context.getClipText()?.let {
-                                    val rule =
-                                        GSON.fromJsonObject<DirectLinkRuleUi>(it)
-                                            .getOrThrow()
-                                    onIntent(
-                                        OtherConfigIntent.DirectRuleChanged(
-                                            uploadUrl = rule.uploadUrl,
-                                            downloadUrlRule = rule.downloadUrlRule,
-                                            summary = rule.summary,
-                                            compress = rule.compress,
-                                        )
-                                    )
-                                }
-                            }.onFailure {
-                                context.toastOnUi(R.string.clipboard_empty_or_invalid)
-                            }
-                        }
-                    )
-                }
-            }
 
+                        "paste_direct_link_rule" -> runCatching {
+                            context.getClipText()?.let {
+                                val rule =
+                                    GSON.fromJsonObject<DirectLinkRuleUi>(it)
+                                        .getOrThrow()
+                                onIntent(
+                                    OtherConfigIntent.DirectRuleChanged(
+                                        uploadUrl = rule.uploadUrl,
+                                        downloadUrlRule = rule.downloadUrlRule,
+                                        summary = rule.summary,
+                                        compress = rule.compress,
+                                    )
+                                )
+                            }
+                        }.onFailure {
+                            context.toastOnUi(R.string.clipboard_empty_or_invalid)
+                        }
+                    }
+                },
+            ) {
+                AppIcon(
+                    imageVector = AppIcons.MoreVert,
+                    contentDescription = stringResource(R.string.more_menu),
+                )
+            }
         },
         onDismissRequest = onDismiss
     ) {

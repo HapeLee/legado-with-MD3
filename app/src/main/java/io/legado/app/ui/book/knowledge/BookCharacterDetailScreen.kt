@@ -48,8 +48,8 @@ import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.icon.AppIcon
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppChoiceDropdown
+import io.legado.app.ui.widget.components.menu.AppChoiceOption
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.text.AnimatedTextLine
 import io.legado.app.ui.widget.components.text.AppText
@@ -59,6 +59,7 @@ import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.toastOnUi
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 
@@ -298,15 +299,23 @@ private fun ProfileVoiceTraitDropdown(
     displayName: @Composable (String) -> String,
     onSelected: (String) -> Unit,
 ) {
-    var showDropdown by remember { mutableStateOf(false) }
+    val choices = options
+        .map { option -> AppChoiceOption(id = option, label = displayName(option)) }
+        .toImmutableList()
     AppText(
         text = label,
         style = LegadoTheme.typography.labelMedium,
         color = LegadoTheme.colorScheme.onSurfaceVariant
     )
-    Box {
+    AppChoiceDropdown(
+        options = choices,
+        selectedId = selected,
+        onSelect = onSelected,
+        title = label,
+        compact = true,
+    ) {
         GlassCard(
-            onClick = { showDropdown = true },
+            modifier = this.modifier,
             containerColor = LegadoTheme.colorScheme.surfaceContainerLow
         ) {
             AnimatedTextLine(
@@ -314,14 +323,6 @@ private fun ProfileVoiceTraitDropdown(
                 style = LegadoTheme.typography.bodyMedium,
                 modifier = Modifier.padding(12.dp)
             )
-        }
-        RoundDropdownMenu(expanded = showDropdown, onDismissRequest = { showDropdown = false }) {
-            options.forEach { option ->
-                RoundDropdownMenuItem(text = displayName(option), onClick = {
-                    onSelected(option)
-                    showDropdown = false
-                })
-            }
         }
     }
 
@@ -372,13 +373,15 @@ private fun ProfileRoleDropdown(
     selectedRole: String,
     onRoleSelected: (String) -> Unit,
 ) {
-    var showDropdown by remember { mutableStateOf(false) }
     val roleDisplayNames = mapOf(
         BookCharacterProfile.ROLE_MALE_LEAD to stringResource(R.string.role_male_lead),
         BookCharacterProfile.ROLE_FEMALE_LEAD to stringResource(R.string.role_female_lead),
         BookCharacterProfile.ROLE_MALE_SUPPORTING to stringResource(R.string.role_male_supporting),
         BookCharacterProfile.ROLE_FEMALE_SUPPORTING to stringResource(R.string.role_female_supporting),
     )
+    val choices = BookCharacterProfile.ALL_ROLES
+        .map { role -> AppChoiceOption(id = role, label = roleDisplayNames[role] ?: role) }
+        .toImmutableList()
     val currentDisplay = roleDisplayNames[selectedRole] ?: "—"
 
     AppText(
@@ -386,9 +389,15 @@ private fun ProfileRoleDropdown(
         style = LegadoTheme.typography.labelMedium,
         color = LegadoTheme.colorScheme.onSurfaceVariant,
     )
-    Box {
+    AppChoiceDropdown(
+        options = choices,
+        selectedId = selectedRole,
+        onSelect = { id -> onRoleSelected(if (id == selectedRole) "" else id) },
+        title = stringResource(R.string.character_role),
+        compact = true,
+    ) {
         GlassCard(
-            onClick = { showDropdown = true },
+            modifier = this.modifier,
             containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
         ) {
             AnimatedTextLine(
@@ -396,20 +405,6 @@ private fun ProfileRoleDropdown(
                 style = LegadoTheme.typography.bodyMedium,
                 modifier = Modifier.padding(12.dp),
             )
-        }
-        RoundDropdownMenu(
-            expanded = showDropdown,
-            onDismissRequest = { showDropdown = false },
-        ) {
-            BookCharacterProfile.ALL_ROLES.forEach { role ->
-                RoundDropdownMenuItem(
-                    text = roleDisplayNames[role] ?: role,
-                    onClick = {
-                        onRoleSelected(if (selectedRole == role) "" else role)
-                        showDropdown = false
-                    },
-                )
-            }
         }
     }
 }

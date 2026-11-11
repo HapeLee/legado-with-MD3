@@ -66,7 +66,8 @@ import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.dialog.TextListInputDialog
-import io.legado.app.ui.widget.components.divider.PillDivider
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
@@ -78,9 +79,11 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
+import io.legado.app.ui.widget.components.settingItem.SettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -179,7 +182,6 @@ fun BookSourceScreen(
     var checkOptionsDraft by remember(state.checkOptions) { mutableStateOf(state.checkOptions) }
     var pendingExportIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var showExportSheet by remember { mutableStateOf(false) }
-    var showImportOptions by remember { mutableStateOf(false) }
     var showCustomGroup by remember { mutableStateOf(false) }
     val importSuccess = state.importState as? BaseImportUiState.Success
     // 拖动回调先更新本地顺序，让布局与后续命中计算使用同一顺序。
@@ -275,50 +277,35 @@ fun BookSourceScreen(
                 )
             )
         },
-        topBarActions = {
-            Box {
-                MediumTonalButton(
-                    modifier = Modifier.minimumInteractiveComponentSize(),
-                    icon = AppIcons.MoreVert,
-                    contentDescription = stringResource(R.string.menu),
-                    onClick = { showImportOptions = true },
-                )
-                RoundDropdownMenu(showImportOptions, { showImportOptions = false }) { dismiss ->
-                    RoundDropdownMenuItem(stringResource(R.string.select_new_source), onClick = {
-                        dismiss(); onIntent(BookSourceIntent.SelectImportStatus(ImportStatus.New))
-                    })
-                    RoundDropdownMenuItem(stringResource(R.string.select_update_source), onClick = {
-                        dismiss(); onIntent(BookSourceIntent.SelectImportStatus(ImportStatus.Update))
-                    })
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.keep_original_name),
-                        isSelected = importSuccess?.keepOriginalName == true,
-                        modifier = Modifier.semantics {
-                            this.selected = importSuccess?.keepOriginalName == true
-                        },
-                        onClick = { onIntent(BookSourceIntent.SetImportKeepName(importSuccess?.keepOriginalName != true)) },
-                    )
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.keep_group),
-                        isSelected = importSuccess?.keepOriginalGroup == true,
-                        modifier = Modifier.semantics {
-                            this.selected = importSuccess?.keepOriginalGroup == true
-                        },
-                        onClick = { onIntent(BookSourceIntent.SetImportKeepGroup(importSuccess?.keepOriginalGroup != true)) },
-                    )
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.keep_enable),
-                        isSelected = importSuccess?.keepOriginalEnable == true,
-                        modifier = Modifier.semantics {
-                            this.selected = importSuccess?.keepOriginalEnable == true
-                        },
-                        onClick = { onIntent(BookSourceIntent.SetImportKeepEnable(importSuccess?.keepOriginalEnable != true)) },
-                    )
-                    RoundDropdownMenuItem(stringResource(R.string.diy_source_group), onClick = {
-                        dismiss(); showCustomGroup = true
-                    })
-                }
-            }
+        configContent = {
+            SwitchSettingItem(
+                title = stringResource(R.string.keep_original_name),
+                checked = importSuccess?.keepOriginalName == true,
+                onCheckedChange = { onIntent(BookSourceIntent.SetImportKeepName(it)) },
+            )
+            SwitchSettingItem(
+                title = stringResource(R.string.keep_group),
+                checked = importSuccess?.keepOriginalGroup == true,
+                onCheckedChange = { onIntent(BookSourceIntent.SetImportKeepGroup(it)) },
+            )
+            SwitchSettingItem(
+                title = stringResource(R.string.keep_enable),
+                checked = importSuccess?.keepOriginalEnable == true,
+                onCheckedChange = { onIntent(BookSourceIntent.SetImportKeepEnable(it)) },
+            )
+            SettingItem(
+                title = stringResource(R.string.diy_source_group),
+                option = importSuccess?.customGroup?.takeIf { it.isNotBlank() },
+                onClick = { showCustomGroup = true },
+            )
+            SettingItem(
+                title = stringResource(R.string.select_new_source),
+                onClick = { onIntent(BookSourceIntent.SelectImportStatus(ImportStatus.New)) },
+            )
+            SettingItem(
+                title = stringResource(R.string.select_update_source),
+                onClick = { onIntent(BookSourceIntent.SelectImportStatus(ImportStatus.Update)) },
+            )
         },
         itemTitle = { it.bookSourceName },
         itemSubtitle = { it.bookSourceUrl },
@@ -530,60 +517,83 @@ fun BookSourceScreen(
             @Suppress("UNCHECKED_CAST")
             onIntent(BookSourceIntent.Delete(it as Set<String>))
         },
-        dropDownMenuContent = { dismiss ->
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.group_manage),
-                onClick = { dismiss(); groupManage = true })
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.import_local),
-                onClick = {
-                    dismiss(); importDocument.launch(
-                    arrayOf(
-                        "application/json",
-                        "text/plain",
-                        "text/*"
-                    )
+        menuGroups = persistentListOf(
+            AppActionGroup(
+                id = "source_actions",
+                actions = persistentListOf(
+                    AppAction("group_manage", stringResource(R.string.group_manage)),
+                    AppAction("import_local", stringResource(R.string.import_local)),
+                    AppAction("import_by_qr_code", stringResource(R.string.import_by_qr_code)),
+                    AppAction("import_on_line", stringResource(R.string.import_on_line)),
+                    AppAction(
+                        "group_sources_by_domain",
+                        stringResource(R.string.group_sources_by_domain),
+                        selected = state.groupByDomain,
+                    ),
+                ),
+            ),
+            AppActionGroup(
+                id = "source_sort",
+                actions = persistentListOf(
+                    AppAction(
+                        "sort_manual", stringResource(R.string.sort_manual),
+                        selected = state.sort == BookSourceSort.Default,
+                    ),
+                    AppAction(
+                        "sort_auto", stringResource(R.string.sort_auto),
+                        selected = state.sort == BookSourceSort.Weight,
+                    ),
+                    AppAction(
+                        "sort_by_name", stringResource(R.string.sort_by_name),
+                        selected = state.sort == BookSourceSort.Name,
+                    ),
+                    AppAction(
+                        "sort_by_url", stringResource(R.string.sort_by_url),
+                        selected = state.sort == BookSourceSort.Url,
+                    ),
+                    AppAction(
+                        "sort_by_lastUpdateTime", stringResource(R.string.sort_by_lastUpdateTime),
+                        selected = state.sort == BookSourceSort.Update,
+                    ),
+                    AppAction(
+                        "sort_by_respondTime", stringResource(R.string.sort_by_respondTime),
+                        selected = state.sort == BookSourceSort.Respond,
+                    ),
+                    AppAction(
+                        "is_enabled", stringResource(R.string.is_enabled),
+                        selected = state.sort == BookSourceSort.Enable,
+                    ),
+                    AppAction(
+                        "sort_desc", stringResource(R.string.sort_desc),
+                        selected = !state.sortAscending,
+                    ),
+                ),
+            ),
+        ),
+        onMenuAction = { id ->
+            val sort = when (id) {
+                "sort_manual" -> BookSourceSort.Default
+                "sort_auto" -> BookSourceSort.Weight
+                "sort_by_name" -> BookSourceSort.Name
+                "sort_by_url" -> BookSourceSort.Url
+                "sort_by_lastUpdateTime" -> BookSourceSort.Update
+                "sort_by_respondTime" -> BookSourceSort.Respond
+                "is_enabled" -> BookSourceSort.Enable
+                else -> null
+            }
+            when {
+                sort != null -> onIntent(BookSourceIntent.SetSort(sort))
+                id == "sort_desc" -> onIntent(BookSourceIntent.ToggleSortDirection)
+                id == "group_manage" -> groupManage = true
+                id == "import_local" -> importDocument.launch(
+                    arrayOf("application/json", "text/plain", "text/*")
                 )
-                })
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.import_by_qr_code),
-                onClick = { dismiss(); qrCodeImport.launch(null) })
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.import_on_line),
-                onClick = { dismiss(); showOnlineImport = true })
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.group_sources_by_domain),
-                isSelected = state.groupByDomain,
-                modifier = Modifier.semantics { this.selected = state.groupByDomain },
-                onClick = { dismiss(); onIntent(BookSourceIntent.ToggleGroupByDomain) },
-            )
-            PillDivider()
-            SortMenuItem(R.string.sort_manual, BookSourceSort.Default, state, dismiss, onIntent)
-            SortMenuItem(R.string.sort_auto, BookSourceSort.Weight, state, dismiss, onIntent)
-            SortMenuItem(R.string.sort_by_name, BookSourceSort.Name, state, dismiss, onIntent)
-            SortMenuItem(R.string.sort_by_url, BookSourceSort.Url, state, dismiss, onIntent)
-            SortMenuItem(
-                R.string.sort_by_lastUpdateTime,
-                BookSourceSort.Update,
-                state,
-                dismiss,
-                onIntent
-            )
-            SortMenuItem(
-                R.string.sort_by_respondTime,
-                BookSourceSort.Respond,
-                state,
-                dismiss,
-                onIntent
-            )
-            SortMenuItem(R.string.is_enabled, BookSourceSort.Enable, state, dismiss, onIntent)
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.sort_desc),
-                isSelected = !state.sortAscending,
-                modifier = Modifier.semantics { this.selected = !state.sortAscending },
-                onClick = { dismiss(); onIntent(BookSourceIntent.ToggleSortDirection) },
-            )
-        }
+                id == "import_by_qr_code" -> qrCodeImport.launch(null)
+                id == "import_on_line" -> showOnlineImport = true
+                id == "group_sources_by_domain" ->
+                    onIntent(BookSourceIntent.ToggleGroupByDomain)
+            }
+        },
     ) { padding ->
         Box(Modifier.fillMaxSize()) {
             FastScrollLazyColumn(
@@ -902,20 +912,6 @@ private fun BookSourceItemMenu(
         }
     }
 }
-
-@Composable
-private fun SortMenuItem(
-    textRes: Int,
-    sort: BookSourceSort,
-    state: BookSourceUiState,
-    dismiss: () -> Unit,
-    onIntent: (BookSourceIntent) -> Unit,
-) = RoundDropdownMenuItem(
-    text = stringResource(textRes),
-    isSelected = state.sort == sort,
-    modifier = Modifier.semantics { this.selected = state.sort == sort },
-    onClick = { dismiss(); onIntent(BookSourceIntent.SetSort(sort)) },
-)
 
 @Composable
 private fun BookSourceGroupFilterSheet(

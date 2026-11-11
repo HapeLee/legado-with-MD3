@@ -34,12 +34,14 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.checkBox.AppCheckbox
-import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
+import kotlinx.collections.immutable.persistentListOf
 
 @Composable
 fun ContentEditSheet(
@@ -52,7 +54,6 @@ fun ContentEditSheet(
     val editorScrollState = rememberScrollState()
     var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
     var pendingLocateOffset by remember { mutableStateOf<Int?>(null) }
-    var menuExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(show) {
         if (!show) return@LaunchedEffect
@@ -104,33 +105,37 @@ fun ContentEditSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.edit_chapter),
         startAction = {
-            Box {
-                MediumTonalButton(
-                    onClick = { menuExpanded = true },
-                    icon = Icons.Default.MoreVert,
-                    contentDescription = stringResource(R.string.more_menu),
-                )
-                RoundDropdownMenu(
-                    expanded = menuExpanded,
-                    onDismissRequest = { menuExpanded = false },
-                ) { dismiss ->
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.content_edit_reset),
-                        leadingIcon = { MenuItemIcon(Icons.Default.Restore) },
-                        onClick = {
-                            dismiss()
-                            onIntent(ReadBookIntent.ResetContentEdit)
-                        },
-                    )
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.content_edit_body_only),
-                        isSelected = state.bodyOnly,
-                        onClick = {
-                            dismiss()
+            AppActionMenu(
+                groups = persistentListOf(
+                    AppActionGroup(
+                        id = "content_edit_commands",
+                        actions = persistentListOf(
+                            AppAction(
+                                "reset_content",
+                                stringResource(R.string.content_edit_reset),
+                                icon = Icons.Default.Restore,
+                            ),
+                            AppAction(
+                                "body_only",
+                                stringResource(R.string.content_edit_body_only),
+                                checked = state.bodyOnly,
+                            ),
+                        ),
+                    ),
+                ),
+                onAction = { id ->
+                    when (id) {
+                        "reset_content" -> onIntent(ReadBookIntent.ResetContentEdit)
+                        "body_only" ->
                             onIntent(ReadBookIntent.SetContentEditBodyOnly(!state.bodyOnly))
-                        },
-                    )
-                }
+                    }
+                },
+            ) {
+                AppIcon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = stringResource(R.string.more_menu),
+                    modifier = this.modifier,
+                )
             }
         },
         endAction = {

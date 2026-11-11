@@ -9,7 +9,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,7 +24,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -60,12 +58,14 @@ import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.reorderAccessibility
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.move
+import kotlinx.collections.immutable.persistentListOf
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.ReorderableLazyGridState
@@ -146,51 +146,58 @@ fun GroupManageSheet(
         },
         endAction = {
             if (!isEditing) {
-                Box {
-                    var showMenu by remember { mutableStateOf(false) }
-                    MediumTonalButton(
-                        onClick = { showMenu = true },
-                        icon = Icons.Default.Add,
-                        contentDescription = stringResource(R.string.add),
-                    )
-                    RoundDropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                        RoundDropdownMenuItem(
-                            text = stringResource(R.string.group_add),
-                            leadingIcon = { Icon(Icons.Default.Add, null) },
-                            onClick = {
-                                showMenu = false
+                AppActionMenu(
+                    groups = persistentListOf(
+                        AppActionGroup(
+                            id = "group_manage_commands",
+                            actions = persistentListOf(
+                                AppAction(
+                                    "group_add",
+                                    stringResource(R.string.group_add),
+                                    icon = Icons.Default.Add,
+                                ),
+                                AppAction(
+                                    "ai_auto_group",
+                                    stringResource(R.string.ai_auto_group),
+                                    icon = Icons.Default.AutoAwesome,
+                                ),
+                                AppAction(
+                                    "tag_group_add_rule",
+                                    stringResource(R.string.tag_group_add_rule),
+                                    icon = Icons.Default.Add,
+                                ),
+                                AppAction(
+                                    "tag_group_sync",
+                                    stringResource(R.string.tag_group_sync),
+                                    icon = Icons.Default.Sync,
+                                ),
+                            ),
+                        ),
+                    ),
+                    onAction = { id ->
+                        when (id) {
+                            "group_add" -> {
                                 editingGroup = null
                                 coverPath = null
                                 isEditing = true
                             }
-                        )
-                        RoundDropdownMenuItem(
-                            text = stringResource(R.string.ai_auto_group),
-                            leadingIcon = { Icon(Icons.Default.AutoAwesome, null) },
-                            onClick = {
-                                showMenu = false
+                            "ai_auto_group" -> {
                                 aiAutoGroupSessionKey += 1L
                                 showAiAutoGroup = true
                             }
-                        )
-                        RoundDropdownMenuItem(
-                            text = stringResource(R.string.tag_group_add_rule),
-                            leadingIcon = { Icon(Icons.Default.Add, null) },
-                            onClick = {
-                                showMenu = false
+                            "tag_group_add_rule" -> {
                                 editingTagRule = null
                                 showTagRuleEdit = true
                             }
-                        )
-                        RoundDropdownMenuItem(
-                            text = stringResource(R.string.tag_group_sync),
-                            leadingIcon = { Icon(Icons.Default.Sync, null) },
-                            onClick = {
-                                showMenu = false
-                                tagGroupRuleViewModel.onIntent(TagGroupRuleIntent.SyncGroups)
-                            }
-                        )
-                    }
+                            "tag_group_sync" -> tagGroupRuleViewModel.onIntent(TagGroupRuleIntent.SyncGroups)
+                        }
+                    },
+                ) {
+                    AppIcon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = stringResource(R.string.add),
+                        modifier = this.modifier,
+                    )
                 }
             } else {
                 GroupResetCoverAction(

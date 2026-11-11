@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
@@ -54,7 +53,6 @@ import io.legado.app.ui.widget.components.button.series.SmallToggleButton
 import io.legado.app.ui.widget.components.button.series.ToggleStyle
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.icon.AppIcons
-import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -67,7 +65,15 @@ import io.legado.app.ui.theme.isMiuixHyperOs4Enabled
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.widget.components.variable.VariableEditorSheet
 import io.legado.app.ui.widget.components.variable.VariableEditorUiState
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.topbar.TopBarActionMenu
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
+
+/** 重定向策略子项的稳定 ID 前缀：`redirect_` + `RedirectPolicy.name`。 */
+private const val REDIRECT_PREFIX = "redirect_"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -114,17 +120,13 @@ fun RssSortScreen(
     val selectedTabIndex = pagerState.currentPage.coerceIn(0, (sortList.size - 1).coerceAtLeast(0))
     val tabTitles = sortList.map { it.first }
 
-    var showMainMenu by remember { mutableStateOf(false) }
     val alwaysShowSearch = isMiuixHyperOs4Enabled()
     var showSearchSheet by remember { mutableStateOf(false) }
     var searchQuery by remember(searchKey) { mutableStateOf(searchKey.orEmpty()) }
-    var showRedirectMenu by remember { mutableStateOf(false) }
     var showGroupMenu by remember { mutableStateOf(false) }
 
-    BackHandler(enabled = showMainMenu || showSearchSheet || showRedirectMenu || showGroupMenu) {
-        showMainMenu = false
+    BackHandler(enabled = showSearchSheet || showGroupMenu) {
         showSearchSheet = false
-        showRedirectMenu = false
         showGroupMenu = false
     }
 
@@ -160,96 +162,93 @@ fun RssSortScreen(
                             contentDescription = stringResource(R.string.search)
                         )
                     }
-                    TopBarActionButton(
-                        onClick = { showMainMenu = true },
-                        imageVector = AppIcons.MoreVert,
-                        contentDescription = stringResource(R.string.more_menu)
+                    TopBarActionMenu(
+                        groups = persistentListOf(
+                            AppActionGroup(
+                                id = "rss_sort_menu",
+                                actions = buildList {
+                                    if (hasLogin) {
+                                        add(
+                                            AppAction(
+                                                id = "login",
+                                                label = stringResource(R.string.login),
+                                                icon = Icons.AutoMirrored.Filled.Login,
+                                            )
+                                        )
+                                    }
+                                    add(
+                                        AppAction(
+                                            id = "refresh_sort",
+                                            label = stringResource(R.string.refresh_sort),
+                                            icon = Icons.Default.Refresh,
+                                        )
+                                    )
+                                    add(
+                                        AppAction(
+                                            id = "set_source_variable",
+                                            label = stringResource(R.string.set_source_variable),
+                                            icon = Icons.Default.Dataset,
+                                        )
+                                    )
+                                    add(
+                                        AppAction(
+                                            id = "edit_source",
+                                            label = stringResource(R.string.edit_source),
+                                            icon = Icons.Default.Edit,
+                                        )
+                                    )
+                                    add(
+                                        AppAction(
+                                            id = "switch_layout",
+                                            label = stringResource(R.string.switchLayout),
+                                            icon = Icons.Default.Style,
+                                        )
+                                    )
+                                    add(
+                                        AppAction(
+                                            id = "read_record",
+                                            label = stringResource(R.string.read_record),
+                                            icon = Icons.Default.History,
+                                        )
+                                    )
+                                    add(
+                                        AppAction(
+                                            id = "clear_articles",
+                                            label = stringResource(R.string.clear),
+                                            icon = Icons.Default.CleaningServices,
+                                        )
+                                    )
+                                    add(
+                                        AppAction(
+                                            id = "redirect_policy",
+                                            label = stringResource(R.string.redirect_policy),
+                                            children = RedirectPolicy.entries.map { policy ->
+                                                AppAction(
+                                                    id = "redirect_${policy.name}",
+                                                    label = policy.title(),
+                                                    checked = policy == redirectPolicy,
+                                                )
+                                            }.toImmutableList(),
+                                        )
+                                    )
+                                }.toImmutableList(),
+                            ),
+                        ),
+                        onAction = { id ->
+                            when {
+                                id == "login" -> onLogin()
+                                id == "refresh_sort" -> onRefreshSort()
+                                id == "set_source_variable" -> onSetSourceVariable()
+                                id == "edit_source" -> onEditSource()
+                                id == "switch_layout" -> onSwitchLayout()
+                                id == "read_record" -> onReadRecord()
+                                id == "clear_articles" -> onClearArticles()
+                                id.startsWith(REDIRECT_PREFIX) -> RedirectPolicy.entries
+                                    .firstOrNull { id == "$REDIRECT_PREFIX${it.name}" }
+                                    ?.let(onRedirectPolicyChanged)
+                            }
+                        },
                     )
-                    RoundDropdownMenu(
-                        expanded = showMainMenu,
-                        onDismissRequest = { showMainMenu = false }
-                    ) { dismiss ->
-                        if (hasLogin) {
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.login),
-                                leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
-                                onClick = {
-                                    dismiss()
-                                    onLogin()
-                                }
-                            )
-                        }
-                        RoundDropdownMenuItem(
-                            text = stringResource(R.string.refresh_sort),
-                            leadingIcon = { MenuItemIcon(Icons.Default.Refresh) },
-                            onClick = {
-                                dismiss()
-                                onRefreshSort()
-                            }
-                        )
-                        RoundDropdownMenuItem(
-                            text = stringResource(R.string.set_source_variable),
-                            leadingIcon = { MenuItemIcon(Icons.Default.Dataset) },
-                            onClick = {
-                                dismiss()
-                                onSetSourceVariable()
-                            }
-                        )
-                        RoundDropdownMenuItem(
-                            text = stringResource(R.string.edit_source),
-                            leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
-                            onClick = {
-                                dismiss()
-                                onEditSource()
-                            }
-                        )
-                        RoundDropdownMenuItem(
-                            text = stringResource(R.string.switchLayout),
-                            leadingIcon = { MenuItemIcon(Icons.Default.Style) },
-                            onClick = {
-                                dismiss()
-                                onSwitchLayout()
-                            }
-                        )
-                        RoundDropdownMenuItem(
-                            text = stringResource(R.string.read_record),
-                            leadingIcon = { MenuItemIcon(Icons.Default.History) },
-                            onClick = {
-                                dismiss()
-                                onReadRecord()
-                            }
-                        )
-                        RoundDropdownMenuItem(
-                            text = stringResource(R.string.clear),
-                            leadingIcon = { MenuItemIcon(Icons.Default.CleaningServices) },
-                            onClick = {
-                                dismiss()
-                                onClearArticles()
-                            }
-                        )
-                        RoundDropdownMenuItem(
-                            text = stringResource(R.string.redirect_policy),
-                            onClick = { showRedirectMenu = true }
-                        )
-                    }
-
-                    RoundDropdownMenu(
-                        expanded = showRedirectMenu,
-                        onDismissRequest = { showRedirectMenu = false },
-                        modifier = Modifier.width(280.dp)
-                    ) { dismiss ->
-                        RedirectPolicy.entries.forEach { policy ->
-                            RoundDropdownMenuItem(
-                                text = policy.title(),
-                                isSelected = policy == redirectPolicy,
-                                onClick = {
-                                    dismiss()
-                                    showMainMenu = false
-                                    onRedirectPolicyChanged(policy)
-                                }
-                            )
-                        }
-                    }
                 },
                 bottomContent = {
                     if (hasSearch && alwaysShowSearch) {

@@ -149,13 +149,16 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarScrollBehavior
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
-import io.legado.app.ui.widget.components.topbar.TopBarOverflowMenu
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.theme.isMiuixHyperOs4Enabled
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -558,7 +561,6 @@ fun BookshelfScreen(
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val showAlternateSearchInMenu = LegadoTheme.composeEngine == ComposeEngine.Coui ||
             isMiuixHyperOs4Enabled()
-    var showTopBarMenu by remember { mutableStateOf(false) }
     val toggleShelfFilter = {
         toggleBookshelfFilter(
             isSearch = uiState.isSearch,
@@ -693,102 +695,60 @@ fun BookshelfScreen(
                     }
 
                     if (!isEditMode) {
-                        TopBarOverflowMenu(
-                            expanded = showTopBarMenu,
-                            onExpandedChange = { showTopBarMenu = it },
-                        ) { dismiss ->
+                        val moreActions = buildList {
                             if (showAlternateSearchInMenu) {
                                 val searchFirst = uiState.settings.bookshelfSearchActionDirectToSearch
-                                RoundDropdownMenuItem(
-                                    text = stringResource(if (searchFirst) R.string.bookshelf_filter else R.string.search),
-                                    onClick = { dismiss(); onAlternateSearch() },
-                                    leadingIcon = { AppIcon(if (searchFirst) AppIcons.Filter else AppIcons.Search, null) },
+                                add(
+                                    AppAction(
+                                        id = "alternate_search",
+                                        label = stringResource(
+                                            if (searchFirst) R.string.bookshelf_filter else R.string.search
+                                        ),
+                                        icon = if (searchFirst) AppIcons.Filter else AppIcons.Search,
+                                    )
                                 )
                             }
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.add_remote_book),
-                                onClick = { onNavigateToRemoteImport(); dismiss() },
-                                leadingIcon = { AppIcon(Icons.Default.Wifi, null) }
-                            )
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.book_local),
-                                onClick = { onNavigateToLocalImport(); dismiss() },
-                                leadingIcon = { AppIcon(Icons.Default.Save, null) }
-                            )
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.update_toc),
-                                onClick = {
-                                    onIntent(BookshelfIntent.RefreshToc(uiState.items))
-                                    dismiss()
-                                },
-                                leadingIcon = { AppIcon(Icons.Default.Refresh, null) }
-                            )
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.layout_setting),
-                                onClick = {
-                                    onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.ConfigSheet))
-                                    dismiss()
-                                },
-                                leadingIcon = { AppIcon(Icons.Default.GridView, null) }
-                            )
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.group_manage),
-                                onClick = {
-                                    onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.GroupManageSheet))
-                                    dismiss()
-                                },
-                                leadingIcon = { AppIcon(Icons.Outlined.ViewCarousel, null) }
-                            )
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.add_url),
-                                onClick = {
-                                    onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.AddUrlDialog))
-                                    dismiss()
-                                },
-                                leadingIcon = { AppIcon(Icons.Default.Link, null) }
-                            )
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.selection_mode),
-                                onClick = {
-                                    toggleEditMode()
-                                    dismiss()
-                                },
-                                leadingIcon = { AppIcon(Icons.Default.Edit, null) }
-                            )
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.bookshelf_management),
-                                onClick = {
-                                    val groupId =
-                                        uiState.groups.getOrNull(uiState.selectedGroupIndex)?.groupId
-                                            ?: -1L
-                                    onNavigateToCache(groupId)
-                                    dismiss()
-                                },
-                                leadingIcon = { AppIcon(Icons.Default.Bookmarks, null) }
-                            )
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.export_bookshelf),
-                                onClick = {
-                                    onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.ExportSheet))
-                                    dismiss()
-                                },
-                                leadingIcon = { AppIcon(Icons.Default.UploadFile, null) }
-                            )
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.import_bookshelf),
-                                onClick = {
-                                    onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.ImportSheet))
-                                    dismiss()
-                                },
-                                leadingIcon = { AppIcon(Icons.Default.CloudDownload, null) }
-                            )
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.log),
-                                onClick = {
-                                    onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.LogSheet))
-                                    dismiss()
-                                },
-                                leadingIcon = { AppIcon(Icons.Default.History, null) }
+                            add(AppAction("add_remote", stringResource(R.string.add_remote_book), icon = Icons.Default.Wifi))
+                            add(AppAction("add_local", stringResource(R.string.book_local), icon = Icons.Default.Save))
+                            add(AppAction("update_toc", stringResource(R.string.update_toc), icon = Icons.Default.Refresh))
+                            add(AppAction("layout", stringResource(R.string.layout_setting), icon = Icons.Default.GridView))
+                            add(AppAction("group_manage", stringResource(R.string.group_manage), icon = Icons.Outlined.ViewCarousel))
+                            add(AppAction("add_url", stringResource(R.string.add_url), icon = Icons.Default.Link))
+                            add(AppAction("selection_mode", stringResource(R.string.selection_mode), icon = Icons.Default.Edit))
+                            add(AppAction("bookshelf_management", stringResource(R.string.bookshelf_management), icon = Icons.Default.Bookmarks))
+                            add(AppAction("export", stringResource(R.string.export_bookshelf), icon = Icons.Default.UploadFile))
+                            add(AppAction("import", stringResource(R.string.import_bookshelf), icon = Icons.Default.CloudDownload))
+                            add(AppAction("log", stringResource(R.string.log), icon = Icons.Default.History))
+                        }.toImmutableList()
+                        AppActionMenu(
+                            groups = persistentListOf(
+                                AppActionGroup(id = "bookshelf_more", actions = moreActions)
+                            ),
+                            onAction = { id ->
+                                when (id) {
+                                    "alternate_search" -> onAlternateSearch()
+                                    "add_remote" -> onNavigateToRemoteImport()
+                                    "add_local" -> onNavigateToLocalImport()
+                                    "update_toc" -> onIntent(BookshelfIntent.RefreshToc(uiState.items))
+                                    "layout" -> onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.ConfigSheet))
+                                    "group_manage" -> onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.GroupManageSheet))
+                                    "add_url" -> onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.AddUrlDialog))
+                                    "selection_mode" -> toggleEditMode()
+                                    "bookshelf_management" -> {
+                                        val groupId =
+                                            uiState.groups.getOrNull(uiState.selectedGroupIndex)?.groupId ?: -1L
+                                        onNavigateToCache(groupId)
+                                    }
+                                    "export" -> onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.ExportSheet))
+                                    "import" -> onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.ImportSheet))
+                                    "log" -> onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.LogSheet))
+                                }
+                            },
+                        ) {
+                            AppIcon(
+                                imageVector = AppIcons.MoreVert,
+                                contentDescription = stringResource(R.string.more_menu),
+                                modifier = this.modifier,
                             )
                         }
                     }

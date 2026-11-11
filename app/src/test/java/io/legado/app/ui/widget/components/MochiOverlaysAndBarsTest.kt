@@ -368,7 +368,7 @@ class MochiOverlaysAndBarsTest {
     }
 
     @Test
-    fun switchingFromMochiToMaterialUsesASeparatePopupWindow() {
+    fun switchingFromMochiToMaterialCommitsAfterMenuDismisses() {
         val app = RuntimeEnvironment.getApplication().also { it.injectAsAppCtx() }
         val target = requireNotNull(SettingsSearchCatalog.find("theme.compose_engine"))
         val material = app.resources.getStringArray(R.array.composeEngine).first()
@@ -391,10 +391,16 @@ class MochiOverlaysAndBarsTest {
 
         val row = hasAnyAncestor(hasTestTag("setting:theme.compose_engine"))
         val picker = compose.onNode(hasText(app.getString(R.string.compose_engine)) and hasClickAction() and row)
-        picker.performTouchInput { click() }
-        compose.onNode(hasText(material) and hasAnyAncestor(isPopup())).assertIsDisplayed().performTouchInput { click() }
-        compose.onNode(isPopup()).assertDoesNotExist()
-        picker.assertIsDisplayed().assertTextContains(material)
+        picker.performClick()
+        // Mochi 原生菜单由 InWindowOverlay 挂到 DecorView，不是 Compose Popup，因此用文本定位选项。
+        // 切换根主题必须等浮层收起摘除后再提交（commitAfterDismiss），否则会在测量期间移除子视图。
+        compose.onNodeWithText(material, useUnmergedTree = true)
+            .assertIsDisplayed()
+            .performTouchInput { click() }
+        compose.waitForIdle()
+        // 新入口的可点按钮节点只声明标题文本，当前值在纯展示的 trigger 子节点里；
+        // 行为基线仍是「切换后设置行显示新值」，改到该文本节点上断言。
+        compose.onNodeWithText(material, useUnmergedTree = true).assertIsDisplayed()
         compose.runOnIdle { assertEquals("material", shell.value.composeEngine) }
     }
 

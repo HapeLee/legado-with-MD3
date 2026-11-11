@@ -28,9 +28,10 @@ import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.GlassCard
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppChoiceDropdown
+import io.legado.app.ui.widget.components.menu.AppChoiceOption
 import io.legado.app.ui.widget.components.text.AppText
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -132,11 +133,22 @@ private fun ClickAreaCell(
     onPick: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    Box(modifier = modifier) {
+    val options = remember(actionKeys, actionValues) {
+        actionKeys.mapIndexed { index, key ->
+            AppChoiceOption(id = key.toString(), label = actionValues[index])
+        }.toImmutableList()
+    }
+    AppChoiceDropdown(
+        options = options,
+        selectedId = selectedAction.toString(),
+        onSelect = { onPick(it.toInt()) },
+        title = label,
+        modifier = modifier,
+        compact = true,
+    ) {
+        // 省略 onClick / onLongClick：GlassCard 即纯展示卡片，由入口包装唯一可点控件。
         GlassCard(
-            modifier = Modifier.fillMaxSize(),
-            onClick = { expanded = true },
+            modifier = this.modifier.fillMaxSize(),
             containerColor = LegadoTheme.colorScheme.surfaceContainer
                 .copy(alpha = 0.9f),
         ) {
@@ -148,21 +160,6 @@ private fun ClickAreaCell(
                     text = label,
                     style = LegadoTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
-                )
-            }
-        }
-        RoundDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) { dismiss ->
-            actionKeys.forEachIndexed { index, action ->
-                RoundDropdownMenuItem(
-                    text = actionValues[index],
-                    isSelected = action == selectedAction,
-                    onClick = {
-                        onPick(action)
-                        dismiss()
-                    },
                 )
             }
         }

@@ -35,8 +35,12 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.icon.AppIcons
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
+import kotlinx.collections.immutable.persistentListOf
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.Dispatchers
@@ -88,7 +92,6 @@ fun <T> RuleEditSheet(
     var rule2 by remember(show, rule) { mutableStateOf(initialFields.rule2) }
     var rule3 by remember(show, rule) { mutableStateOf(initialFields.rule3) }
 
-    var showMenu by remember(show, rule) { mutableStateOf(false) }
 
     // Test results state
     var testResults by remember(show, rule) { mutableStateOf<List<TestLineResult>?>(null) }
@@ -152,38 +155,44 @@ fun <T> RuleEditSheet(
             )
         },
         endAction = {
-            Box{
-                MediumTonalButton(
-                    onClick = { showMenu = true },
-                    icon = Icons.Default.MoreVert,
-                    contentDescription = stringResource(R.string.more_menu)
-                )
-                RoundDropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.copy_rule),
-                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.NoteAdd, null) },
-                        onClick = {
-                            onCopy(getCurrentEntity())
-                            showMenu = false
-                        }
-                    )
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.paste_rule),
-                        leadingIcon = { Icon(Icons.Default.ContentPaste, null) },
-                        onClick = {
-                            scope.launch {
-                                onPaste()?.let { pasted ->
-                                    val fields = toFields(pasted)
-                                    name = fields.name
-                                    rule1 = fields.rule1
-                                    rule2 = fields.rule2
-                                    rule3 = fields.rule3
-                                }
+            AppActionMenu(
+                groups = persistentListOf(
+                    AppActionGroup(
+                        id = "rule_clipboard",
+                        actions = persistentListOf(
+                            AppAction(
+                                "copy_rule",
+                                stringResource(R.string.copy_rule),
+                                icon = Icons.AutoMirrored.Filled.NoteAdd,
+                            ),
+                            AppAction(
+                                "paste_rule",
+                                stringResource(R.string.paste_rule),
+                                icon = Icons.Default.ContentPaste,
+                            ),
+                        ),
+                    ),
+                ),
+                onAction = { id ->
+                    when (id) {
+                        "copy_rule" -> onCopy(getCurrentEntity())
+                        "paste_rule" -> scope.launch {
+                            onPaste()?.let { pasted ->
+                                val fields = toFields(pasted)
+                                name = fields.name
+                                rule1 = fields.rule1
+                                rule2 = fields.rule2
+                                rule3 = fields.rule3
                             }
-                            showMenu = false
                         }
-                    )
-                }
+                    }
+                },
+            ) {
+                AppIcon(
+                    imageVector = AppIcons.MoreVert,
+                    contentDescription = stringResource(R.string.more_menu),
+                    modifier = this.modifier,
+                )
             }
         },
         show = show,

@@ -36,7 +36,9 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SelectionActions
 import io.legado.app.ui.widget.components.SelectionBottomBar
 import io.legado.app.ui.widget.components.icon.AppIcons
+import io.legado.app.ui.widget.components.menu.AppActionGroup
 import io.legado.app.ui.widget.components.topbar.DynamicTopAppBar
+import kotlinx.collections.immutable.ImmutableList
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarScrollBehavior
 
@@ -57,6 +59,9 @@ fun <T> ListScaffold(
     topBarActions: @Composable RowScope.() -> Unit = {},
     bottomContent: @Composable (ColumnScope.(GlassTopAppBarScrollBehavior) -> Unit)? = null,
     dropDownMenuContent: @Composable (ColumnScope.(dismiss: () -> Unit) -> Unit)? = null,
+    /** 声明式溢出菜单；与 [dropDownMenuContent] 二选一，非空时优先。 */
+    menuGroups: ImmutableList<AppActionGroup>? = null,
+    onMenuAction: (String) -> Unit = {},
     onClearSelection: (() -> Unit)? = null,
     selectionActions: SelectionActions? = null,
     /**
@@ -114,6 +119,8 @@ fun <T> ListScaffold(
                 selectionTitle = selectionTitle,
                 topBarActions = topBarActions,
                 dropDownMenuContent = dropDownMenuContent,
+                menuGroups = menuGroups,
+                onMenuAction = onMenuAction,
                 bottomContent = bottomContent
             )
         },
