@@ -3,6 +3,7 @@ package io.legado.app.feature.reader.core.layout
 import io.legado.app.feature.reader.core.cast.CastMarkers
 import io.legado.app.feature.reader.core.model.ReaderTextStyle
 import io.legado.app.feature.reader.core.source.ReaderChapterInlineSource
+import io.legado.app.feature.reader.core.source.ReaderLocalImagePresentation
 import io.legado.app.feature.reader.core.source.ReaderChapterSource
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
 import io.legado.app.feature.reader.core.source.ReaderInlineSourceStyle
@@ -126,6 +127,7 @@ data class ReaderChapterMeasureStyle(
     val imageAvailableWidthPx: Float? = null,
     /** true = 带 click 动作脚本的图片（段评气泡）不参与排版：不产出测量项，也不解析图片尺寸。 */
     val excludeActionImages: Boolean = false,
+    val localImageDensity: Float = 1f,
 )
 
 sealed interface ReaderChapterMeasureResult {
@@ -480,7 +482,12 @@ class ReaderChapterBlockMeasurer(
                         val size = originalSize.withWidth(requestedWidth)
                         val layout = style.resolveImageLayout(options, fromHtmlBlock)
                         val mode = layout.mode
-                        val standalone = mode != ReaderImageLayoutMode.INLINE && (
+                        val localInlineSize = item.presentation
+                            ?.takeIf { mode == ReaderImageLayoutMode.AUTO && requestedWidth == null }
+                            ?.resolveInlineSize(
+                                originalSize, baseStyle.fontSizePx, style.imageAvailableWidthPx, style.localImageDensity,
+                            )
+                        val standalone = localInlineSize == null && mode != ReaderImageLayoutMode.INLINE && (
                             mode == ReaderImageLayoutMode.STANDALONE ||
                             mode == ReaderImageLayoutMode.FULL_WIDTH ||
                             mode == ReaderImageLayoutMode.SINGLE_PAGE ||
@@ -497,6 +504,7 @@ class ReaderChapterBlockMeasurer(
                                 // 整图也要带动作：书源写在 src 尾随 JSON 里的 click（例如唤起章评）
                                 // 只有解析成功时才有值，消费侧是 `ReadBookController.handleComposeImageClick`。
                                 action = action,
+                                link = item.presentation?.link,
                                 horizontalAlignment = layout.alignment,
                                 scaleMode = mode.toScaleMode(),
                                 pageBreakBefore = mode == ReaderImageLayoutMode.SINGLE_PAGE,
@@ -511,10 +519,10 @@ class ReaderChapterBlockMeasurer(
                             // 位图再按最终槽宽栅格化，所以渲染分辨率与排版宽度始终同口径。
                             val inlineWidthScale =
                                 options?.inlineWidthScale?.takeIf { it > 0f } ?: 1f
-                            val cellWidthPx =
+                            val cellWidthPx = localInlineSize?.widthPx ?:
                                 inlinePlaceholderWidth(layout.placeholder, baseStyle) *
                                     inlineWidthScale
-                            val cellHeightPx =
+                            val cellHeightPx = localInlineSize?.heightPx ?:
                                 cellWidthPx * (size.heightPx.coerceAtLeast(1f) /
                                         size.widthPx.coerceAtLeast(1f))
                             inline += ReaderMeasuredInlineItem.Image(
@@ -523,6 +531,8 @@ class ReaderChapterBlockMeasurer(
                                 heightPx = cellHeightPx,
                                 chapterPosition = item.chapterPosition,
                                 action = action,
+                                link = item.presentation?.link,
+                                useMeasuredBounds = localInlineSize != null,
                             )
                         }
                     }
@@ -771,6 +781,38 @@ private fun ReaderChapterMeasureStyle.resolveImageLayout(
 private fun ReaderImageDimensions.withWidth(requestedWidthPx: Float?): ReaderImageDimensions {
     val width = requestedWidthPx?.takeIf { it > 0f && widthPx > 0f } ?: return this
     return ReaderImageDimensions(width, heightPx * width / widthPx)
+}
+
+private val localImageLength = Regex("([0-9]+(?:\\.[0-9]+)?|\\.[0-9]+)(em|px|%)?")
+
+/** Local dimensions can opt a small icon into inline layout in automatic mode. */
+private fun ReaderLocalImagePresentation.resolveInlineSize(
+    intrinsic: ReaderImageDimensions,
+    fontSizePx: Float,
+    columnWidthPx: Float?,
+    density: Float,
+): ReaderImageDimensions? {
+    fun resolveLength(value: String?, percentBasePx: Float? = null): Float? {
+        val match = localImageLength.matchEntire(value?.trim()?.lowercase() ?: return null) ?: return null
+        val number = match.groupValues[1].toFloatOrNull() ?: return null
+        val pixels = when (match.groupValues[2]) {
+            "em" -> number * fontSizePx * fontSizeScale
+            "%" -> (percentBasePx ?: return null) * (number / 100f)
+            else -> number * density
+        }
+        return pixels.takeIf { it.isFinite() && it > 0f }
+    }
+
+    val declaredWidth = resolveLength(width, columnWidthPx)
+    // The containing block has no explicit height in the reader's text flow.
+    val declaredHeight = resolveLength(height)
+    val ratio = intrinsic.widthPx / intrinsic.heightPx
+    val resolvedWidth = declaredWidth ?: (declaredHeight ?: return null) * ratio
+    val resolvedHeight = declaredHeight ?: resolvedWidth / ratio
+    val maxExtent = fontSizePx * 2f
+    val maxWidth = minOf(maxExtent, columnWidthPx ?: maxExtent)
+    if (resolvedWidth !in 1f..maxWidth || resolvedHeight !in 1f..maxExtent) return null
+    return ReaderImageDimensions(resolvedWidth, resolvedHeight)
 }
 
 private fun ReaderImageLayoutMode.toScaleMode(): ReaderImageScaleMode = when (this) {

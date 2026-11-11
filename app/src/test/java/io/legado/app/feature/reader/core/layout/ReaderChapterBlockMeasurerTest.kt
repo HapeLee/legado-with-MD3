@@ -3,6 +3,8 @@ package io.legado.app.feature.reader.core.layout
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import io.legado.app.feature.reader.bookForegroundOverrides
+import io.legado.app.feature.reader.core.model.ReaderElement
+import io.legado.app.feature.reader.core.model.ReaderImageDrawLayout
 import io.legado.app.feature.reader.core.model.ReaderTextStyle
 import io.legado.app.feature.reader.core.source.ReaderChapterInlineSource
 import io.legado.app.feature.reader.core.source.ReaderChapterSource
@@ -13,15 +15,88 @@ import io.legado.app.feature.reader.core.source.ReaderTitleSegmentation
 import io.legado.app.feature.reader.core.style.ReaderCharacterStyle
 import io.legado.app.feature.reader.core.style.ReaderStyleRange
 import io.legado.app.feature.reader.core.style.ReaderStyleTarget
+import io.legado.app.feature.reader.platform.ReaderLocalPresentationResolver
+import io.legado.app.help.book.MixedContentSegments
+import io.legado.app.model.localBook.LocalBookSemanticHtml
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.coroutines.cancellation.CancellationException
 
 class ReaderChapterBlockMeasurerTest {
+    @Test
+    fun linkedLocalIconUsesScreenDensityAndCanBeTappedAcrossItsLine() = runBlocking {
+        val doc = Jsoup.parse("""
+            <style>.notes a img { width: 16px; height: 1em; }</style>
+            <section class="notes"><p>甲<a href="#note"><img src="note.png"></a>乙</p>
+            <p id="note">注释</p></section>
+        """.trimIndent())
+        LocalBookSemanticHtml.inlineDocumentCssSemantics(doc) { null }
+        val appearance = checkNotNull(ReaderLocalPresentationResolver.resolve(doc.body().outerHtml()))
+        val paragraphs = MixedContentSegments.paragraphs(appearance.content, "", false)
+        val styled = ReaderChapterSourceParser.parse(0, "", paragraphs, false, true, localPresentation = appearance)
+        val plain = ReaderChapterSourceParser.parse(0, "", paragraphs, false, false)
+        assertEquals("甲\uFFFC乙\n注释\n", styled.semanticContent)
+        assertEquals(plain.semanticContent, styled.semanticContent)
+        assertEquals(plain.paragraphs, styled.paragraphs)
+        assertEquals(4, styled.anchorPositions["note"])
+
+        val measurer = ReaderChapterBlockMeasurer(shaper, shaper, { ReaderImageDimensions(20f, 100f) })
+        val measureStyle = style.copy(
+            bodyStyle = style.bodyStyle.copy(fontSizePx = 30f),
+            bodyIndentCharacters = 0,
+            bodyLineHeightPx = 48f,
+            bodyBaselineOffsetPx = 36f,
+            localImageDensity = 3f,
+        )
+        val measured = measurer.measure(styled, measureStyle) as ReaderChapterMeasureResult.Success
+        val page = ReaderPaginator.paginateBlocks(measured.blocks, ReaderPaginationConfig(
+            0, "", 500, 1000, 0f, 0f, 0f, 0f, 48f, 36f,
+        )).single()
+        val image = page.elements.filterIsInstance<ReaderElement.Image>().single()
+        assertTrue(image.inline)
+        assertEquals(1, image.chapterPosition)
+        assertEquals("#note", image.link)
+        assertTrue(image.touchBounds.top < image.bounds.top)
+        assertEquals(image, page.elementAt(image.bounds.left + 5f, image.bounds.top - 1f))
+        assertEquals(
+            ReaderImageDrawLayout(image.bounds.left, image.bounds.top, 48f, 30f),
+            ReaderImageDrawLayout.forElement(image, 20, 100),
+        )
+        val singlePage = measurer.measure(styled, measureStyle.copy(
+            imageLayoutMode = ReaderImageLayoutMode.SINGLE_PAGE,
+        )) as ReaderChapterMeasureResult.Success
+        val standalone = singlePage.blocks.filterIsInstance<ReaderMeasuredBlock.Image>().single()
+        assertTrue(standalone.pageBreakBefore && standalone.pageBreakAfter)
+    }
+
+    @Test
+    fun tallLocalIconDoesNotInterceptTheNextLineInTightSpacing() {
+        val paragraph = ReaderMeasuredBlock.InlineParagraph(
+            items = listOf(
+                ReaderMeasuredInlineItem.Image("note.png", 12f, 20f, 0, link = "#note", useMeasuredBounds = true),
+                ReaderMeasuredInlineItem.Text("甲", 12f, style.bodyStyle, 1),
+            ),
+            indentCharacters = 0,
+            alignment = ReaderTextAlignment.START,
+            lineHeightPx = 12f,
+            baselineOffsetPx = 9f,
+            baseTextSizePx = 10f,
+            lineSpacingMultiplier = 0.8f,
+        )
+        val page = ReaderPaginator.paginateBlocks(listOf(paragraph), ReaderPaginationConfig(
+            0, "", 15, 100, 0f, 0f, 0f, 0f, 12f, 9f,
+        )).single()
+        val image = page.elements.filterIsInstance<ReaderElement.Image>().single()
+        val text = page.elements.filterIsInstance<ReaderElement.Text>().single()
+        assertTrue(text.bounds.top >= image.bounds.bottom)
+        assertEquals(text, page.elementAt(text.bounds.left + 5f, text.bounds.top))
+    }
+
     @Test
     fun localPresentationKeepsCanonicalBodyAndBgmOrdinalsWhileDrawingRulesAndNumbers() = runBlocking {
         val fixture = io.legado.app.support.ReaderSemanticFixtures

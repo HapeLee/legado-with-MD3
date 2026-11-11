@@ -41,6 +41,7 @@ data class ReaderAndroidPaginationStyle(
      * 该字段，生产路径恒为 `false`，因此默认行为零变化；接线前不要把它当作已生效能力。
      */
     val excludeActionImages: Boolean = false,
+    val density: Float = 1f,
 ) {
     fun columnCount(widthPx: Int, heightPx: Int): Int =
         columnMode.columnCount(widthPx, heightPx, isTablet, isScroll)

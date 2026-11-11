@@ -35,15 +35,19 @@ object LocalBookSemanticHtml {
 
     private val allowedImgAttrs = setOf("src", "alt", "width", "height", "class", "style")
 
-    private val allowedCssProps = setOf("text-align", "font-weight", "font-style", "text-decoration", "color", "font-size")
+    private val imageSizeProps = setOf("width", "height")
+    private val allowedCssProps = setOf("text-align", "font-weight", "font-style", "text-decoration", "color", "font-size") + imageSizeProps
+
+    data class CssSpecificity(val ids: Int, val classes: Int, val tags: Int)
 
     data class CssRule(
         val tag: String?,
         val id: String?,
         val classes: Set<String>,
         val declarations: Map<String, String>,
-        val specificity: Int,
-        val order: Int
+        val specificity: CssSpecificity,
+        val order: Int,
+        val ancestors: List<Triple<String?, String?, Set<String>>> = emptyList(),
     )
 
     /**
@@ -141,7 +145,7 @@ object LocalBookSemanticHtml {
         }
     }
 
-    /** Parse simple selectors (tag, #id, .class, tag.class) with whitelisted props. */
+    /** Parse simple selectors and descendant chains with whitelisted props. */
     fun parseCssRules(cssText: String, baseOrder: Int = 0, maxRules: Int = Int.MAX_VALUE): List<CssRule> {
         if (maxRules <= 0) return emptyList()
         return runCatching {
@@ -159,16 +163,22 @@ object LocalBookSemanticHtml {
                 for (rawSelector in selectorGroup.split(",")) {
                     val selector = rawSelector.trim()
                     if (selector.isEmpty()) continue
-                    if (selector.contains(" ") || selector.contains(">") ||
+                    if (selector.contains(">") ||
                         selector.contains("+") || selector.contains("~") ||
                         selector.contains("[") || selector.contains(":")
                     ) {
                         continue
                     }
-                    val (tag, id, classes) = parseSimpleSelector(selector) ?: continue
-                    val specificity = (if (id != null) 100 else 0) +
-                        classes.size * 10 + (if (tag != null) 1 else 0)
-                    rules += CssRule(tag, id, classes, declarations, specificity, order++)
+                    val parts = selector.split(Regex("\\s+")).map { parseSimpleSelector(it) }
+                    if (parts.any { it == null }) continue
+                    val parsed = parts.filterNotNull()
+                    val (tag, id, classes) = parsed.last()
+                    val specificity = CssSpecificity(
+                        ids = parsed.count { it.second != null },
+                        classes = parsed.sumOf { it.third.size },
+                        tags = parsed.count { it.first != null },
+                    )
+                    rules += CssRule(tag, id, classes, declarations, specificity, order++, parsed.dropLast(1))
                     if (rules.size >= maxRules) break@blocks
                 }
             }
@@ -263,6 +273,9 @@ object LocalBookSemanticHtml {
             }
         }
         val candidates = mutableListOf<CssRule>()
+        val cascadeOrder = compareBy<CssRule>(
+            { it.specificity.ids }, { it.specificity.classes }, { it.specificity.tags }, { it.order },
+        )
         for (el in docBody.allElements) {
             // Preserve the legacy inline-hidden flag until chapter boundaries have been used.
             if (el.attr("style").contains("display:none", ignoreCase = true)) continue
@@ -277,19 +290,40 @@ object LocalBookSemanticHtml {
             val matched = candidates.filter { rule ->
                 (rule.tag == null || rule.tag == tag) &&
                     (rule.id == null || rule.id == id) &&
-                    (rule.classes.isEmpty() || classes.containsAll(rule.classes))
-            }.sortedWith(compareBy({ it.specificity }, { it.order }))
+                    (rule.classes.isEmpty() || classes.containsAll(rule.classes)) &&
+                    matchesAncestors(el, rule.ancestors)
+            }.sortedWith(cascadeOrder)
             if (matched.isEmpty()) continue
+            val supportsImageSize = tag == "img" || tag == "image"
             val merged = mutableMapOf<String, String>()
             for ((_, _, _, declarations) in matched) {
-                for ((k, v) in declarations) merged[k] = v
+                for ((k, v) in declarations) {
+                    if (supportsImageSize || k !in imageSizeProps) merged[k] = v
+                }
             }
-            val inline = parseDeclarations(el.attr("style"))
-            for ((k, v) in inline) merged[k] = v
             if (merged.isEmpty()) continue
+            val inline = parseDeclarations(el.attr("style"))
+            for ((k, v) in inline) {
+                if (supportsImageSize || k !in imageSizeProps) merged[k] = v
+            }
             el.attr("style", merged.entries.joinToString("; ") { "${it.key}: ${it.value}" })
         }
         normalizeLegacyAlignment(docBody)
+    }
+
+    private fun matchesAncestors(element: Element, selectors: List<Triple<String?, String?, Set<String>>>): Boolean {
+        if (selectors.isEmpty()) return true
+        var parent = element.parent()
+        for ((tag, id, classes) in selectors.asReversed()) {
+            while (parent != null && !((tag == null || parent.normalName() == tag) &&
+                    (id == null || parent.id().equals(id, true)) &&
+                    (classes.isEmpty() || parent.classNames().map { it.lowercase() }.containsAll(classes)))) {
+                parent = parent.parent()
+            }
+            if (parent == null) return false
+            parent = parent.parent()
+        }
+        return true
     }
 
     private val blockAlignTags = setOf(
