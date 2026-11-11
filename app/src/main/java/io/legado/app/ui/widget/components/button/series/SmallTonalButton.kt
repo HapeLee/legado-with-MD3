@@ -8,9 +8,16 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 
+/**
+ * 小号 Tonal 按钮。
+ *
+ * [onClick] 传 `null` 得到纯展示形态：几何、选中态与配色不变，但不安装点击节点、涟漪和按钮语义。
+ * 用途同 [SmallPlainButton]：塞进 `AppActionMenu` / `AppChoiceDropdown` 的 `trigger` 槽，
+ * 由入口包唯一可点节点，避免内外两层可点节点。
+ */
 @Composable
 fun SmallTonalButton(
-    onClick: () -> Unit,
+    onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     onLongClick: (() -> Unit)? = null,
     enabled: Boolean = true,

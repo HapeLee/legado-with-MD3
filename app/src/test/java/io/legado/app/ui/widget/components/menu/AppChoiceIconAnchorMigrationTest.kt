@@ -43,12 +43,12 @@ class AppChoiceIconAnchorMigrationTest {
         assertTrue("ChangeGroup 未接回调", source.contains("ChangeGroup(id.toLong())"))
     }
 
-    /** 同文件第 716 行那处是列表项菜单，本轮刻意不动。 */
+    /** 同文件那处列表项「更多」菜单已在第二十轮迁到 `Row` 锚点，此处棘轮收尾。 */
     @Test
     fun bookshelfManageKeepsOtherMenuRatchet() {
         assertEquals(
-            "BookshelfManageScreen 剩余手画 RoundDropdownMenu 数量",
-            1,
+            "BookshelfManageScreen 应不再有手画 RoundDropdownMenu",
+            0,
             Regex("RoundDropdownMenu\\(").findAll(sourceOf(MANAGE)).count(),
         )
     }

@@ -48,6 +48,38 @@ class AppActionRowAnchorMigrationTest {
         assertTrue("删除项未标危险色", source.contains("destructive = true"))
     }
 
+    /** 行级「更多」菜单原来用 `moreMenuBookUrl` 做单例展开，迁到 Row 锚点后状态整条消失。 */
+    @Test
+    fun bookshelfManageBookRowActionsUseRowAnchor() {
+        val source = sourceOf(MANAGE)
+        assertFalse("仍自带单例展开状态", source.contains("moreMenuBookUrl"))
+        assertTrue("书行动作未用 Row 锚点", source.contains("anchor = AppMenuAnchor.Row"))
+    }
+
+    @Test
+    fun audioPlayActionsUseRowAnchor() {
+        val source = sourceOf(AUDIO_PLAY)
+        assertFalse("仍手画 RoundDropdownMenu", source.contains("RoundDropdownMenu("))
+        assertFalse("仍自带菜单开合状态", source.contains("menuExpanded"))
+        assertTrue("未使用 Row 锚点", source.contains("anchor = AppMenuAnchor.Row"))
+        // 唤醒锁与媒体控制是开关态，不是「当前选中项」
+        assertTrue("唤醒锁开关态丢失", source.contains("checked = state.wakeLockEnabled"))
+        assertTrue("媒体控制开关态丢失", source.contains("checked = state.mediaControlEnabled"))
+    }
+
+    @Test
+    fun displayOnlyTriggersAcceptNullOnClick() {
+        listOf(
+            "io/legado/app/ui/widget/components/button/series/SmallTonalButton.kt",
+            "io/legado/app/ui/widget/components/button/series/MediumPlainButton.kt",
+        ).forEach { path ->
+            assertTrue(
+                "$path 未支持纯展示形态",
+                sourceOf(path).contains("onClick: (() -> Unit)?"),
+            )
+        }
+    }
+
     private fun sourceOf(path: String): String {
         var directory: File? = File("").absoluteFile
         while (directory != null) {
@@ -62,6 +94,8 @@ class AppActionRowAnchorMigrationTest {
         const val BOOK_SOURCE = "io/legado/app/ui/book/source/manage/BookSourceScreen.kt"
         const val CAST_POOL = "io/legado/app/ui/book/readaloud/cast/CastPoolWidgets.kt"
         const val CAST_ROLE = "io/legado/app/ui/book/readaloud/casting/CastRoleEditing.kt"
+        const val MANAGE = "io/legado/app/ui/book/manage/BookshelfManageScreen.kt"
+        const val AUDIO_PLAY = "io/legado/app/ui/book/audio/AudioPlayScreen.kt"
         val IDS = listOf("to_top", "to_bottom", "login", "search", "debug", "delete", "toggle_explore")
     }
 }

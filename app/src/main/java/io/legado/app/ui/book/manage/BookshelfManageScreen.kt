@@ -101,6 +101,7 @@ import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.menu.AppAction
 import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.menu.AppChoiceDropdown
 import io.legado.app.ui.widget.components.menu.AppChoiceOption
 import io.legado.app.ui.widget.components.menu.AppMenuAnchor
@@ -188,7 +189,6 @@ private fun BookshelfManageScreen(
     var otherSourcePreviewItem by remember { mutableStateOf<BatchChangeSourcePreviewItem?>(null) }
     var pendingMoveGroupBookUrl by remember { mutableStateOf<String?>(null) }
     var groupPickerCurrentGroupId by remember { mutableLongStateOf(0L) }
-    var moreMenuBookUrl by remember { mutableStateOf<String?>(null) }
     var pendingDeleteBookUrls by remember { mutableStateOf<Set<String>>(emptySet()) }
     var fabMenuExpanded by rememberSaveable { mutableStateOf(false) }
     // 下面两处待导出集合直接存实体而不是 url：跨分组选中的书不在当前列表里，按 url 回查会漏掉
@@ -719,47 +719,47 @@ private fun BookshelfManageScreen(
                                             .padding(horizontal = 4.dp),
                                         color = LegadoTheme.colorScheme.outlineVariant
                                     )
-                                    RoundDropdownMenu(
-                                        expanded = moreMenuBookUrl == book.bookUrl,
-                                        onDismissRequest = { moreMenuBookUrl = null }
-                                    ) { dismiss ->
-                                        RoundDropdownMenuItem(
-                                            text = "换源",
-                                            onClick = {
-                                                singleChangeSourceBook = book
-                                                dismiss()
-                                            }
-                                        )
-                                        RoundDropdownMenuItem(
-                                            text = "删除书籍",
-                                            onClick = {
-                                                pendingDeleteBookUrls = setOf(book.bookUrl)
-                                                deleteOriginalBookFile = state.deleteBookOriginal
-                                                showDeleteBookConfirmDialog = true
-                                                dismiss()
-                                            }
-                                        )
-                                        RoundDropdownMenuItem(
-                                            text = "删除缓存",
-                                            onClick = {
-                                                viewModel.dispatch(
+                                    AppActionMenu(
+                                        groups = persistentListOf(
+                                            AppActionGroup(
+                                                id = "bookshelf_book_actions",
+                                                actions = persistentListOf(
+                                                    AppAction(id = "change_source", label = "换源"),
+                                                    AppAction(id = "delete_book", label = "删除书籍"),
+                                                    AppAction(id = "clear_cache", label = "删除缓存"),
+                                                ),
+                                            ),
+                                        ),
+                                        onAction = { id ->
+                                            when (id) {
+                                                "change_source" -> singleChangeSourceBook = book
+                                                "delete_book" -> {
+                                                    pendingDeleteBookUrls = setOf(book.bookUrl)
+                                                    deleteOriginalBookFile = state.deleteBookOriginal
+                                                    showDeleteBookConfirmDialog = true
+                                                }
+
+                                                "clear_cache" -> viewModel.dispatch(
                                                     BookshelfManageScreenIntent.ClearCachesForBooks(
                                                         setOf(book.bookUrl)
                                                     )
                                                 )
-                                                dismiss()
                                             }
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        anchor = AppMenuAnchor.Row,
+                                        title = "更多",
+                                    ) {
+                                        SmallTonalButton(
+                                            onClick = null,
+                                            modifier = Modifier.fillMaxWidth(),
+                                            icon = Icons.Default.MoreVert,
+                                            text = "更多",
+                                            contentColor = LegadoTheme.colorScheme.onSurfaceVariant.copy(
+                                                alpha = 0.8f
+                                            )
                                         )
                                     }
-                                    SmallTonalButton(
-                                        onClick = { moreMenuBookUrl = book.bookUrl },
-                                        modifier = Modifier.weight(1f),
-                                        icon = Icons.Default.MoreVert,
-                                        text = "更多",
-                                        contentColor = LegadoTheme.colorScheme.onSurfaceVariant.copy(
-                                            alpha = 0.8f
-                                        )
-                                    )
                                 }
                                 if (downloadFailureText != null) {
                                     AppText(

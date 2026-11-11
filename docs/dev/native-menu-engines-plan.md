@@ -826,7 +826,15 @@ enum class AppMenuAnchor { Row, Icon }   // 决定 Miuix 用 Preference 还是 I
    同一约定，`SeriesButton` 底座已支持），`selected` 仍可表达业务态。
    迁移 `BookSourceScreen` 书源行动作、`CastPoolWidgets` 分组动作、`CastRoleEditing`
    角色行动作（**43 → 40**）；`CastRoleEditing` 的「删除」改为 `destructive = true`，
-   Miuix 分支按既有能力降级不染色；
+   Miuix 分支按既有能力降级不染色。
+   同一轮继续：`SmallTonalButton` / `MediumPlainButton` 也支持 `onClick = null`；
+   迁移 `BookshelfManageScreen` 行级「更多」菜单（删掉 `moreMenuBookUrl` 单例展开状态，
+   行内菜单天然互斥）与 `AudioPlayScreen` 浮层顶栏的更多菜单（唤醒锁 / 媒体控制用
+   `checked` 表达开关态而不是 `selected`），**40 → 38**。
+   暂缓：`ThemeListContent` 的「原地翻页 + 锁宽」伪子菜单（`AppActionMenu` 的
+   `children` 不等价，会改变交互）；`VideoPlayerScreen` 的 `OverlayIconButton` 触发
+   （需先给该组件加纯展示形态）；`SelectionItemCard` 的 `dropdownContent` 槽
+   （调用方提供任意内容，改 `groups` 会破 API）；
    顶栏 content 只剩 `RssSourceScreen`（伪子菜单 +
    嵌套 popup，刻意保留）。带文字标题的 4 处列表项菜单 trigger 是长按 / 图标按钮，
    需单独建交互基线，**不能复用顶栏 `menuGroups` 槽**；

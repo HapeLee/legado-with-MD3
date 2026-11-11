@@ -90,9 +90,12 @@ import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.button.series.SmallAnimatedButton
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.log.AppLogSheet
-import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
+import io.legado.app.ui.widget.components.menu.AppMenuAnchor
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.OptionCard
 import io.legado.app.ui.widget.components.modalBottomSheet.OptionSheet
@@ -121,7 +124,6 @@ fun AudioPlayScreenContent(
         pageCount = { if (state.lyricLines.isEmpty()) 2 else 3 },
     )
     TrackPlayerMorphCoverPage(horizontalPagerState)
-    var menuExpanded by remember { mutableStateOf(false) }
     val pagerHazeState = remember { HazeState() }
     val hazeEnabled =
         state.bgMode != ReadAloudBgMode.Solid && state.bgMode != ReadAloudBgMode.Transparent
@@ -176,121 +178,117 @@ fun AudioPlayScreenContent(
                         contentDescription = stringResource(R.string.back),
                     )
 
-                    Box {
+                    AppActionMenu(
+                        groups = persistentListOf(
+                            AppActionGroup(
+                                id = "audio_play_actions",
+                                actions = buildList {
+                                    add(
+                                        AppAction(
+                                            id = "change_source",
+                                            label = stringResource(R.string.change_origin),
+                                            icon = Icons.Default.SwapHoriz,
+                                        )
+                                    )
+                                    if (state.canLogin) {
+                                        add(
+                                            AppAction(
+                                                id = "login",
+                                                label = stringResource(R.string.login),
+                                                icon = Icons.AutoMirrored.Filled.Login,
+                                            )
+                                        )
+                                    }
+                                    add(
+                                        AppAction(
+                                            id = "copy_play_url",
+                                            label = stringResource(R.string.copy_play_url),
+                                            icon = Icons.Default.ContentCopy,
+                                        )
+                                    )
+                                    add(
+                                        AppAction(
+                                            id = "edit_source",
+                                            label = stringResource(R.string.edit_book_source),
+                                            icon = Icons.Default.Edit,
+                                        )
+                                    )
+                                    add(
+                                        AppAction(
+                                            id = "skip_credits",
+                                            label = stringResource(R.string.audio_play_skip_credits),
+                                            icon = Icons.Default.FastForward,
+                                        )
+                                    )
+                                    add(
+                                        AppAction(
+                                            id = "gain",
+                                            label = stringResource(R.string.audio_play_gain),
+                                            icon = Icons.AutoMirrored.Filled.VolumeUp,
+                                        )
+                                    )
+                                    add(
+                                        AppAction(
+                                            id = "cover_ratio",
+                                            label = stringResource(R.string.audio_play_cover_ratio),
+                                            icon = Icons.Default.Crop,
+                                        )
+                                    )
+                                    // 勾选态表达开关，而不是「当前选中项」
+                                    add(
+                                        AppAction(
+                                            id = "wake_lock",
+                                            label = stringResource(R.string.audio_play_wake_lock),
+                                            icon = Icons.Default.Lock,
+                                            checked = state.wakeLockEnabled,
+                                        )
+                                    )
+                                    add(
+                                        AppAction(
+                                            id = "media_control",
+                                            label = stringResource(
+                                                R.string.system_media_control_compatibility_change
+                                            ),
+                                            icon = Icons.Default.Headphones,
+                                            checked = state.mediaControlEnabled,
+                                        )
+                                    )
+                                    add(
+                                        AppAction(
+                                            id = "log",
+                                            label = stringResource(R.string.log),
+                                            icon = Icons.Default.Info,
+                                        )
+                                    )
+                                }.toImmutableList(),
+                            ),
+                        ),
+                        onAction = { id ->
+                            when (id) {
+                                "change_source" -> onIntent(AudioPlayIntent.ChangeSource)
+                                "login" -> onIntent(AudioPlayIntent.Login)
+                                "copy_play_url" -> onIntent(AudioPlayIntent.CopyPlayUrl)
+                                "edit_source" -> onIntent(AudioPlayIntent.EditSource)
+                                "skip_credits" ->
+                                    onIntent(AudioPlayIntent.OpenSheet(AudioPlaySheet.SkipCredits))
+
+                                "gain" -> onIntent(AudioPlayIntent.OpenSheet(AudioPlaySheet.Gain))
+                                "cover_ratio" ->
+                                    onIntent(AudioPlayIntent.OpenSheet(AudioPlaySheet.CoverRatioOptions))
+
+                                "wake_lock" -> onIntent(AudioPlayIntent.ToggleWakeLock)
+                                "media_control" -> onIntent(AudioPlayIntent.ToggleMediaControl)
+                                "log" -> onIntent(AudioPlayIntent.OpenSheet(AudioPlaySheet.Log))
+                            }
+                        },
+                        anchor = AppMenuAnchor.Row,
+                        title = stringResource(R.string.more),
+                    ) {
                         MediumPlainButton(
-                            onClick = { menuExpanded = true },
+                            onClick = null,
                             icon = AppIcons.MoreVert,
                             contentDescription = stringResource(R.string.more),
                         )
-                        RoundDropdownMenu(
-                            expanded = menuExpanded,
-                            onDismissRequest = { menuExpanded = false },
-                        ) { dismiss ->
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.change_origin),
-                                leadingIcon = {
-                                    MenuItemIcon(Icons.Default.SwapHoriz)
-                                },
-                                onClick = {
-                                    dismiss()
-                                    onIntent(AudioPlayIntent.ChangeSource)
-                                },
-                            )
-                            if (state.canLogin) {
-                                RoundDropdownMenuItem(
-                                    text = stringResource(R.string.login),
-                                    leadingIcon = {
-                                        MenuItemIcon(Icons.AutoMirrored.Filled.Login)
-                                    },
-                                    onClick = {
-                                        dismiss()
-                                        onIntent(AudioPlayIntent.Login)
-                                    },
-                                )
-                            }
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.copy_play_url),
-                                leadingIcon = {
-                                    MenuItemIcon(Icons.Default.ContentCopy)
-                                },
-                                onClick = {
-                                    dismiss()
-                                    onIntent(AudioPlayIntent.CopyPlayUrl)
-                                },
-                            )
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.edit_book_source),
-                                leadingIcon = {
-                                    MenuItemIcon(Icons.Default.Edit)
-                                },
-                                onClick = {
-                                    dismiss()
-                                    onIntent(AudioPlayIntent.EditSource)
-                                },
-                            )
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.audio_play_skip_credits),
-                                leadingIcon = {
-                                    MenuItemIcon(Icons.Default.FastForward)
-                                },
-                                onClick = {
-                                    dismiss()
-                                    onIntent(AudioPlayIntent.OpenSheet(AudioPlaySheet.SkipCredits))
-                                },
-                            )
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.audio_play_gain),
-                                leadingIcon = {
-                                    MenuItemIcon(Icons.AutoMirrored.Filled.VolumeUp)
-                                },
-                                onClick = {
-                                    dismiss()
-                                    onIntent(AudioPlayIntent.OpenSheet(AudioPlaySheet.Gain))
-                                },
-                            )
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.audio_play_cover_ratio),
-                                leadingIcon = {
-                                    MenuItemIcon(Icons.Default.Crop)
-                                },
-                                onClick = {
-                                    dismiss()
-                                    onIntent(AudioPlayIntent.OpenSheet(AudioPlaySheet.CoverRatioOptions))
-                                },
-                            )
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.audio_play_wake_lock),
-                                leadingIcon = {
-                                    MenuItemIcon(Icons.Default.Lock)
-                                },
-                                isSelected = state.wakeLockEnabled,
-                                onClick = {
-                                    dismiss()
-                                    onIntent(AudioPlayIntent.ToggleWakeLock)
-                                },
-                            )
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.system_media_control_compatibility_change),
-                                leadingIcon = {
-                                    MenuItemIcon(Icons.Default.Headphones)
-                                },
-                                isSelected = state.mediaControlEnabled,
-                                onClick = {
-                                    dismiss()
-                                    onIntent(AudioPlayIntent.ToggleMediaControl)
-                                },
-                            )
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.log),
-                                leadingIcon = {
-                                    MenuItemIcon(Icons.Default.Info)
-                                },
-                                onClick = {
-                                    dismiss()
-                                    onIntent(AudioPlayIntent.OpenSheet(AudioPlaySheet.Log))
-                                },
-                            )
-                        }
                     }
                 }
             }
