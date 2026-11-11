@@ -72,8 +72,7 @@ import io.legado.app.ui.widget.components.menu.AppActionGroup
 import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.menu.AppChoiceDropdown
 import io.legado.app.ui.widget.components.menu.AppChoiceOption
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppMenuAnchor
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.OptionCard
 import io.legado.app.ui.widget.components.modalBottomSheet.OptionSheet
@@ -896,7 +895,6 @@ private fun CloudTtsEngineEditorContent(
     editor: CloudTtsEngineEditorUi,
     onIntent: (CloudTtsIntent) -> Unit,
 ) {
-    var regionMenu by remember { mutableStateOf(false) }
     var customRegion by remember(editor.provider, editor.editingEngineId) {
         val options = CloudTtsProviderType.entries.firstOrNull {
             it.storageValue == editor.provider
@@ -970,29 +968,52 @@ private fun CloudTtsEngineEditorContent(
                     )
                 }
                 if (profile.regionOptions.isNotEmpty()) {
-                    MenuButton(
-                        stringResource(
-                            R.string.cloud_tts_region_value,
-                            editor.region.ifBlank { stringResource(R.string.cloud_tts_please_select) })
-                    ) { regionMenu = true }
-                    RoundDropdownMenu(regionMenu, { regionMenu = false }) {
-                        profile.regionOptions.forEach { region ->
-                            RoundDropdownMenuItem(
-                                text = region,
-                                onClick = {
-                                    regionMenu = false
-                                    customRegion = false
-                                    update(editor.copy(region = region))
-                                },
-                            )
-                        }
-                        RoundDropdownMenuItem(
-                            text = stringResource(R.string.cloud_tts_custom_region_action),
-                            onClick = {
-                                regionMenu = false
+                    val regionTitle = stringResource(
+                        R.string.cloud_tts_region_value,
+                        editor.region.ifBlank { stringResource(R.string.cloud_tts_please_select) })
+                    // 区域是「预设单选 + 自定义命令」的混合菜单，不是纯单选，
+                    // 因此走 `AppActionMenu`（能同时承载 checked 项与命令项）。
+                    AppActionMenu(
+                        groups = persistentListOf(
+                            AppActionGroup(
+                                id = "cloud_tts_region",
+                                actions = buildList {
+                                    profile.regionOptions.forEach { region ->
+                                        add(
+                                            AppAction(
+                                                id = "region_$region",
+                                                label = region,
+                                                checked = editor.region == region,
+                                            )
+                                        )
+                                    }
+                                    add(
+                                        AppAction(
+                                            id = "custom_region",
+                                            label = stringResource(
+                                                R.string.cloud_tts_custom_region_action
+                                            ),
+                                        )
+                                    )
+                                }.toImmutableList(),
+                            ),
+                        ),
+                        onAction = { id ->
+                            if (id == "custom_region") {
                                 customRegion = true
                                 update(editor.copy(region = ""))
-                            },
+                            } else {
+                                customRegion = false
+                                update(editor.copy(region = id.removePrefix("region_")))
+                            }
+                        },
+                        anchor = AppMenuAnchor.Row,
+                        title = regionTitle,
+                    ) {
+                        MediumTonalButton(
+                            onClick = null,
+                            text = regionTitle,
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
                     if (customRegion) {
@@ -1311,18 +1332,6 @@ private fun Field(value: String, onValueChange: (String) -> Unit, label: String)
         label = label,
         modifier = Modifier.fillMaxWidth(),
         singleLine = true,
-    )
-}
-
-@Composable
-private fun MenuButton(
-    text: String,
-    onClick: () -> Unit,
-) {
-    MediumTonalButton(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        text = text,
     )
 }
 

@@ -832,9 +832,19 @@ enum class AppMenuAnchor { Row, Icon }   // 决定 Miuix 用 Preference 还是 I
    行内菜单天然互斥）与 `AudioPlayScreen` 浮层顶栏的更多菜单（唤醒锁 / 媒体控制用
    `checked` 表达开关态而不是 `selected`），**40 → 38**。
    暂缓：`ThemeListContent` 的「原地翻页 + 锁宽」伪子菜单（`AppActionMenu` 的
-   `children` 不等价，会改变交互）；`VideoPlayerScreen` 的 `OverlayIconButton` 触发
-   （需先给该组件加纯展示形态）；`SelectionItemCard` 的 `dropdownContent` 槽
-   （调用方提供任意内容，改 `groups` 会破 API）；
+   `children` 不等价，会改变交互）；`SelectionItemCard` 的 `dropdownContent` 槽
+   （调用方提供任意内容，改 `groups` 会破 API）。
+   **第二十一轮**：`CloudTtsScreen` 的区域混合菜单（第十七轮刻意保留的那处）改用
+   `AppActionMenu(anchor = Row)`——`AppChoiceDropdown` 只能选、不能带命令项，而
+   `AppActionMenu` 能在同一组里同时承载 `checked` 选项与「自定义区域」命令，该文件手画菜单归零；
+   `HomepageModuleManageSheet` 顶栏分组筛选迁到 `AppChoiceDropdown(compact = true)`，
+   空串代表「全部」以免 nullable 渗进 `AppChoiceOption.id`（**38 → 36**）。
+   本轮确认两条新阻塞：
+   - `VideoPlayerScreen` 的 `menuExpanded` 不只控制菜单，还参与「播放时自动隐藏控制栏」的
+     `LaunchedEffect`；`AppActionMenu` 不暴露展开态（Miuix 分支由库自持），迁移会回退该行为；
+   - `SettingItem` / `TinySettingItems` 虽有 `interactive = false` 的纯展示约定，但
+     `dropdownMenu` 是任意内容槽（`(onDismiss) -> Unit`），改成 `groups` 属破坏性 API 变更，
+     需要单独一轮连同调用方一起改；
    顶栏 content 只剩 `RssSourceScreen`（伪子菜单 +
    嵌套 popup，刻意保留）。带文字标题的 4 处列表项菜单 trigger 是长按 / 图标按钮，
    需单独建交互基线，**不能复用顶栏 `menuGroups` 槽**；

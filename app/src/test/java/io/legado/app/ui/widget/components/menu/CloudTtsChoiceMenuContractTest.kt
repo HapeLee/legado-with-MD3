@@ -45,8 +45,8 @@ class CloudTtsChoiceMenuContractTest {
             source.contains("MediumTonalButtonDisplay"),
         )
         assertEquals(
-            "纯展示 trigger 数量",
-            5,
+            "纯展示 trigger 数量（5 处纯单选 + 区域混合菜单）",
+            6,
             Regex("onClick = null").findAll(source).count(),
         )
         assertEquals(
@@ -64,17 +64,22 @@ class CloudTtsChoiceMenuContractTest {
         }
     }
 
-    /** 区域菜单是「选项 + 自定义区域命令 + 后续输入框」的混合菜单，本轮刻意不动。 */
+    /**
+     * 区域菜单是「预设单选 + 自定义区域命令 + 随后输入框」的混合菜单：第十七轮因
+     * `AppChoiceDropdown` 只能选、不能带命令项而刻意保留；第二十一轮改用能同组承载
+     * `checked` 项与命令项的 `AppActionMenu`，因此该文件手画菜单归零。
+     */
     @Test
-    fun mixedRegionMenuKeepsRoundDropdownMenu() {
+    fun mixedRegionMenuMigratedToActionMenu() {
         val source = sourceOf(SCREEN)
         assertEquals(
-            "剩余手画 RoundDropdownMenu 数量（仅区域混合菜单）",
-            1,
+            "CloudTtsScreen 应不再有手画 RoundDropdownMenu",
+            0,
             Regex("RoundDropdownMenu\\(").findAll(source).count(),
         )
-        assertTrue("区域菜单丢失", source.contains("var regionMenu by remember"))
+        assertFalse("仍自带区域菜单开合状态", source.contains("regionMenu"))
         assertTrue("区域自定义命令丢失", source.contains("R.string.cloud_tts_custom_region_action"))
+        assertTrue("区域项未表达勾选态", source.contains("checked = editor.region == region"))
     }
 
     private fun sourceOf(path: String): String {

@@ -48,8 +48,8 @@ class CloudTtsTopBarMenuContractTest {
     fun remainingFormMenusKeepRatchet() {
         val source = sourceOf(CLOUD_TTS)
         assertEquals(
-            "第十七轮迁完 5 处纯单选后应只剩区域混合菜单",
-            1,
+            "纯单选与区域混合菜单迁完后应归零",
+            0,
             Regex("RoundDropdownMenu\\(").findAll(source).count(),
         )
         // 区域菜单的混合命令项必须留着：迁成纯单选会静默丢掉「自定义区域」分支。

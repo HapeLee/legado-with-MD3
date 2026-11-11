@@ -62,8 +62,8 @@ class SheetActionMenuContractTest {
     fun cloudTtsKeepsOtherMenusUntouched() {
         val source = sourceOf(CLOUD_TTS)
         assertEquals(
-            "CloudTtsScreen 应只剩区域混合菜单 1 处",
-            1,
+            "CloudTtsScreen 的手画菜单应已归零",
+            0,
             Regex("RoundDropdownMenu\\(").findAll(source).count(),
         )
     }
