@@ -818,6 +818,15 @@ enum class AppMenuAnchor { Row, Icon }   // 决定 Miuix 用 Preference 还是 I
    首批调用方 `BookCacheManageScreen` 与 `BookshelfManageScreen` 的分组筛选（**45 → 43**）。
    `RssSortScreen` 暂缓：它的 trigger 是 `SmallToggleButton(checked = showGroupMenu)`，
    展开态高亮在纯展示 trigger 里无法保留，属形态变化；`TocScreen` 卷菜单同理且是混合菜单。
+   **第二十轮**补齐 `AppActionMenu` 的 `AppMenuAnchor.Row`（此前只有 Mochi 真正生效，
+   COUI / Miuix / Material 都无条件渲染图标按钮，列表项里那层壳会变）：`Row` 在四分支都由
+   trigger 自己画壳，Miuix 改走 `Window/OverlayDropdownPopup` 以绕开
+   `Icon*DropdownMenu` 的库按钮包装；新增 `title` 参数供 `Row` 形态声明可访问名称。
+   同时 `SmallPlainButton` 支持 `onClick = null`（与 `MediumTonalButton` / `SourceEditOptionCard`
+   同一约定，`SeriesButton` 底座已支持），`selected` 仍可表达业务态。
+   迁移 `BookSourceScreen` 书源行动作、`CastPoolWidgets` 分组动作、`CastRoleEditing`
+   角色行动作（**43 → 40**）；`CastRoleEditing` 的「删除」改为 `destructive = true`，
+   Miuix 分支按既有能力降级不染色；
    顶栏 content 只剩 `RssSourceScreen`（伪子菜单 +
    嵌套 popup，刻意保留）。带文字标题的 4 处列表项菜单 trigger 是长按 / 图标按钮，
    需单独建交互基线，**不能复用顶栏 `menuGroups` 槽**；

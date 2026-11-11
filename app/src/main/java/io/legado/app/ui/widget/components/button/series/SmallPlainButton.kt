@@ -13,9 +13,16 @@ internal fun smallContainerSize() = squareSize(SmallButtonSize)
 internal val smallIconSize: Dp = 18.dp
 internal val SmallButtonSize = 32.dp
 
+/**
+ * 小号图标按钮。
+ *
+ * [onClick] 传 `null` 得到纯展示形态：几何、选中态与配色不变，但不安装点击节点、涟漪和按钮语义。
+ * 用途同 [MediumTonalButton]：塞进 `AppActionMenu` / `AppChoiceDropdown` 的 `trigger` 槽，
+ * 由入口包唯一可点节点，避免内外两层可点节点。`selected` 仍可表达业务态（例如「正在编辑」）。
+ */
 @Composable
 fun SmallPlainButton(
-    onClick: () -> Unit,
+    onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     onLongClick: (() -> Unit)? = null,
     enabled: Boolean = true,

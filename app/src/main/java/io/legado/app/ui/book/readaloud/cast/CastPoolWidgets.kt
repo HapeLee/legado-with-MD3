@@ -66,8 +66,12 @@ import io.legado.app.ui.widget.components.checkBox.AppCheckbox
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
+import io.legado.app.ui.widget.components.menu.AppMenuAnchor
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import io.legado.app.ui.widget.components.reorderAccessibility
 import io.legado.app.ui.widget.components.text.AppText
 import sh.calvin.reorderable.ReorderableItem
@@ -428,7 +432,7 @@ private fun GroupHeader(
     depth: Int = 0,
     elevation: Dp = 0.dp,
 ) {
-    var showMenu by remember { mutableStateOf(false) }
+
     NormalCard(
         modifier = Modifier
             .fillMaxWidth()
@@ -492,50 +496,60 @@ private fun GroupHeader(
                 modifier = Modifier.padding(horizontal = 10.dp),
             )
             if (onRename != null || onDelete != null) {
-                Box {
+                val groupActions = buildList {
+                    onRename?.let {
+                        add(
+                            AppAction(
+                                id = "rename",
+                                label = stringResource(R.string.cast_group_rename),
+                            )
+                        )
+                    }
+                    onNewSubgroup?.let {
+                        add(
+                            AppAction(
+                                id = "new_subgroup",
+                                label = stringResource(R.string.cast_subgroup_create),
+                            )
+                        )
+                    }
+                    onMove?.let {
+                        add(
+                            AppAction(
+                                id = "move",
+                                label = stringResource(R.string.cast_group_move),
+                            )
+                        )
+                    }
+                    onDelete?.let {
+                        add(
+                            AppAction(
+                                id = "delete",
+                                label = stringResource(R.string.cast_group_delete),
+                            )
+                        )
+                    }
+                }.toImmutableList()
+                AppActionMenu(
+                    groups = persistentListOf(
+                        AppActionGroup(id = "cast_group_actions", actions = groupActions),
+                    ),
+                    onAction = { id ->
+                        when (id) {
+                            "rename" -> onRename?.invoke()
+                            "new_subgroup" -> onNewSubgroup?.invoke()
+                            "move" -> onMove?.invoke()
+                            "delete" -> onDelete?.invoke()
+                        }
+                    },
+                    anchor = AppMenuAnchor.Row,
+                    title = stringResource(R.string.more),
+                ) {
                     SmallPlainButton(
-                        onClick = { showMenu = true },
+                        onClick = null,
                         icon = AppIcons.MoreVert,
                         contentDescription = stringResource(R.string.more),
                     )
-                    RoundDropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) { dismiss ->
-                        onRename?.let { action ->
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.cast_group_rename),
-                                onClick = {
-                                    dismiss()
-                                    action()
-                                },
-                            )
-                        }
-                        onNewSubgroup?.let { action ->
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.cast_subgroup_create),
-                                onClick = {
-                                    dismiss()
-                                    action()
-                                },
-                            )
-                        }
-                        onMove?.let { action ->
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.cast_group_move),
-                                onClick = {
-                                    dismiss()
-                                    action()
-                                },
-                            )
-                        }
-                        onDelete?.let { action ->
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.cast_group_delete),
-                                onClick = {
-                                    dismiss()
-                                    action()
-                                },
-                            )
-                        }
-                    }
                 }
             }
             AppIcon(

@@ -68,6 +68,8 @@ import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.dialog.TextListInputDialog
 import io.legado.app.ui.widget.components.menu.AppAction
 import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
+import io.legado.app.ui.widget.components.menu.AppMenuAnchor
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
@@ -75,8 +77,7 @@ import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.ImportStatus
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
 import io.legado.app.ui.widget.components.settingItem.SettingItem
@@ -84,6 +85,7 @@ import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -866,50 +868,52 @@ private fun BookSourceItemMenu(
     onDelete: () -> Unit,
     onSetExploreEnabled: (Boolean) -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    Box {
+    val moreActions = buildList {
+        if (canMoveToEdge) {
+            add(AppAction(id = "to_top", label = stringResource(R.string.to_top)))
+            add(AppAction(id = "to_bottom", label = stringResource(R.string.to_bottom)))
+        }
+        if (item.hasLoginUrl) {
+            add(AppAction(id = "login", label = stringResource(R.string.login)))
+        }
+        add(AppAction(id = "search", label = stringResource(R.string.search)))
+        add(AppAction(id = "debug", label = stringResource(R.string.debug)))
+        add(AppAction(id = "delete", label = stringResource(R.string.delete)))
+        if (item.hasExploreUrl) {
+            add(
+                AppAction(
+                    id = "toggle_explore",
+                    label = stringResource(
+                        if (item.enabledExplore) R.string.disable_explore
+                        else R.string.enable_explore
+                    ),
+                )
+            )
+        }
+    }.toImmutableList()
+    AppActionMenu(
+        groups = persistentListOf(
+            AppActionGroup(id = "book_source_actions", actions = moreActions),
+        ),
+        onAction = { id ->
+            when (id) {
+                "to_top" -> onMoveToEdge(true)
+                "to_bottom" -> onMoveToEdge(false)
+                "login" -> onLogin()
+                "search" -> onSearch()
+                "debug" -> onDebug()
+                "delete" -> onDelete()
+                "toggle_explore" -> onSetExploreEnabled(!item.enabledExplore)
+            }
+        },
+        anchor = AppMenuAnchor.Row,
+        title = stringResource(R.string.menu),
+    ) {
         SmallPlainButton(
+            onClick = null,
             icon = AppIcons.MoreVert,
             contentDescription = stringResource(R.string.menu),
-            onClick = { expanded = true },
         )
-        RoundDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) { dismiss ->
-            if (canMoveToEdge) {
-                RoundDropdownMenuItem(stringResource(R.string.to_top), onClick = {
-                    dismiss(); onMoveToEdge(true)
-                })
-                RoundDropdownMenuItem(stringResource(R.string.to_bottom), onClick = {
-                    dismiss(); onMoveToEdge(false)
-                })
-            }
-            if (item.hasLoginUrl) {
-                RoundDropdownMenuItem(stringResource(R.string.login), onClick = {
-                    dismiss(); onLogin()
-                })
-            }
-            RoundDropdownMenuItem(stringResource(R.string.search), onClick = {
-                dismiss(); onSearch()
-            })
-            RoundDropdownMenuItem(stringResource(R.string.debug), onClick = {
-                dismiss(); onDebug()
-            })
-            RoundDropdownMenuItem(stringResource(R.string.delete), onClick = {
-                dismiss(); onDelete()
-            })
-            if (item.hasExploreUrl) {
-                RoundDropdownMenuItem(
-                    text = stringResource(
-                        if (item.enabledExplore) R.string.disable_explore else R.string.enable_explore
-                    ),
-                    onClick = {
-                        dismiss(); onSetExploreEnabled(!item.enabledExplore)
-                    },
-                )
-            }
-        }
     }
 }
 

@@ -22,6 +22,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.text
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.IntRect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.roundToIntRect
@@ -47,8 +49,11 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import top.yukonga.miuix.kmp.basic.DropdownDefaults
 import top.yukonga.miuix.kmp.basic.DropdownEntry
 import top.yukonga.miuix.kmp.basic.DropdownItem
+import top.yukonga.miuix.kmp.popup.OverlayDropdownPopup
+import top.yukonga.miuix.kmp.popup.WindowDropdownPopup
 import top.yukonga.miuix.kmp.glass.GlassIconButton as MiuixGlassIconButton
 import top.yukonga.miuix.kmp.glass.GlassIconDropdownMenu
 import top.yukonga.miuix.kmp.glass.GlassTopAppBarDefaults
@@ -93,6 +98,12 @@ fun AppActionMenu(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     anchor: AppMenuAnchor = AppMenuAnchor.Icon,
+    /**
+     * `Row` 锚点的可访问名称。`Icon` 锚点由分支渲染按钮、名称取自 trigger 里的
+     * contentDescription；`Row` 锚点只有一层 `Box(clickable)`，必须显式给出名称，
+     * 否则 TalkBack 读不到这个「更多」按钮。
+     */
+    title: String? = null,
     trigger: @Composable AppMenuTriggerScope.() -> Unit,
 ) {
     val flat = remember(groups) { groups.flatMap { it.actions } }
@@ -102,17 +113,21 @@ fun AppActionMenu(
         )
 
         ComposeEngine.Coui -> if (canUseCouiSettingMenu()) {
-            CouiActions(groups, onAction, modifier, enabled, trigger)
+            CouiActions(groups, onAction, modifier, enabled, anchor, title, trigger)
         } else {
-            LegacyActions(groups, onAction, modifier, enabled, trigger)
+            LegacyActions(groups, onAction, modifier, enabled, anchor, title, trigger)
         }
 
-        ComposeEngine.Miuix -> MiuixActions(
-            groups, onAction, modifier, enabled, trigger,
-        )
+        ComposeEngine.Miuix -> if (anchor == AppMenuAnchor.Row) {
+            // 库的 `Icon*DropdownMenu` 会把 content 包进它自己的图标按钮，
+            // 列表项里那层壳必须由 trigger 自己画，所以改走 popup 形态。
+            MiuixRowActions(groups, onAction, modifier, enabled, title, trigger)
+        } else {
+            MiuixActions(groups, onAction, modifier, enabled, trigger)
+        }
 
         ComposeEngine.Material -> LegacyActions(
-            groups, onAction, modifier, enabled, trigger,
+            groups, onAction, modifier, enabled, anchor, title, trigger,
         )
     }
 }
@@ -217,6 +232,8 @@ private fun CouiActions(
     onAction: (String) -> Unit,
     modifier: Modifier,
     enabled: Boolean,
+    anchor: AppMenuAnchor,
+    title: String?,
     trigger: @Composable AppMenuTriggerScope.() -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -257,24 +274,33 @@ private fun CouiActions(
         )
     }
     Box(modifier) {
-        // 跟随同排 TopBarActionButton：只有 COUI 原生胶囊按钮才带那层玻璃底，
-        // 普通 IconButton 会让 ⋮ 成为整排里唯一没有玻璃的按钮。
-        val capsule = rememberCouiCapsuleRenderer()
-        if (ThemeResolver.isCouiSupported() && LocalAppCouiNativeToolbar.current &&
-            capsule != null
-        ) {
-            CouiTopAppBarButton(
-                modifier = scope.modifier.semantics { role = Role.Button },
-                onClick = { if (enabled) scope.open() },
-                text = false,
-                renderer = capsule,
+        if (anchor == AppMenuAnchor.Row) {
+            // 列表项 / 卡片内：壳由 trigger 自己画，入口只包一个可点节点。
+            Box(
+                scope.modifier
+                    .clickable(enabled = enabled) { scope.open() }
+                    .semantics { title?.let { text = AnnotatedString(it) } },
             ) { scope.trigger() }
         } else {
-            IconButton(
-                onClick = scope::open,
-                enabled = enabled,
-                modifier = scope.modifier,
-            ) { scope.trigger() }
+            // 跟随同排 TopBarActionButton：只有 COUI 原生胶囊按钮才带那层玻璃底，
+            // 普通 IconButton 会让 ⋮ 成为整排里唯一没有玻璃的按钮。
+            val capsule = rememberCouiCapsuleRenderer()
+            if (ThemeResolver.isCouiSupported() && LocalAppCouiNativeToolbar.current &&
+                capsule != null
+            ) {
+                CouiTopAppBarButton(
+                    modifier = scope.modifier.semantics { role = Role.Button },
+                    onClick = { if (enabled) scope.open() },
+                    text = false,
+                    renderer = capsule,
+                ) { scope.trigger() }
+            } else {
+                IconButton(
+                    onClick = scope::open,
+                    enabled = enabled,
+                    modifier = scope.modifier,
+                ) { scope.trigger() }
+            }
         }
         Menu(
             expanded = expanded && enabled,
@@ -286,6 +312,58 @@ private fun CouiActions(
             },
             anchor = couiAnchor,
         )
+    }
+}
+
+/**
+ * Miuix 列表项命令菜单（`Row` 锚点）：壳由 [trigger] 自己画，弹层走
+ * `WindowDropdownPopup` / `OverlayDropdownPopup`。
+ *
+ * 库的 `Icon*DropdownMenu` 会把 content 包进它自己的图标按钮，列表项 / 卡片里那层壳不对，
+ * 因此 `Row` 锚点必须绕开它；条目构造仍是同一份 [toMiuixEntries]，语义不因锚点变化。
+ * 锚定方式与 `AppChoiceDropdown` 的紧凑形态一致（同一个 `Box` 内的 popup）。
+ */
+@Composable
+private fun MiuixRowActions(
+    groups: ImmutableList<AppActionGroup>,
+    onAction: (String) -> Unit,
+    modifier: Modifier,
+    enabled: Boolean,
+    title: String?,
+    trigger: @Composable AppMenuTriggerScope.() -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val entries = remember(groups, onAction) { groups.toMiuixEntries(onAction) }
+    val scope = remember { AppMenuTriggerScopeImpl(Modifier) { expanded = true } }
+    val dropdownColors = DropdownDefaults.dropdownColors()
+    Box(modifier) {
+        Box(
+            scope.modifier
+                .clickable(enabled = enabled) { scope.open() }
+                .semantics { title?.let { text = AnnotatedString(it) } },
+        ) { scope.trigger() }
+        if (LocalHasMiuixPopupHost.current) {
+            OverlayDropdownPopup(
+                entries = entries,
+                show = expanded && enabled,
+                onDismiss = { expanded = false },
+                onDismissFinished = {},
+                maxHeight = null,
+                dropdownColors = dropdownColors,
+                renderInRootScaffold = true,
+                collapseOnSelection = true,
+            )
+        } else {
+            WindowDropdownPopup(
+                entries = entries,
+                show = expanded && enabled,
+                onDismiss = { expanded = false },
+                onDismissFinished = {},
+                maxHeight = null,
+                dropdownColors = dropdownColors,
+                collapseOnSelection = true,
+            )
+        }
     }
 }
 
@@ -473,16 +551,26 @@ private fun LegacyActions(
     onAction: (String) -> Unit,
     modifier: Modifier,
     enabled: Boolean,
+    anchor: AppMenuAnchor,
+    title: String?,
     trigger: @Composable AppMenuTriggerScope.() -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val scope = remember { AppMenuTriggerScopeImpl(Modifier) { expanded = true } }
     Box(modifier) {
-        IconButton(
-            onClick = scope::open,
-            enabled = enabled,
-            modifier = scope.modifier,
-        ) { scope.trigger() }
+        if (anchor == AppMenuAnchor.Row) {
+            Box(
+                scope.modifier
+                    .clickable(enabled = enabled) { scope.open() }
+                    .semantics { title?.let { text = AnnotatedString(it) } },
+            ) { scope.trigger() }
+        } else {
+            IconButton(
+                onClick = scope::open,
+                enabled = enabled,
+                modifier = scope.modifier,
+            ) { scope.trigger() }
+        }
         RoundDropdownMenu(
             expanded = expanded && enabled,
             onDismissRequest = { expanded = false },

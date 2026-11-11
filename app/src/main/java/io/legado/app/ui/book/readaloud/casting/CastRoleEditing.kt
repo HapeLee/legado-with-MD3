@@ -1,7 +1,6 @@
 package io.legado.app.ui.book.readaloud.casting
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,7 +24,6 @@ import io.legado.app.R
 import io.legado.app.feature.reader.core.cast.CastMarkers
 import io.legado.app.help.readaloud.cast.BookCastStore
 import io.legado.app.help.readaloud.cast.VoiceAudition
-import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.CastFieldSpec
 import io.legado.app.ui.widget.components.CastFieldStack
 import io.legado.app.ui.widget.components.CastOption
@@ -35,9 +33,12 @@ import io.legado.app.ui.widget.components.button.PrimaryButton
 import io.legado.app.ui.widget.components.button.SecondaryButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.icon.AppIcons
-import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
+import io.legado.app.ui.widget.components.menu.AppMenuAnchor
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -60,89 +61,70 @@ fun CastRoleRowActions(
     onClearBubble: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    Box(modifier = modifier) {
+    val roleActions = buildList {
+        add(
+            AppAction(
+                id = "edit",
+                label = stringResource(R.string.edit),
+                icon = AppIcons.Edit,
+            )
+        )
+        add(
+            AppAction(
+                id = "set_avatar",
+                label = stringResource(R.string.character_avatar_source),
+                icon = Icons.Default.Image,
+            )
+        )
+        add(
+            AppAction(
+                id = "set_bubble",
+                label = stringResource(R.string.cast_bubble_menu),
+                icon = Icons.AutoMirrored.Filled.Chat,
+            )
+        )
+        // 弹层里已经没有「启用」那一栏了，撤掉气泡只能在菜单里做一次
+        if (hasBubble) {
+            add(
+                AppAction(
+                    id = "clear_bubble",
+                    label = stringResource(R.string.cast_bubble_clear),
+                    icon = AppIcons.Close,
+                )
+            )
+        }
+        add(
+            AppAction(
+                id = "delete",
+                label = stringResource(R.string.cast_delete_character),
+                icon = AppIcons.Delete,
+                destructive = true,
+            )
+        )
+    }.toImmutableList()
+    AppActionMenu(
+        groups = persistentListOf(
+            AppActionGroup(id = "cast_role_actions", actions = roleActions),
+        ),
+        onAction = { id ->
+            when (id) {
+                "edit" -> onToggleEdit()
+                "set_avatar" -> onSetAvatar()
+                "set_bubble" -> onSetBubble()
+                "clear_bubble" -> onClearBubble()
+                "delete" -> onDelete()
+            }
+        },
+        modifier = modifier,
+        anchor = AppMenuAnchor.Row,
+        title = stringResource(R.string.menu),
+    ) {
         SmallPlainButton(
+            onClick = null,
             icon = AppIcons.MoreVert,
             contentDescription = stringResource(R.string.menu),
             selected = editing,
-            onClick = { expanded = true },
         )
-        RoundDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) { dismiss ->
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.edit),
-                leadingIcon = {
-                    MenuItemIcon(
-                        imageVector = AppIcons.Edit,
-                        contentDescription = null,
-                    )
-                },
-                onClick = {
-                    dismiss()
-                    onToggleEdit()
-                },
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.character_avatar_source),
-                leadingIcon = {
-                    MenuItemIcon(
-                        imageVector = Icons.Default.Image,
-                        contentDescription = null,
-                    )
-                },
-                onClick = {
-                    dismiss()
-                    onSetAvatar()
-                },
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.cast_bubble_menu),
-                leadingIcon = {
-                    MenuItemIcon(
-                        imageVector = Icons.AutoMirrored.Filled.Chat,
-                        contentDescription = null,
-                    )
-                },
-                onClick = {
-                    dismiss()
-                    onSetBubble()
-                },
-            )
-            // 弹层里已经没有「启用」那一栏了，撤掉气泡只能在菜单里做一次
-            if (hasBubble) {
-                RoundDropdownMenuItem(
-                    text = stringResource(R.string.cast_bubble_clear),
-                    leadingIcon = {
-                        MenuItemIcon(
-                            imageVector = AppIcons.Close,
-                            contentDescription = null,
-                        )
-                    },
-                    onClick = {
-                        dismiss()
-                        onClearBubble()
-                    },
-                )
-            }
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.cast_delete_character),
-                color = LegadoTheme.colorScheme.error,
-                leadingIcon = {
-                    MenuItemIcon(
-                        imageVector = AppIcons.Delete,
-                        contentDescription = null,
-                        tint = LegadoTheme.colorScheme.error,
-                    )
-                },
-                onClick = {
-                    dismiss()
-                    onDelete()
-                },
-            )
-        }
     }
 }
 
