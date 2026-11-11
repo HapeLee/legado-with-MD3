@@ -435,7 +435,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             useZhLayout = ReadBookConfig.useZhLayout,
             textFullJustify = ReadBookConfig.textFullJustify,
             adaptSpecialStyle = readSettingsGateway.currentSettings.adaptSpecialStyle,
-            imageLayoutKey = book.getImageStyle().orEmpty(),
+            imageLayoutKey = "${book.getImageStyle().orEmpty()}|${style.density}",
             contentKey = buildString {
                 append(book.config.useReplaceRule)
                 append('|').append(book.config.delTag)

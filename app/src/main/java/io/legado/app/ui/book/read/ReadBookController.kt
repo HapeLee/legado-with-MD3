@@ -673,19 +673,18 @@ class ReadBookController(
         is ReaderElement.Rule -> false
     }
 
-    private fun handleComposeLinkClick(rawLink: String) {
-        val book = ReadBook.book ?: return
+    private fun handleComposeLinkClick(rawLink: String): Boolean {
+        val book = ReadBook.book ?: return false
         val link = LocalBookSemanticHtml.resolveReaderLink(rawLink, book.isLocal,
-            ReadBook.readerChapterInputWindow.current?.chapter?.url.orEmpty()) ?: return
+            ReadBook.readerChapterInputWindow.current?.chapter?.url.orEmpty()) ?: return false
         if (LocalBookSemanticHtml.isExternalLink(link)) {
             viewModel.onIntent(
-                ReadBookIntent.ShowDialog(ReadBookDialog.ConfirmOpenExternalUrl(if (link.startsWith("//")) "https:$link" else link))
+                ReadBookIntent.ShowDialog(ReadBookDialog.ConfirmOpenExternalUrl(link))
             )
-            return
-        }
-        if (LocalBookSemanticHtml.classifyLink(link) == LocalBookSemanticHtml.LinkKind.INTERNAL) {
+        } else {
             viewModel.openInternalBookLink(link)
         }
+        return true
     }
 
     fun onComposeReaderElementLongPress(element: ReaderElement, x: Float, y: Float): Boolean {
@@ -747,26 +746,30 @@ class ReadBookController(
         val debounce = now - composeImageClickAt < 300L
         composeImageClickAt = now
         composeImageDoubleClick = if (debounce) !composeImageDoubleClick else false
+        val action = image.action?.takeIf(String::isNotBlank)
         return when (readSettingsGateway.currentSettings.clickImgWay) {
             // 气泡没有磁盘文件，放进大图预览只会是一张错误占位图：有动作就执行动作，否则吞掉点击
             "1" -> if (ParagraphBubbleRenderer.isBubbleSrc(image.source)) {
-                image.action?.takeIf(String::isNotBlank)?.let { clickImg(it, image.source) }
+                action?.let { clickImg(it, image.source) }
                 true
             } else {
                 viewModel.onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Photo(image.source)))
                 true
             }
-            "2" -> if (!debounce && ReadBook.book?.isOnLineTxt == true) {
-                image.action?.takeIf(String::isNotBlank)?.let { clickImg(it, image.source); true }
-                    ?: oldClickImg(image.source)
-            } else false
+            "2" -> when {
+                ReadBook.book?.isOnLineTxt != true -> image.link?.let(::handleComposeLinkClick) == true
+                debounce -> false
+                else -> action?.let { clickImg(it, image.source); true } ?: oldClickImg(image.source)
+            }
             "3" -> false
             "4" -> if (composeImageDoubleClick) {
-                image.action?.takeIf(String::isNotBlank)?.let { clickImg(it, image.source); true } ?: false
+                action?.let { clickImg(it, image.source); true } ?: false
             } else true
-            else -> if (!debounce) {
-                image.action?.takeIf(String::isNotBlank)?.let { clickImg(it, image.source); true } ?: false
-            } else false
+            else -> when {
+                action == null -> image.link?.let(::handleComposeLinkClick) == true
+                debounce -> false
+                else -> { clickImg(action, image.source); true }
+            }
         }
     }
 
@@ -1343,6 +1346,7 @@ class ReadBookController(
         }
         val paginationEnvironmentKey = buildString {
             append('|').append(width).append('x').append(height)
+            append('|').append(resolvedPaginationStyle.density)
             append('|').append(contentPadding.left).append(',').append(contentPadding.top)
             append(',').append(contentPadding.right).append(',').append(contentPadding.bottom)
             append('|').append(resolvedPaginationStyle.columnCount(width, height))

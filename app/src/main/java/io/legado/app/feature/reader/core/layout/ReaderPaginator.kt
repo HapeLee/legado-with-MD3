@@ -137,6 +137,7 @@ sealed interface ReaderMeasuredBlock {
         val scaleMode: ReaderImageScaleMode = ReaderImageScaleMode.CONTAIN_NO_UPSCALE,
         val pageBreakBefore: Boolean = false,
         val pageBreakAfter: Boolean = false,
+        val link: String? = null,
     ) : ReaderMeasuredBlock
 
     data class InlineParagraph(
@@ -201,6 +202,8 @@ sealed interface ReaderMeasuredInlineItem {
         val heightPx: Float,
         override val chapterPosition: Int,
         val action: String? = null,
+        val link: String? = null,
+        val useMeasuredBounds: Boolean = false,
     ) : ReaderMeasuredInlineItem
 
     /**
@@ -541,6 +544,7 @@ internal class ReaderPaginationSession(
             bounds = ReaderRect(x, y, x + width, y + height),
             source = image.source,
             action = image.action,
+            link = image.link,
             chapterPosition = image.chapterPosition,
         )
         columnRows += ReaderLayoutRow(
@@ -660,6 +664,7 @@ internal class ReaderPaginationSession(
             // 行内图高、自然宽度、命中留白和空格数并为一次遍历，去掉原先各自产生的临时列表。
             var maxTextScale = 1f
             var maxImageHeightPx = 0f
+            var maxMeasuredImageHeightPx = 0f
             var markerColorArgb: Int? = null
             var widthSum = 0.0
             var matchSum = 0.0
@@ -687,6 +692,9 @@ internal class ReaderPaginationSession(
                 } else {
                     val tallHeightPx = item.tallItemHeightPx()
                     if (tallHeightPx > maxImageHeightPx) maxImageHeightPx = tallHeightPx
+                    if (item is ReaderMeasuredInlineItem.Image && item.useMeasuredBounds) {
+                        maxMeasuredImageHeightPx = maxOf(maxMeasuredImageHeightPx, item.heightPx)
+                    }
                 }
             }
             val fallbackLineHeight = paragraph.lineHeightPx * maxTextScale
@@ -711,6 +719,11 @@ internal class ReaderPaginationSession(
             val textLineHeight = lineAscent + lineDescent
             val actualLineHeight = maxOf(textLineHeight, maxImageHeightPx)
             val lineBaselineOffset = lineAscent + (actualLineHeight - textLineHeight) / 2f
+            var lineAdvance = linePadBottomPx + actualLineHeight * paragraph.lineSpacingMultiplier
+            if (maxMeasuredImageHeightPx > 0f) {
+                // 紧行距时，下一行至少从定尺寸图片的底边开始。
+                lineAdvance = maxOf(lineAdvance, (actualLineHeight + maxMeasuredImageHeightPx) / 2f)
+            }
             // 命中行行距算进页底判定（对照 Legado_Max：上下两截都要落得下），否则下一行会
             // 压到上一行的九宫格上边。抬完再画，行盒本身高度不变。
             if (y + linePadTopPx + actualLineHeight + linePadBottomPx > config.contentBottomPx &&
@@ -856,19 +869,20 @@ internal class ReaderPaginationSession(
 
                     is ReaderMeasuredInlineItem.Image -> {
                         val imageTop = y + (actualLineHeight - item.heightPx) / 2f
+                        val bounds = ReaderRect(x, imageTop, x + item.widthPx, imageTop + item.heightPx)
                         elements += ReaderElement.Image(
-                            bounds = ReaderRect(
-                                x,
-                                imageTop,
-                                x + item.widthPx,
-                                imageTop + item.heightPx
-                            ),
+                            bounds = bounds,
                             source = item.source,
                             action = item.action,
+                            link = item.link,
                             chapterPosition = item.chapterPosition,
-                            // 行内图必须带标记：绘制期按位图长宽比重新算几何（旧 ImageColumn）。
                             inline = true,
-                            touchBounds = ReaderRect(x, y, x + item.widthPx, y + actualLineHeight),
+                            touchBounds = bounds.copy(
+                                top = y,
+                                bottom = y + if (item.useMeasuredBounds) minOf(actualLineHeight, lineAdvance)
+                                else actualLineHeight,
+                            ),
+                            useMeasuredBounds = item.useMeasuredBounds,
                         )
                     }
 
@@ -944,7 +958,7 @@ internal class ReaderPaginationSession(
             // 会让同一页里的 HTML 段落和普通段落行距不一致。
             // 命中行行距不进行盒、也不乘行距：它是这一行之后额外留出的空白，
             // 九宫格的下边条就画在这截里。
-            y += linePadBottomPx + actualLineHeight * paragraph.lineSpacingMultiplier
+            y += lineAdvance
         }
         if (appendSeparator) {
             pageText.append('\n')

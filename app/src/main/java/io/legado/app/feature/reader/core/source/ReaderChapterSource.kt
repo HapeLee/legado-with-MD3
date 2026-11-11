@@ -48,6 +48,7 @@ sealed interface ReaderChapterInlineSource {
         override val chapterPosition: Int,
         /** Explicit HTML image action; source-URL options remain at the legacy boundary. */
         val action: String? = null,
+        val presentation: ReaderLocalImagePresentation? = null,
     ) : ReaderChapterInlineSource
     data class BlankLine(override val chapterPosition: Int) : ReaderChapterInlineSource
 
@@ -63,6 +64,13 @@ sealed interface ReaderChapterInlineSource {
         val trackName: String,
     ) : ReaderChapterInlineSource
 }
+
+data class ReaderLocalImagePresentation(
+    val link: String? = null,
+    val width: String? = null,
+    val height: String? = null,
+    val fontSizeScale: Float = 1f,
+)
 
 data class ReaderInlineSourceStyle(
     val colorArgb: Int? = null,
