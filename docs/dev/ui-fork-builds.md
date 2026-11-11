@@ -4,7 +4,7 @@ Miuix 通过固定子模块与 `includeBuild` 接入。COUI、Mochi 同样固定
 
 ## 本地与 CI
 
-首次检出执行 `git submodule update --init modules/miuix modules/coui modules/mochi`。配置 JDK 21、Python 3.11+ 与 `ANDROID_HOME`，安装 Android SDK 36、37.0、37.1 平台及 Build Tools 36.0.0、37.0.0。运行 `python scripts/prepare-ui-forks.py` 后，按 README 或 AGENTS 中的命令编译应用。`--check` 只核对提交与版本，不运行 Gradle。
+首次检出执行 `git submodule update --init modules/miuix modules/coui modules/mochi`。配置 JDK 21、Python 3.11+，在根项目 `local.properties` 设置 `sdk.dir` 或配置 `ANDROID_HOME`，安装 Android SDK 36、37.0、37.1 平台及 Build Tools 36.0.0、37.0.0。脚本优先读取根项目 `sdk.dir`，仅通过子进程环境传给两个 fork，不修改子模块文件或系统环境。运行 `python scripts/prepare-ui-forks.py` 后，按 README 或 AGENTS 中的命令编译应用。更新 fork 提交后需重新运行脚本；`--check` 只核对提交与版本，不检查产物是否已生成，也不运行 Gradle。
 
 脚本仅发布 COUI 的核心、Material 3、图标三个模块和 Mochi 的 compose、ios 两个模块，输出到 `build/ui-forks/maven`。应用将这五个模块独占路由到该目录，不读取开发机的旧 Maven Local 包，也不会回落到上游发行版。清理根 `build/` 后需重新准备；仅修改应用代码时无需重复发布。
 

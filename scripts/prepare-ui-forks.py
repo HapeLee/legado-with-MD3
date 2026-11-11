@@ -4,6 +4,7 @@
 import argparse
 import os
 from pathlib import Path
+import re
 import subprocess
 import tomllib
 
@@ -14,6 +15,36 @@ FORKS = (
     ("coui", "io.github.itoseo", ("coui", "coui-material3", "coui-icons")),
     ("mochi", "io.github.feice11", ("mochi-compose", "mochi-ios")),
 )
+
+
+def android_environment() -> dict[str, str]:
+    """子模块继承根项目的 SDK 路径，不要求 Android Studio 用户另设环境变量。"""
+    environment = os.environ.copy()
+    sdk = None
+    properties = ROOT / "local.properties"
+    if properties.is_file():
+        match = re.search(
+            r"(?m)^[ \t]*sdk\.dir[ \t]*[=:][ \t]*(.*?)[ \t]*$",
+            properties.read_text(encoding="utf-8-sig"),
+        )
+        if match:
+            # local.properties 使用 Java Properties 转义，Windows 常见 D\:\\Android\\SDK。
+            sdk = re.sub(
+                r"\\(?:u([0-9a-fA-F]{4})|(.))",
+                lambda escape: chr(int(escape[1], 16)) if escape[1] else
+                {"t": "\t", "r": "\r", "n": "\n", "f": "\f"}.get(escape[2], escape[2]),
+                match[1],
+            )
+    sdk = sdk or environment.get("ANDROID_HOME") or environment.get("ANDROID_SDK_ROOT")
+    if not sdk:
+        raise RuntimeError("请在根项目 local.properties 设置 sdk.dir，或设置 ANDROID_HOME 指向 Android SDK")
+    directory = (ROOT / sdk).resolve()
+    if not (directory / "platforms").is_dir():
+        raise RuntimeError(f"Android SDK 路径无效或缺少 platforms: {directory}")
+    environment["ANDROID_HOME"] = str(directory)
+    environment["ANDROID_SDK_ROOT"] = str(directory)
+    print(f"Android SDK: {directory}", flush=True)
+    return environment
 
 
 def prepare(check_only: bool) -> None:
@@ -55,10 +86,9 @@ def prepare(check_only: bool) -> None:
     print(f"Maven repository: {REPOSITORY}", flush=True)
     if check_only:
         return
-    if not (os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT")):
-        raise RuntimeError("请设置 ANDROID_HOME 指向 Android SDK；子模块不会读取根项目 local.properties")
+    environment = android_environment()
     for directory, command, group, artifacts, version in commands:
-        subprocess.run(command, cwd=directory, check=True)
+        subprocess.run(command, cwd=directory, env=environment, check=True)
         # 同时检查元数据，防止只复制 AAR 后遗漏传递依赖。
         for artifact in artifacts:
             base = REPOSITORY / group.replace(".", "/") / artifact / version

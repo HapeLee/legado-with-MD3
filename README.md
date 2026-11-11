@@ -40,7 +40,7 @@ Design 3 风格重构版本。
 
 ## 从源码构建
 
-首次检出后运行 `git submodule update --init modules/miuix modules/coui modules/mochi`。使用 JDK 21、Python 3.11+，设置 `ANDROID_HOME` 指向 Android SDK，安装 Android 36、37.0、37.1 平台后执行：
+首次检出后运行 `git submodule update --init modules/miuix modules/coui modules/mochi`。使用 JDK 21、Python 3.11+，在 `local.properties` 配置 `sdk.dir` 或设置 `ANDROID_HOME`，安装 Android 36、37.0、37.1 平台后执行：
 
 ```shell
 python scripts/prepare-ui-forks.py
