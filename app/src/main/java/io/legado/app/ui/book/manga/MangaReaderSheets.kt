@@ -52,6 +52,7 @@ import io.legado.app.ui.book.read.sheet.ReaderBookHeader
 import io.legado.app.ui.book.read.sheet.ReaderBookHeaderState
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.NormalCard
+import io.legado.app.ui.widget.components.card.resolveBaseCardShape
 import io.legado.app.ui.widget.components.menu.AppChoiceDropdown
 import io.legado.app.ui.widget.components.menu.AppChoiceOption
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
@@ -460,6 +461,7 @@ private fun MangaClickAreaCell(
         onSelect = { id -> onPick(id.toInt()) },
         title = stringResource(R.string.manga_reader_click_areas),
         compact = true,
+        triggerShape = resolveBaseCardShape(),
         modifier = modifier,
     ) {
         NormalCard(

@@ -46,6 +46,7 @@ import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.card.resolveBaseCardShape
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.menu.AppChoiceDropdown
@@ -313,6 +314,7 @@ private fun ProfileVoiceTraitDropdown(
         onSelect = onSelected,
         title = label,
         compact = true,
+        triggerShape = resolveBaseCardShape(),
     ) {
         GlassCard(
             modifier = this.modifier,
@@ -395,6 +397,7 @@ private fun ProfileRoleDropdown(
         onSelect = { id -> onRoleSelected(if (id == selectedRole) "" else id) },
         title = stringResource(R.string.character_role),
         compact = true,
+        triggerShape = resolveBaseCardShape(),
     ) {
         GlassCard(
             modifier = this.modifier,

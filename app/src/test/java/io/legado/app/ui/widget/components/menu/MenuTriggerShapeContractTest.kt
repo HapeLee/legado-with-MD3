@@ -70,6 +70,69 @@ class MenuTriggerShapeContractTest {
         )
     }
 
+    /**
+     * 走 BaseCard 的方卡圆角由主题动态解析，调用点写死 dp 会在「覆盖卡片圆角」
+     * 或 Mochi 引擎下裁错。这些 compact 触发必须与卡片取同一份解析结果；
+     * 纯图标触发没有可见容器，保持 null。
+     */
+    @Test
+    fun baseCardCompactTriggersResolveShapeFromCardLayer() {
+        val card = sourceOf("io/legado/app/ui/widget/components/card/GlassCard.kt")
+        assertTrue(
+            "卡片层须有公开的形状解析入口",
+            card.contains("fun resolveBaseCardShape(cornerRadius: Dp = MiuixCardDefaults.CornerRadius): Shape"),
+        )
+        assertTrue(
+            "解析须同时覆盖主题圆角覆盖与 Mochi 连续曲率轮廓",
+            card.contains("overrideBaseCardCornerRadius") &&
+                card.contains("composeEngine == ComposeEngine.Mochi"),
+        )
+        assertTrue(
+            "BaseCard 必须复用该解析结果",
+            card.contains("val resolvedShape = resolveBaseCardShape(cornerRadius)"),
+        )
+        assertFalse("卡片层不得留第二份形状定义", card.contains("val resolvedShape = if ("))
+        assertTrue(
+            "紧凑方卡的 12dp 须由共享常量表达",
+            card.contains("val CompactCardCornerRadius: Dp = 12.dp") &&
+                sourceOf("io/legado/app/ui/widget/components/settingItem/TinySettingItems.kt")
+                    .contains("cornerRadius = CompactCardCornerRadius"),
+        )
+
+        listOf(
+            "io/legado/app/ui/rss/source/edit/RssSourceEditScreen.kt",
+            "io/legado/app/ui/book/source/edit/BookSourceEditScreen.kt",
+            "io/legado/app/ui/book/read/sheet/ClickActionConfigSheet.kt",
+            "io/legado/app/ui/book/knowledge/BookKnowledgeDetailScreen.kt",
+            "io/legado/app/ui/book/knowledge/BookCharacterDetailScreen.kt",
+            "io/legado/app/ui/book/manga/MangaReaderSheets.kt",
+        ).forEach { path ->
+            val source = sourceOf(path)
+            val compactCount = Regex("compact = true").findAll(source).count()
+            val shapeCount = Regex("triggerShape = resolveBaseCardShape\\(\\)").findAll(source).count()
+            assertTrue(
+                "$path 有 $compactCount 处 compact，只有 $shapeCount 处按解析形状裁剪",
+                compactCount > 0 && shapeCount == compactCount,
+            )
+        }
+
+        val globalTheme = sourceOf("io/legado/app/ui/book/read/sheet/GlobalThemePage.kt")
+        assertTrue(
+            "阅读菜单翻页动画两张卡须改吃解析结果",
+            globalTheme.contains("resolveBaseCardShape(CompactCardCornerRadius)"),
+        )
+        assertFalse(
+            "不应再硬编码 12dp 的 RoundedCornerShape",
+            globalTheme.contains("RoundedCornerShape(12.dp)"),
+        )
+        listOf(
+            "io/legado/app/ui/widget/components/FontSelectGrid.kt",
+            "io/legado/app/ui/book/read/sheet/CharsetConfigSheet.kt",
+        ).forEach { path ->
+            assertFalse("$path 是纯图标触发，保持矩形即可", sourceOf(path).contains("triggerShape"))
+        }
+    }
+
     private fun sourceOf(path: String): String {
         var directory: File? = File("").absoluteFile
         while (directory != null) {

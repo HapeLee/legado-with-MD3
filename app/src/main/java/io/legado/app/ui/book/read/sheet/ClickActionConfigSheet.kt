@@ -28,6 +28,7 @@ import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.widget.components.card.resolveBaseCardShape
 import io.legado.app.ui.widget.components.menu.AppChoiceDropdown
 import io.legado.app.ui.widget.components.menu.AppChoiceOption
 import io.legado.app.ui.widget.components.text.AppText
@@ -145,6 +146,7 @@ private fun ClickAreaCell(
         title = label,
         modifier = modifier,
         compact = true,
+        triggerShape = resolveBaseCardShape(),
     ) {
         // 省略 onClick / onLongClick：GlassCard 即纯展示卡片，由入口包装唯一可点控件。
         GlassCard(

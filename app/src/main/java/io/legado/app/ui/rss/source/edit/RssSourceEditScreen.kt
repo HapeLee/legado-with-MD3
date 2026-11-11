@@ -30,6 +30,7 @@ import io.legado.app.ui.book.source.edit.SourceEditFieldSheet
 import io.legado.app.ui.book.source.edit.SourceEditOptionCard
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.card.resolveBaseCardShape
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.log.AppLogSheet
@@ -121,6 +122,7 @@ private fun RssEditOptions(
                 title = "类型：${types.getOrNull(s.type).orEmpty()}",
                 modifier = Modifier.weight(1f),
                 compact = true,
+                triggerShape = resolveBaseCardShape(),
             ) {
                 SourceEditOptionCard(
                     title = "类型：${types.getOrNull(s.type).orEmpty()}",
@@ -135,6 +137,7 @@ private fun RssEditOptions(
                 title = "布局：${styles.getOrNull(s.articleStyle).orEmpty()}",
                 modifier = Modifier.weight(1f),
                 compact = true,
+                triggerShape = resolveBaseCardShape(),
             ) {
                 SourceEditOptionCard(
                     title = "布局：${styles.getOrNull(s.articleStyle).orEmpty()}",

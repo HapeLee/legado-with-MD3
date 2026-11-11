@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -67,8 +66,10 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
+import io.legado.app.ui.widget.components.card.CompactCardCornerRadius
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.card.resolveBaseCardShape
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.menu.AppChoiceDropdown
 import io.legado.app.ui.widget.components.menu.AppChoiceOption
@@ -384,8 +385,8 @@ fun GlobalThemePage(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // 这两张方卡都是 12dp 圆角；紧凑菜单入口要按同一形状裁剪水波纹。
-            val cardShape = RoundedCornerShape(12.dp)
+            // 两张方卡与菜单触发共用 BaseCard 的解析结果，主题覆盖圆角或 Mochi 下仍同源。
+            val cardShape = resolveBaseCardShape(CompactCardCornerRadius)
             AppChoiceDropdown(
                 options = pageAnimChoices,
                 selectedId = pageAnim.toString(),
@@ -433,7 +434,7 @@ fun GlobalThemePage(
                         .height(56.dp)
                         .aspectRatio(1f),
                     containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
-                    cornerRadius = 12.dp,
+                    cornerRadius = CompactCardCornerRadius,
                 ) {
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                         AppIcon(

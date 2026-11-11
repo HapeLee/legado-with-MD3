@@ -141,17 +141,19 @@ git diff --check
    别顺手重构。
 4. **`AppChoiceDropdown.MiuixIconChoice`**（顶栏图标单选）仍走库 `Window/OverlayIconDropdownMenu`，
    不是玻璃；顶栏 `AppActionMenu` 的玻璃路径由 `LocalMiuixGlassTopBar` 控制，两者口径不同。
-5. **（部分完成）** 其它 `compact = true` 触发内容的 `triggerShape`：
-   - 已完成 7 处几何固定的触发：`TextProcessingSheet`（10dp，与 `CompactTextProcessTool` 同源）、
+5. **已完成** 其它 `compact = true` 触发内容的 `triggerShape`：
+   - 7 处几何固定的触发：`TextProcessingSheet`（10dp，与 `CompactTextProcessTool` 同源）、
      `HomepageModuleManageSheet` + `CloudTtsScreen` 共 6 处 `MediumTonalButton`
      （`IconButtonDefaults.extraSmallRoundShape`，与 `SeriesButton` 默认 shape 同源），
      并加 1 条源码契约用例防漏传 / 漂移。
-   - **剩余 8 处不能硬编码**：`SourceEditOptionCard` / `NormalCard` / `TinySettingItem` /
-     `GlassCard` 等走 `BaseCard`，圆角由主题动态覆盖，写死 dp 会把水波纹裁错。
-     需要设计「卡片把 resolvedShape 暴露给入口」再统一处理，别逐处猜值。
-   - **另有一处待复核**：`GlobalThemePage` 两张卡已传 12dp，但 `TinySettingItem` / `NormalCard`
-     同样走 `BaseCard`，主题覆盖开启或 Mochi 引擎下可能不一致，需真机确认。
+   - 剩余 8 处方卡触发 + `GlobalThemePage` 两张卡统一改吃 `resolveBaseCardShape(...)`
+     （`card/GlassCard.kt`）：`BaseCard` 与菜单入口共用同一份「主题圆角覆盖 + Mochi
+     连续曲率轮廓」解析，不再写死 dp。紧凑方卡 12dp 提成 `CompactCardCornerRadius`，
+     `TinySettingItem` / `NormalCard` / 两张阅读菜单卡同源。方案与排除项见 §9。
    - 2 处纯图标触发（`FontSelectGrid`、`CharsetConfigSheet`）保持 `null` 是正确的，不要补。
+   - **仍需真机确认**：`overrideBaseCardCornerRadius` 开启或 Mochi 引擎下，波纹裁剪与
+     卡片实际轮廓是否贴合。Robolectric 里 `LocalAppUiConfiguration` 是默认值，
+     源码契约只能锁住「取同一份解析」，覆盖不到实际取值。
 
 ## 6. 建议的接手顺序
 
@@ -244,3 +246,40 @@ COUI / Mochi 的库级 `Indication` 还不存在（现在只有 Modifier 扩展�
   （`TopBarButton.kt:441`、`AppTabRowIconButton.kt:134`、`AppCouiTabRow.kt:119`、
   `RoundDropdownMenuItem.kt:169`、`FloatingBottomBar.kt:122,124`、`SettingItem.kt:151`）
   在 fork 提供 Indication 后要重新评估：是继续走 Modifier，还是改吃主题注入，避免双层反馈。
+
+## 9. §5.5 收尾：形状单一真源（2026-11-12 第三轮续作）
+
+**状态订正**：§3 / §7 里「仍未执行任何 git 写操作」的声明已过时——§1~§8 的改动
+已于 2026-11-12 提交为 `2c4d0856b`。**本节的改动未暂存、未提交**。
+
+### 方案
+
+`card/GlassCard.kt` 把 `BaseCard` 原来的「读 `overrideBaseCardCornerRadius` → 选
+`RoundedCornerShape` / `MochiRoundedRectangle`」抽成公开的
+`@Composable @ReadOnlyComposable resolveBaseCardShape(cornerRadius: Dp = MiuixCardDefaults.CornerRadius)`。
+`BaseCard` 与 10 处 compact `triggerShape` 共用这一份结果；紧凑方卡的 12dp 提成
+`CompactCardCornerRadius`，供 `TinySettingItem`、`NormalCard`、阅读菜单两张卡同源引用。
+
+排除的两个方向：
+
+- `AppMenuTriggerScope` 回写 shape：入口的 `Modifier` 在父节点组合时已求值，
+  trigger 内容还没执行；改成 State 会引入额外重组并破坏 `@Stable` 契约。
+- `CompositionLocal` 下发：方向反了，入口 `Box(clickable)` 是卡片的父节点，
+  读不到子层提供的 Local。
+
+### 改动范围
+
+- 卡片层：`GlassCard.kt`（解析函数 + 常量 + `BaseCard` 复用）、`TinySettingItems.kt`（12dp 改常量）。
+- 调用点：8 处方卡触发（RSS / 书源编辑、点击配置、知识 / 角色详情、漫画点击区域）
+  传 `resolveBaseCardShape()`；`GlobalThemePage` 两张卡传
+  `resolveBaseCardShape(CompactCardCornerRadius)`，删掉本地 `RoundedCornerShape(12.dp)`。
+- 文档 / 契约：`TriggerShape.kt` 与 `AppChoiceDropdown.kt` 的 KDoc 指向真源；
+  `MenuTriggerShapeContractTest` 新增 1 用例，锁定单一真源、8 处补齐、12dp 同源、
+  两张卡不再硬编码、2 处纯图标保持 `null`。
+
+### 未动 / 未验证
+
+- 未动：`AppChoiceDropdown.kt:225,233` 受控玻璃锚点的硬编码 `12.dp`（属 §5.2，
+  是玻璃 morph 起点半径，与 `triggerShape` 不是一回事）；§5.1 / §5.3 / §5.4 仍未动。
+- 未验证：真机上「覆盖卡片圆角」开关（0–40dp）与 Mochi 引擎下的波纹贴合；
+  Robolectric 里 `LocalAppUiConfiguration` 取默认快照，源码契约覆盖不到实际取值。

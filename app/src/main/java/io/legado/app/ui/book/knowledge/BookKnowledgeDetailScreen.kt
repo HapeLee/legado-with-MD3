@@ -32,6 +32,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.widget.components.card.resolveBaseCardShape
 import io.legado.app.ui.widget.components.menu.AppChoiceDropdown
 import io.legado.app.ui.widget.components.menu.AppChoiceOption
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
@@ -209,6 +210,7 @@ private fun KnowledgeTypeSelector(
             onSelect = onTypeSelected,
             title = stringResource(R.string.knowledge_type),
             compact = true,
+            triggerShape = resolveBaseCardShape(),
         ) {
             GlassCard(
                 modifier = this.modifier,

@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -23,6 +24,31 @@ import io.legado.app.ui.widget.components.AppContainerBackgroundType
 import io.legado.app.ui.widget.components.appContainerBackground
 import top.yukonga.miuix.kmp.basic.CardDefaults as MiuixCardDefaults
 import ui.feice.mochi.shape.MochiRoundedRectangle
+
+/** 紧凑方卡（TinySettingItem 等）的圆角，卡片与菜单触发的裁剪形状共用。 */
+val CompactCardCornerRadius: Dp = 12.dp
+
+/**
+ * [BaseCard] 系列卡片实际采用的形状。
+ *
+ * 半径受「覆盖卡片圆角」设置控制，Mochi 引擎下换成连续曲率轮廓。紧凑菜单入口的
+ * `triggerShape` 必须取这份解析结果：写死一个 dp 值会在主题覆盖或 Mochi 下裁错波纹。
+ */
+@Composable
+@ReadOnlyComposable
+fun resolveBaseCardShape(cornerRadius: Dp = MiuixCardDefaults.CornerRadius): Shape {
+    val themeSettings = LocalAppUiConfiguration.current.theme
+    val resolvedCornerRadius = if (themeSettings.overrideBaseCardCornerRadius) {
+        themeSettings.baseCardCornerRadius.dp
+    } else {
+        cornerRadius
+    }
+    return if (LegadoTheme.composeEngine == ComposeEngine.Mochi) {
+        MochiRoundedRectangle(resolvedCornerRadius)
+    } else {
+        RoundedCornerShape(resolvedCornerRadius)
+    }
+}
 
 @Composable
 private fun BaseCardContent(
@@ -77,11 +103,7 @@ private fun BaseCard(
         .let { it.copy(alpha = it.alpha * alpha) }
     val themeSettings = LocalAppUiConfiguration.current.theme
     val isTransparent = containerColor == Color.Transparent
-    val resolvedCornerRadius = if (themeSettings.overrideBaseCardCornerRadius) {
-        themeSettings.baseCardCornerRadius.dp
-    } else {
-        cornerRadius
-    }
+    val resolvedShape = resolveBaseCardShape(cornerRadius)
     val resolvedBorder = if (themeSettings.overrideBaseCardBorder) {
         val configuredColor = if (LegadoTheme.isDark) {
             themeSettings.baseCardBorderColorNight
@@ -97,11 +119,6 @@ private fun BaseCard(
         )
     } else {
         border
-    }
-    val resolvedShape = if (LegadoTheme.composeEngine == ComposeEngine.Mochi) {
-        MochiRoundedRectangle(resolvedCornerRadius)
-    } else {
-        RoundedCornerShape(resolvedCornerRadius)
     }
     val clickableModifier = if (onClick != null || onLongClick != null) {
         modifier

@@ -41,6 +41,7 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.card.resolveBaseCardShape
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.log.AppLogSheet
@@ -267,6 +268,7 @@ private fun BookSourceOptions(
                 title = stringResource(R.string.book_type),
                 modifier = Modifier.weight(1f),
                 compact = true,
+                triggerShape = resolveBaseCardShape(),
             ) {
                 SourceEditOptionCard(
                     title = stringResource(R.string.book_type),

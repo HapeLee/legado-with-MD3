@@ -68,6 +68,7 @@ import io.legado.app.ui.widget.components.AccentColorButton
 import io.legado.app.ui.widget.components.AppSlider
 import io.legado.app.ui.widget.components.TinySwitch
 import io.legado.app.ui.widget.components.ValueStepper
+import io.legado.app.ui.widget.components.card.CompactCardCornerRadius
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.icon.AppIcon
@@ -151,7 +152,7 @@ fun TinySettingItem(
                 }
                 if (!enabled) disabled()
             },
-        cornerRadius = 12.dp,
+        cornerRadius = CompactCardCornerRadius,
         containerColor = color?.copy(alpha = alpha),
         contentColor = LegadoTheme.colorScheme.onSurface.copy(alpha = alpha),
     ) {
