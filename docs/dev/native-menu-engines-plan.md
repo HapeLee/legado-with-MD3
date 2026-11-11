@@ -805,12 +805,19 @@ enum class AppMenuAnchor { Row, Icon }   // 决定 Miuix 用 Preference 还是 I
    业务调用点 **46 处**（第十七轮减 5 后）。可零外观变化迁移的顶栏纯命令菜单当时只剩
    `AllBookmarkScreen` 1 处，已在第十八轮迁完（46 → **45**）。该轮同时确认两条约束：
    - `BookCacheManageScreen` / `BookshelfManageScreen` / `RssSortScreen` 等剩余顶栏图标菜单是
-     **单选**，而 `AppChoiceDropdown` 只有 `Row` 形态、**没有 `AppMenuAnchor.Icon` 分支**
-     （本文 §3 的伪代码写了 `anchor` 参数，代码尚未实现，属文档超前于实现），
-     因此这些页面在补齐该能力前无法迁移；
+     **单选**，而 `AppChoiceDropdown` 当时只有 `Row` 形态、没有 `AppMenuAnchor.Icon` 分支
+     （§3 伪代码写了 `anchor` 参数、代码没跟上，属文档超前于实现）；
    - 阅读器那一批（`ReadBookMenuBarTitle` / `ReadBookMenuBarFloating` / `ReaderBookSheet` /
      `RssReadRouteScreen`）普遍是外部受控 `expanded` 的共用组件、`CompactToolIconBox(selected)`
      高亮或伪子菜单，均非零形态变化，需先建基线；
+   **第十九轮**补齐了 `AppChoiceDropdown` 的 `AppMenuAnchor.Icon`（§3 的 `anchor` 名实相符）：
+   Mochi 穿 `MochiBarIconButton`（= `TopBarActionButton` 的 Mochi 实现）、COUI 穿
+   `CouiTopAppBarButton`（无原生工具栏时退 `IconButton`）、Miuix 走
+   `Window/OverlayIconDropdownMenu` 由库渲染 Icon 按钮并复用同一份 `DropdownEntry` 构建、
+   Material 退 `IconButton`；`Icon` 优先于 `compact`，Miuix 不再落到设置行。
+   首批调用方 `BookCacheManageScreen` 与 `BookshelfManageScreen` 的分组筛选（**45 → 43**）。
+   `RssSortScreen` 暂缓：它的 trigger 是 `SmallToggleButton(checked = showGroupMenu)`，
+   展开态高亮在纯展示 trigger 里无法保留，属形态变化；`TocScreen` 卷菜单同理且是混合菜单。
    顶栏 content 只剩 `RssSourceScreen`（伪子菜单 +
    嵌套 popup，刻意保留）。带文字标题的 4 处列表项菜单 trigger 是长按 / 图标按钮，
    需单独建交互基线，**不能复用顶栏 `menuGroups` 槽**；
@@ -823,9 +830,11 @@ enum class AppMenuAnchor { Row, Icon }   // 决定 Miuix 用 Preference 还是 I
    走 `TopBarActionMenu`；`dropDownMenuContent` 只剩 `RssSourceScreen` 1 处（刻意保留，
    见第 2 条）。`TopBarOverflowMenu.kt:55` 的 `externalTrigger = true` 现在只服务那 1 页，
    不必再单独排期；剩余工作只是「四引擎顶栏按钮外观统一」，随第 1 条的基线一起收。
-4. 给 `compact` 的 Miuix 分支补 HyperOS 4 玻璃锚点变形（复用 `MiuixGlassActions` 的
+4. 给 `compact` 与 `Icon` 的 Miuix 分支补 HyperOS 4 玻璃锚点变形（复用 `MiuixGlassActions` 的
    `AppGlassOverlayState` 注册路径），并把 `AppChoiceDropdown` 默认行形态的
-   「trigger 槽不生效」例外写进契约。
+   「trigger 槽不生效」例外写进契约。`Icon` 与 `compact` 同属「暂不接玻璃」，
+   在 HyperOS 4 玻璃顶栏上会出现「整排玻璃、只有筛选按钮没有玻璃」的错位，
+   这条已是该形态唯一已知的外观缺口。
 5. 三入口 × 四引擎契约测试剩余项（COUI / Miuix 玻璃路径的 ID 回调、菜单项语义树名称；
    子项回调与关闭所有权已在第十二轮收口）；在用户允许时补跑 `testAppComicDebugUnitTest` / `lint` / `assemble`，
    复核 9 个漫画 / insets 既有失败；真机验 COUI 触点、Miuix 玻璃变形、Mochi 融球滑选、

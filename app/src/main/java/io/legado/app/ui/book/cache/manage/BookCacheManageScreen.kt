@@ -55,8 +55,9 @@ import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.list.ListUiState
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppChoiceDropdown
+import io.legado.app.ui.widget.components.menu.AppChoiceOption
+import io.legado.app.ui.widget.components.menu.AppMenuAnchor
 import io.legado.app.ui.widget.components.privacy.rememberPrivateLockedBookUrls
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
@@ -65,6 +66,7 @@ import io.legado.app.ui.widget.components.topbar.DynamicTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.utils.toastOnUi
+import kotlinx.collections.immutable.toImmutableList
 import org.koin.androidx.compose.koinViewModel
 
 private data class BookCacheManageListState(
@@ -112,7 +114,7 @@ private fun BookCacheManageScreen(
     var isSearchMode by remember { mutableStateOf(false) }
     var searchKey by remember { mutableStateOf("") }
     var selectedGroupId by remember { mutableStateOf(BookGroup.IdAll) }
-    var showGroupMenu by remember { mutableStateOf(false) }
+
     val allBooks = state.shelfBooks + state.notShelfBooks
     val filteredBooks = remember(allBooks, searchKey, isSearchMode, selectedGroupId) {
         allBooks.filter { book ->
@@ -150,6 +152,12 @@ private fun BookCacheManageScreen(
             BookGroup.IdNetNone to noGroupText,
         ) + state.groups.map { it.groupId to it.groupName }
     }
+    // 分组 id 是 Long（位掩码），菜单入口用字符串稳定 ID，边界在这一层转换。
+    val groupChoices = remember(groupOptions) {
+        groupOptions
+            .map { (id, name) -> AppChoiceOption(id = id.toString(), label = name) }
+            .toImmutableList()
+    }
 
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -167,27 +175,17 @@ private fun BookCacheManageScreen(
                 searchPlaceholder = "筛选书名/作者",
                 onClearSelection = {},
                 topBarActions = {
-                    Box {
-                        TopBarActionButton(
-                            onClick = { showGroupMenu = true },
+                    AppChoiceDropdown(
+                        options = groupChoices,
+                        selectedId = selectedGroupId.toString(),
+                        onSelect = { selectedGroupId = it.toLong() },
+                        title = stringResource(R.string.a11y_group_filter),
+                        anchor = AppMenuAnchor.Icon,
+                    ) {
+                        AppIcon(
                             imageVector = AppIcons.Filter,
-                            contentDescription = stringResource(R.string.a11y_group_filter)
+                            contentDescription = stringResource(R.string.a11y_group_filter),
                         )
-                        RoundDropdownMenu(
-                            expanded = showGroupMenu,
-                            onDismissRequest = { showGroupMenu = false }
-                        ) { dismiss ->
-                            groupOptions.forEach { (groupId, groupName) ->
-                                RoundDropdownMenuItem(
-                                    text = groupName,
-                                    isSelected = groupId == selectedGroupId,
-                                    onClick = {
-                                        selectedGroupId = groupId
-                                        dismiss()
-                                    }
-                                )
-                            }
-                        }
                     }
                     TopBarActionButton(
                         onClick = { onIntent(BookCacheManageIntent.Refresh) },
