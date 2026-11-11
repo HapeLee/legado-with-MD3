@@ -274,10 +274,10 @@ sealed interface ReaderElement {
         val chapterPosition: Int = 0,
         /** 行内图默认沿用旧 ImageColumn 的字符格绘制。 */
         val inline: Boolean = false,
-        /** 旧行内图按整行高度命中，其他图片默认命中自身。 */
+        /** 行内图沿行盒扩大命中范围，独立图默认命中自身。 */
         val touchBounds: ReaderRect = bounds,
         val link: String? = null,
-        /** 显式定尺寸的本地行内图按 [bounds] 绘制并命中。 */
+        /** 显式定尺寸的本地行内图按 [bounds] 绘制。 */
         val useMeasuredBounds: Boolean = false,
     ) : ReaderElement
 
@@ -390,7 +390,11 @@ data class ReaderPage(
 ) {
     fun elementAt(x: Float, y: Float): ReaderElement? =
         elements.firstOrNull {
-            (if (it is ReaderElement.Image) it.touchBounds else it.bounds).contains(x, y)
+            if (it is ReaderElement.Image) {
+                it.touchBounds.contains(x, y) && (!it.useMeasuredBounds || y < it.touchBounds.bottom)
+            } else {
+                it.bounds.contains(x, y)
+            }
         }
 
     fun hasSameGeometryAs(other: ReaderPage): Boolean =

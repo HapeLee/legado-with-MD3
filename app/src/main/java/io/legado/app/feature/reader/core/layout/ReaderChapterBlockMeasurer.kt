@@ -127,6 +127,7 @@ data class ReaderChapterMeasureStyle(
     val imageAvailableWidthPx: Float? = null,
     /** true = 带 click 动作脚本的图片（段评气泡）不参与排版：不产出测量项，也不解析图片尺寸。 */
     val excludeActionImages: Boolean = false,
+    val localImageDensity: Float = 1f,
 )
 
 sealed interface ReaderChapterMeasureResult {
@@ -483,7 +484,9 @@ class ReaderChapterBlockMeasurer(
                         val mode = layout.mode
                         val localInlineSize = item.presentation
                             ?.takeIf { mode == ReaderImageLayoutMode.AUTO && requestedWidth == null }
-                            ?.resolveInlineSize(originalSize, baseStyle.fontSizePx, style.imageAvailableWidthPx)
+                            ?.resolveInlineSize(
+                                originalSize, baseStyle.fontSizePx, style.imageAvailableWidthPx, style.localImageDensity,
+                            )
                         val standalone = localInlineSize == null && mode != ReaderImageLayoutMode.INLINE && (
                             mode == ReaderImageLayoutMode.STANDALONE ||
                             mode == ReaderImageLayoutMode.FULL_WIDTH ||
@@ -787,6 +790,7 @@ private fun ReaderLocalImagePresentation.resolveInlineSize(
     intrinsic: ReaderImageDimensions,
     fontSizePx: Float,
     columnWidthPx: Float?,
+    density: Float,
 ): ReaderImageDimensions? {
     fun resolveLength(value: String?, percentBasePx: Float? = null): Float? {
         val match = localImageLength.matchEntire(value?.trim()?.lowercase() ?: return null) ?: return null
@@ -794,7 +798,7 @@ private fun ReaderLocalImagePresentation.resolveInlineSize(
         val pixels = when (match.groupValues[2]) {
             "em" -> number * fontSizePx * fontSizeScale
             "%" -> (percentBasePx ?: return null) * (number / 100f)
-            else -> number
+            else -> number * density
         }
         return pixels.takeIf { it.isFinite() && it > 0f }
     }
