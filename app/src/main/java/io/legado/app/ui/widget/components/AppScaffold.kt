@@ -46,6 +46,7 @@ import io.legado.app.ui.theme.LocalMochiScrollBlurProgress
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.coui.AppCouiTopBarHost
 import io.legado.app.ui.widget.components.coui.LocalAppCouiTopBarHost
+import io.legado.app.ui.widget.components.coui.LocalCouiPageBackdrop
 import ui.feice.mochi.effect.glass.LocalMochiBackdrop
 import ui.feice.mochi.effect.glass.rememberMochiBackdrop
 import ui.feice.mochi.effect.glass.mochiBackdropSource
@@ -274,7 +275,12 @@ fun AppScaffold(
                         },
                         bottomBar = { bottomBar?.invoke() },
                         snackbarHost = snackbarHost,
-                        floatingActionButton = floatingActionButton,
+                        floatingActionButton = {
+                            // 只向独立栏位提供页面源，正文里的 FAB 不得采样自身。
+                            CompositionLocalProvider(LocalCouiPageBackdrop provides couiBackdrop) {
+                                floatingActionButton()
+                            }
+                        },
                         floatingActionButtonPosition = floatingActionButtonPosition,
                         containerColor = containerColor,
                         contentColor = contentColor,

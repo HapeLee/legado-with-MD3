@@ -44,10 +44,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.itos.coui.theme.CouiTheme
 import io.legado.app.R
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ProvideAppDensity
+import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.widget.components.coui.AppCouiFloatingActionButton
 import io.legado.app.ui.widget.components.text.AppText
 import top.yukonga.miuix.kmp.basic.Button
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -55,6 +58,13 @@ import top.yukonga.miuix.kmp.basic.FloatingActionButton as MiuixFloatingActionBu
 import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
 import top.yukonga.miuix.kmp.basic.Text as MiuixText
 
+/**
+ * 跨引擎浮动操作按钮。
+ *
+ * [containerColor] / [contentColor] 为 null 时按引擎取默认配色：Material / Mochi 用
+ * `primaryContainer` + `primary`；COUI 用主题强调色 + 对应的 `onAccent`（对应 COUI 原厂有色 FAB）。
+ * 调用方显式传入时该颜色在 COUI 分支同样生效。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppFloatingActionButton(
@@ -62,18 +72,70 @@ fun AppFloatingActionButton(
     modifier: Modifier = Modifier,
     tooltipText: String? = null,
     icon: ImageVector? = null,
-    containerColor: Color = LegadoTheme.colorScheme.primaryContainer,
-    contentColor: Color = LegadoTheme.colorScheme.primary,
+    containerColor: Color? = null,
+    contentColor: Color? = null,
     content: (@Composable () -> Unit)? = null
+) {
+    val tooltip = tooltipText
+    // Miuix 引擎不显示 M3 提示气泡，保持原有表现。
+    if (tooltip != null && LegadoTheme.composeEngine != ComposeEngine.Miuix) {
+        Box(modifier = modifier) {
+            TooltipBox(
+                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                    TooltipAnchorPosition.Above
+                ),
+                tooltip = {
+                    ProvideAppDensity {
+                        PlainTooltip(
+                            containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                            contentColor = LegadoTheme.colorScheme.onSurface,
+                        ) { AppText(tooltip) }
+                    }
+                },
+                state = rememberTooltipState(),
+            ) {
+                FloatingActionButtonByEngine(
+                    modifier = Modifier,
+                    onClick = onClick,
+                    tooltipText = tooltip,
+                    icon = icon,
+                    containerColor = containerColor,
+                    contentColor = contentColor,
+                    content = content,
+                )
+            }
+        }
+    } else {
+        FloatingActionButtonByEngine(
+            modifier = modifier,
+            onClick = onClick,
+            tooltipText = tooltip,
+            icon = icon,
+            containerColor = containerColor,
+            contentColor = contentColor,
+            content = content,
+        )
+    }
+}
+
+@Composable
+private fun FloatingActionButtonByEngine(
+    modifier: Modifier,
+    onClick: () -> Unit,
+    tooltipText: String?,
+    icon: ImageVector?,
+    containerColor: Color?,
+    contentColor: Color?,
+    content: (@Composable () -> Unit)?,
 ) {
     val isMiuix = LegadoTheme.composeEngine == ComposeEngine.Miuix
     val fabContent: @Composable () -> Unit = {
         if (icon != null) {
-            if (isMiuix){
+            if (isMiuix) {
                 MiuixIcon(
                     imageVector = icon,
                     contentDescription = tooltipText,
-                    tint = containerColor
+                    tint = containerColor ?: LegadoTheme.colorScheme.primaryContainer
                 )
             } else {
                 Icon(
@@ -96,42 +158,52 @@ fun AppFloatingActionButton(
                 containerColor = LegadoTheme.colorScheme.surfaceContainer
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
-            if (tooltipText != null) {
-                Box(modifier = modifier) {
-                    TooltipBox(
-                        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                            TooltipAnchorPosition.Above
-                        ),
-                        tooltip = {
-                            ProvideAppDensity {
-                                PlainTooltip(
-                                    containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
-                                    contentColor = LegadoTheme.colorScheme.onSurface,
-                                ) { AppText(tooltipText) }
-                            }
-                        },
-                        state = rememberTooltipState(),
-                    ) {
-                        FloatingActionButton(
-                            onClick = onClick,
-                            containerColor = containerColor,
-                            contentColor = contentColor,
-                            content = fabContent
-                        )
-                    }
-                }
-            } else {
-                FloatingActionButton(
+        ComposeEngine.Coui -> {
+            if (ThemeResolver.isCouiSupported()) {
+                AppCouiFloatingActionButton(
                     onClick = onClick,
                     modifier = modifier,
-                    containerColor = containerColor,
-                    contentColor = contentColor,
-                    content = fabContent
+                    containerColor = containerColor ?: CouiTheme.colorScheme.accent,
+                    contentColor = contentColor ?: CouiTheme.colorScheme.onAccent,
+                    content = fabContent,
+                )
+            } else {
+                MaterialFloatingActionButton(
+                    modifier = modifier,
+                    onClick = onClick,
+                    containerColor = containerColor ?: LegadoTheme.colorScheme.primaryContainer,
+                    contentColor = contentColor ?: LegadoTheme.colorScheme.primary,
+                    content = fabContent,
                 )
             }
         }
+        ComposeEngine.Material, ComposeEngine.Mochi -> {
+            MaterialFloatingActionButton(
+                modifier = modifier,
+                onClick = onClick,
+                containerColor = containerColor ?: LegadoTheme.colorScheme.primaryContainer,
+                contentColor = contentColor ?: LegadoTheme.colorScheme.primary,
+                content = fabContent,
+            )
+        }
     }
+}
+
+@Composable
+private fun MaterialFloatingActionButton(
+    modifier: Modifier,
+    onClick: () -> Unit,
+    containerColor: Color,
+    contentColor: Color,
+    content: @Composable () -> Unit,
+) {
+    FloatingActionButton(
+        onClick = onClick,
+        modifier = modifier,
+        containerColor = containerColor,
+        contentColor = contentColor,
+        content = content,
+    )
 }
 
 data class FabMenuItem(
