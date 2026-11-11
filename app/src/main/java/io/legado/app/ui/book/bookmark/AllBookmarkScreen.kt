@@ -55,10 +55,12 @@ import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
 import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.privacy.PrivateLockedCover
 import io.legado.app.ui.widget.components.privacy.rememberPrivateLockedBookUrls
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
@@ -68,6 +70,7 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.theme.isMiuixHyperOs4Enabled
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
@@ -134,7 +137,6 @@ fun AllBookmarkScreen(
     val selectedBook = state.selectedBook
     var showSearch by remember(selectedBook?.key) { mutableStateOf(false) }
     val alwaysShowSearch = isMiuixHyperOs4Enabled()
-    var showMenu by remember { mutableStateOf(false) }
     val overviewListState = rememberLazyListState()
     val bookmarkListState = rememberLazyListState()
     val noteListState = rememberLazyListState()
@@ -207,27 +209,32 @@ fun AllBookmarkScreen(
                             )
                         }
                         if (selectedBook != null) {
-                            TopBarActionButton(
-                                onClick = { showMenu = true },
-                                imageVector = AppIcons.MoreVert,
-                                contentDescription = stringResource(R.string.more_menu),
-                            )
-                            RoundDropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false }) {
-                                RoundDropdownMenuItem(
-                                    text = stringResource(R.string.export_bookmarks_json),
-                                    onClick = {
-                                        showMenu = false
-                                        onRequestExport(selectedBook.key, false)
-                                    },
-                                )
-                                RoundDropdownMenuItem(
-                                    text = stringResource(R.string.export_bookmarks_markdown),
-                                    onClick = {
-                                        showMenu = false
-                                        onRequestExport(selectedBook.key, true)
-                                    },
+                            AppActionMenu(
+                                groups = persistentListOf(
+                                    AppActionGroup(
+                                        id = "bookmark_export",
+                                        actions = persistentListOf(
+                                            AppAction(
+                                                id = "export_json",
+                                                label = stringResource(R.string.export_bookmarks_json),
+                                            ),
+                                            AppAction(
+                                                id = "export_markdown",
+                                                label = stringResource(R.string.export_bookmarks_markdown),
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                                onAction = { id ->
+                                    when (id) {
+                                        "export_json" -> onRequestExport(selectedBook.key, false)
+                                        "export_markdown" -> onRequestExport(selectedBook.key, true)
+                                    }
+                                },
+                            ) {
+                                AppIcon(
+                                    imageVector = AppIcons.MoreVert,
+                                    contentDescription = stringResource(R.string.more_menu),
                                 )
                             }
                         }

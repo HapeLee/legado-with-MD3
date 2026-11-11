@@ -801,7 +801,16 @@ enum class AppMenuAnchor { Row, Icon }   // 决定 Miuix 用 Preference 还是 I
    （`SeriesButton` 相应支持可空 `onClick`，与 `SourceEditOptionCard(onClick = null)` /
    `GlassCard(onClick = null)` 同一约定；外观与迁移前的 Tonal 按钮一致）。
    区域菜单是混合菜单（选项 + 「自定义区域」命令 + 随后输入框），**刻意保留**。
-   该轮减少 5 处，全局剩余计数待下一轮重新实测；
+   **第十八轮实测**：全仓 `RoundDropdownMenu(` 文本命中 50，扣除组件定义 1 与三入口内部 3，
+   业务调用点 **46 处**（第十七轮减 5 后）。可零外观变化迁移的顶栏纯命令菜单当时只剩
+   `AllBookmarkScreen` 1 处，已在第十八轮迁完（46 → **45**）。该轮同时确认两条约束：
+   - `BookCacheManageScreen` / `BookshelfManageScreen` / `RssSortScreen` 等剩余顶栏图标菜单是
+     **单选**，而 `AppChoiceDropdown` 只有 `Row` 形态、**没有 `AppMenuAnchor.Icon` 分支**
+     （本文 §3 的伪代码写了 `anchor` 参数，代码尚未实现，属文档超前于实现），
+     因此这些页面在补齐该能力前无法迁移；
+   - 阅读器那一批（`ReadBookMenuBarTitle` / `ReadBookMenuBarFloating` / `ReaderBookSheet` /
+     `RssReadRouteScreen`）普遍是外部受控 `expanded` 的共用组件、`CompactToolIconBox(selected)`
+     高亮或伪子菜单，均非零形态变化，需先建基线；
    顶栏 content 只剩 `RssSourceScreen`（伪子菜单 +
    嵌套 popup，刻意保留）。带文字标题的 4 处列表项菜单 trigger 是长按 / 图标按钮，
    需单独建交互基线，**不能复用顶栏 `menuGroups` 槽**；
