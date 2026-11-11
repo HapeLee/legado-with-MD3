@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -16,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.semantics.Role
@@ -45,8 +47,10 @@ import io.legado.app.ui.widget.components.coui.rememberCouiCapsuleRenderer
 import io.legado.app.ui.widget.components.topbar.LocalMiuixGlassTopBar
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.menuItem.MiuixGlassMenuHost
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menuItem.isMiuixGlassMenuAvailable
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import top.yukonga.miuix.kmp.basic.DropdownDefaults
@@ -56,6 +60,7 @@ import top.yukonga.miuix.kmp.popup.OverlayDropdownPopup
 import top.yukonga.miuix.kmp.popup.WindowDropdownPopup
 import top.yukonga.miuix.kmp.glass.GlassIconButton as MiuixGlassIconButton
 import top.yukonga.miuix.kmp.glass.GlassIconDropdownMenu
+import top.yukonga.miuix.kmp.glass.GlassPopupItem
 import top.yukonga.miuix.kmp.glass.GlassTopAppBarDefaults
 import top.yukonga.miuix.kmp.glass.glassPopupAnchor
 import top.yukonga.miuix.kmp.glass.glassPopupAnchorContent
@@ -104,30 +109,38 @@ fun AppActionMenu(
      * 否则 TalkBack 读不到这个「更多」按钮。
      */
     title: String? = null,
+    /**
+     * `Row` 锚点触发内容的形状。
+     *
+     * 入口只包一层可点节点（矩形），触发内容自己画圆角按钮时，M3 水波纹会从四个角溢出，
+     * 观感就是「按钮没有圆角」。Row 触发的惯例是图标按钮 / 胶囊（`RoundedCornerShape(50)`），
+     * 所以默认按圆形裁剪；方形卡片触发时传自己的形状。
+     */
+    triggerShape: Shape = CircleShape,
     trigger: @Composable AppMenuTriggerScope.() -> Unit,
 ) {
     val flat = remember(groups) { groups.flatMap { it.actions } }
     when (LegadoTheme.composeEngine) {
         ComposeEngine.Mochi -> MochiActions(
-            groups, flat, onAction, modifier, enabled, anchor, trigger,
+            groups, flat, onAction, modifier, enabled, anchor, triggerShape, trigger,
         )
 
         ComposeEngine.Coui -> if (canUseCouiSettingMenu()) {
-            CouiActions(groups, onAction, modifier, enabled, anchor, title, trigger)
+            CouiActions(groups, onAction, modifier, enabled, anchor, title, triggerShape, trigger)
         } else {
-            LegacyActions(groups, onAction, modifier, enabled, anchor, title, trigger)
+            LegacyActions(groups, onAction, modifier, enabled, anchor, title, triggerShape, trigger)
         }
 
         ComposeEngine.Miuix -> if (anchor == AppMenuAnchor.Row) {
             // 库的 `Icon*DropdownMenu` 会把 content 包进它自己的图标按钮，
             // 列表项里那层壳必须由 trigger 自己画，所以改走 popup 形态。
-            MiuixRowActions(groups, onAction, modifier, enabled, title, trigger)
+            MiuixRowActions(groups, onAction, modifier, enabled, title, triggerShape, trigger)
         } else {
             MiuixActions(groups, onAction, modifier, enabled, trigger)
         }
 
         ComposeEngine.Material -> LegacyActions(
-            groups, onAction, modifier, enabled, anchor, title, trigger,
+            groups, onAction, modifier, enabled, anchor, title, triggerShape, trigger,
         )
     }
 }
@@ -140,6 +153,7 @@ private fun MochiActions(
     modifier: Modifier,
     enabled: Boolean,
     anchor: AppMenuAnchor,
+    triggerShape: Shape,
     trigger: @Composable AppMenuTriggerScope.() -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -206,6 +220,7 @@ private fun MochiActions(
             Box(
                 scope.modifier
                     .onGloballyPositioned { anchorBounds = it.boundsInWindow().roundToIntRect() }
+                    .clipTriggerShape(triggerShape)
                     .clickable(enabled = enabled) { scope.open() },
             ) { scope.trigger() }
         }
@@ -234,6 +249,7 @@ private fun CouiActions(
     enabled: Boolean,
     anchor: AppMenuAnchor,
     title: String?,
+    triggerShape: Shape,
     trigger: @Composable AppMenuTriggerScope.() -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -276,8 +292,10 @@ private fun CouiActions(
     Box(modifier) {
         if (anchor == AppMenuAnchor.Row) {
             // 列表项 / 卡片内：壳由 trigger 自己画，入口只包一个可点节点。
+            // 必须按 trigger 的形状裁剪：否则按压底色/水波纹是方角，观感上就是「按钮没有圆角」。
             Box(
                 scope.modifier
+                    .clipTriggerShape(triggerShape)
                     .clickable(enabled = enabled) { scope.open() }
                     .semantics { title?.let { text = AnnotatedString(it) } },
             ) { scope.trigger() }
@@ -330,39 +348,62 @@ private fun MiuixRowActions(
     modifier: Modifier,
     enabled: Boolean,
     title: String?,
+    triggerShape: Shape,
     trigger: @Composable AppMenuTriggerScope.() -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val entries = remember(groups, onAction) { groups.toMiuixEntries(onAction) }
     val scope = remember { AppMenuTriggerScopeImpl(Modifier) { expanded = true } }
-    val dropdownColors = DropdownDefaults.dropdownColors()
+    val glass = isMiuixGlassMenuAvailable()
+    val anchor = rememberGlassPopupAnchor()
+    val entries = remember(groups, onAction) { groups.toMiuixEntries(onAction) }
     Box(modifier) {
         Box(
             scope.modifier
+                // morph 起点圆角对齐 `SmallPlainButton`（32dp 圆形）。
+                .then(if (glass) Modifier.glassPopupAnchor(anchor, cornerRadius = 16.dp) else Modifier)
+                .clipTriggerShape(triggerShape)
                 .clickable(enabled = enabled) { scope.open() }
                 .semantics { title?.let { text = AnnotatedString(it) } },
         ) { scope.trigger() }
-        if (LocalHasMiuixPopupHost.current) {
-            OverlayDropdownPopup(
-                entries = entries,
+        if (glass) {
+            // HyperOS 4：Row 锚点也走原生玻璃菜单——面板从按钮矩形 morph 出来，
+            // 行、级联子菜单、勾选态全部由库画。否则同一页会出现「顶栏 ⋮ 是玻璃、
+            // 列表 ⋮ 还是 OS3 面板」的错位。
+            // `anchorContent` 必须是 trigger 内容：`glassPopupAnchor` 只把原按钮瞬间
+            // 置为透明，过渡中移动/缩放的那一份图标由弹层自己画；留空就成了「图标直接
+            // 消失再出现」。这里不给 trigger 挂 `glassPopupAnchorContent`——弹层自己
+            // 画面板（没有 `anchor.surface`），库需要复制整个控件而不是只复制图标。
+            MiuixGlassMenuHost(
                 show = expanded && enabled,
-                onDismiss = { expanded = false },
-                onDismissFinished = {},
-                maxHeight = null,
-                dropdownColors = dropdownColors,
-                renderInRootScaffold = true,
-                collapseOnSelection = true,
+                onDismissRequest = { expanded = false },
+                anchor = anchor,
+                entries = entries,
+                anchorContent = { scope.trigger() },
             )
         } else {
-            WindowDropdownPopup(
-                entries = entries,
-                show = expanded && enabled,
-                onDismiss = { expanded = false },
-                onDismissFinished = {},
-                maxHeight = null,
-                dropdownColors = dropdownColors,
-                collapseOnSelection = true,
-            )
+            val dropdownColors = DropdownDefaults.dropdownColors()
+            if (LocalHasMiuixPopupHost.current) {
+                OverlayDropdownPopup(
+                    entries = entries,
+                    show = expanded && enabled,
+                    onDismiss = { expanded = false },
+                    onDismissFinished = {},
+                    maxHeight = null,
+                    dropdownColors = dropdownColors,
+                    renderInRootScaffold = true,
+                    collapseOnSelection = true,
+                )
+            } else {
+                WindowDropdownPopup(
+                    entries = entries,
+                    show = expanded && enabled,
+                    onDismiss = { expanded = false },
+                    onDismissFinished = {},
+                    maxHeight = null,
+                    dropdownColors = dropdownColors,
+                    collapseOnSelection = true,
+                )
+            }
         }
     }
 }
@@ -458,31 +499,14 @@ private fun MiuixGlassActions(
     var expanded by remember { mutableStateOf(false) }
     val anchor = rememberGlassPopupAnchor()
     val backdrop = LocalMiuixBarBackdrop.current
-    val localContext = currentCompositionLocalContext
     val scope = remember { AppMenuTriggerScopeImpl(Modifier) {} }
-    val key = remember { Any() }
-    val popupContent = remember(glassOverlay) {
-        mutableStateOf<@Composable BoxScope.() -> Unit>({})
-    }
-    SideEffect {
-        popupContent.value = {
-            CompositionLocalProvider(localContext) {
-                GlassIconDropdownMenu(
-                    show = expanded && enabled,
-                    onDismissRequest = { expanded = false },
-                    anchor = anchor,
-                    anchorContent = { scope.trigger() },
-                    entries = entries,
-                    backdrop = backdrop,
-                    collapseOnSelection = true,
-                )
-            }
-        }
-    }
-    DisposableEffect(glassOverlay, key) {
-        glassOverlay.register(key) { popupContent.value(this) }
-        onDispose { glassOverlay.remove(key) }
-    }
+    MiuixGlassMenuHost(
+        show = expanded && enabled,
+        onDismissRequest = { expanded = false },
+        anchor = anchor,
+        entries = entries,
+        anchorContent = { scope.trigger() },
+    )
     MiuixGlassIconButton(
         onClick = { if (enabled) expanded = true },
         modifier = modifier
@@ -553,6 +577,7 @@ private fun LegacyActions(
     enabled: Boolean,
     anchor: AppMenuAnchor,
     title: String?,
+    triggerShape: Shape,
     trigger: @Composable AppMenuTriggerScope.() -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -561,6 +586,7 @@ private fun LegacyActions(
         if (anchor == AppMenuAnchor.Row) {
             Box(
                 scope.modifier
+                    .clipTriggerShape(triggerShape)
                     .clickable(enabled = enabled) { scope.open() }
                     .semantics { title?.let { text = AnnotatedString(it) } },
             ) { scope.trigger() }

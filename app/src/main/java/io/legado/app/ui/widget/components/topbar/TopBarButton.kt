@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,7 +25,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
-import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.derivedStateOf
@@ -357,7 +357,7 @@ private fun TopBarButton(
                 .mergedDivider()
                 .combinedClickable(
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = if (liquidGlassEnabled) null else ripple(bounded = true),
+                    indication = if (liquidGlassEnabled) null else LocalIndication.current,
                     role = Role.Button,
                     onLongClick = onLongClick,
                     onLongClickLabel = onLongClickLabel,
@@ -404,7 +404,7 @@ private fun TopBarButton(
             style = style.seriesStyle,
             contentColor = LegadoTheme.colorScheme.onSurface,
             containerColor = containerColor,
-            indication = if (liquidGlassEnabled) null else ripple(bounded = true)
+            indication = if (liquidGlassEnabled) null else LocalIndication.current
         ) { resolvedContentColor ->
             if (text != null) {
                 Text(
@@ -679,7 +679,7 @@ fun TopBarAnimatedActionButton(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = if (topBarStyle == TopBarButtonStyle.LiquidGlass &&
                                 topBarLiquidGlassEnabled()
-                            ) null else ripple(bounded = true),
+                            ) null else LocalIndication.current,
                             role = Role.Button,
                             onClick = { onToggle(!checked) }
                         )
@@ -708,7 +708,7 @@ fun TopBarAnimatedActionButton(
                         containerColor = containerColor,
                         indication = if (topBarStyle == TopBarButtonStyle.LiquidGlass &&
                             topBarLiquidGlassEnabled()
-                        ) null else ripple(bounded = true)
+                        ) null else LocalIndication.current
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,

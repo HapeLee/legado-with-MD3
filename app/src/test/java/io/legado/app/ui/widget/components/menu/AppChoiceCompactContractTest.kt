@@ -1,11 +1,17 @@
 package io.legado.app.ui.widget.components.menu
 
 import android.app.Application
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.*
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.domain.model.settings.AppUiConfiguration
@@ -148,6 +154,86 @@ class AppChoiceCompactContractTest {
         compose.onNodeWithText("standard", useUnmergedTree = true).performClick()
         compose.waitForIdle()
         assertEquals("standard", selected)
+    }
+
+    /**
+     * 受控弹层模式：不渲染 trigger 包装，弹层锚在调用方给的容器上
+     * （设置行里就是右侧取值区，这里用等价的 48dp `Box` 模拟）。
+     */
+    @Composable
+    private fun EmbeddedMenu(expanded: Boolean, onSelect: (String) -> Unit) {
+        Box(Modifier.size(48.dp)) {
+            AppChoiceDropdown(
+                options = persistentListOf(
+                    AppChoiceOption("all", "全部"),
+                    AppChoiceOption("g1", "分组一"),
+                ),
+                selectedId = "all",
+                onSelect = onSelect,
+                title = "分组筛选",
+                modifier = Modifier.matchParentSize(),
+                embeddedExpanded = expanded,
+                onDismissRequest = {},
+            )
+        }
+    }
+
+    /**
+     * 受控模式要按真实时序走一遍：设置行初始是关闭的，点击行才把 `expanded` 置 true。
+     * 首次组合就 `show = true` 时 Miuix 的 popup 还没量到锚点，弹层不会出现。
+     */
+    @Test
+    fun embeddedModeRendersPopupAndCommitsIdWithoutTrigger() {
+        var selected: String? = null
+        var expanded by mutableStateOf(false)
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        compose.setContent {
+            AppTheme(AppUiConfiguration(appShell = AppShellSettings(composeEngine = "material"))) {
+                EmbeddedMenu(expanded) { selected = it }
+            }
+        }
+        compose.runOnIdle { expanded = true }
+        compose.waitForIdle()
+        // 受控模式没有任何 trigger 内容，因此不存在「入口按钮」这一层
+        compose.onAllNodesWithText("分组筛选", useUnmergedTree = true).assertCountEquals(0)
+        compose.onNodeWithText("分组一", useUnmergedTree = true).performClick()
+        compose.waitForIdle()
+        assertEquals("g1", selected)
+    }
+
+    @Test
+    fun embeddedModeRendersPopupOnMiuix() {
+        var selected: String? = null
+        var expanded by mutableStateOf(false)
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        compose.setContent {
+            AppTheme(AppUiConfiguration(appShell = AppShellSettings(composeEngine = "miuix"))) {
+                EmbeddedMenu(expanded) { selected = it }
+            }
+        }
+        compose.runOnIdle { expanded = true }
+        compose.waitForIdle()
+        compose.onNodeWithText("分组一", useUnmergedTree = true).performClick()
+        compose.waitForIdle()
+        assertEquals("g1", selected)
+    }
+
+    /** Mochi 分支在受控模式下没有 trigger 可上报位置，锚点矩形取自调用方容器。 */
+    @Test
+    fun embeddedModeRendersPopupOnMochi() {
+        var selected: String? = null
+        var expanded by mutableStateOf(false)
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        compose.setContent {
+            AppTheme(AppUiConfiguration(appShell = AppShellSettings(composeEngine = "mochi"))) {
+                EmbeddedMenu(expanded) { selected = it }
+            }
+        }
+        compose.runOnIdle { expanded = true }
+        compose.waitForIdle()
+        compose.onNodeWithText("分组一", useUnmergedTree = true).performClick()
+        compose.waitForIdle()
+        assertEquals("g1", selected)
     }
 
     @Test

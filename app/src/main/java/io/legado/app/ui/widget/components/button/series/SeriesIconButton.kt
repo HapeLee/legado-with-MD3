@@ -7,6 +7,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Indication
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
@@ -21,7 +22,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.minimumInteractiveComponentSize
-import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -82,7 +82,7 @@ internal fun SeriesButton(
     size: DpSize? = null,
     enforceMinimumInteractiveSize: Boolean = true,
     clipToShape: Boolean = true,
-    indication: Indication? = ripple(bounded = true),
+    indication: Indication? = LocalIndication.current,
     shape: Shape = IconButtonDefaults.extraSmallRoundShape,
     style: SeriesIconButtonStyle = SeriesIconButtonStyle.Plain,
     contentColor: Color = LegadoTheme.colorScheme.onSurfaceVariant,

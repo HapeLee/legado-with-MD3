@@ -9,6 +9,7 @@ import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -52,8 +53,10 @@ import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.widget.components.LocalMochiSettingsGroup
 import io.legado.app.ui.widget.components.LocalCouiSettingsGroup
 import io.legado.app.ui.widget.components.card.SettingCard
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.menu.AppChoiceDropdown
+import io.legado.app.ui.widget.components.menu.AppChoiceOption
 import io.legado.app.ui.widget.components.text.AppText
+import kotlinx.collections.immutable.ImmutableList
 import ui.feice.mochi.list.mochiListDivider
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -68,7 +71,19 @@ fun SettingItem(
     description: String? = null,
     option: String? = null,
     trailingContent: @Composable (() -> Unit)? = null,
-    dropdownMenu: (@Composable (onDismiss: () -> Unit) -> Unit)? = null,
+    /**
+     * 单选下拉的选项。与 [onChoiceSelect] 一起使用时，本行点击会打开四引擎原生的单选弹层，
+     * 锚点落在右侧 `trailing` 取值区（与用户已经看惯的「值旁边弹出」一致）。
+     * 旧的自定义内容槽 `dropdownMenu` 已由数据描述取代：内容槽无法映射到
+     * `AppChoiceDropdown` 的 `selectedId` 语义，也无法在四引擎下保持同一形态。
+     */
+    choiceOptions: ImmutableList<AppChoiceOption>? = null,
+    choiceSelectedId: String? = null,
+    onChoiceSelect: ((String) -> Unit)? = null,
+    /** 当前设备/产物不提供的档位：仍列出但不可选中。 */
+    choiceUnavailableIds: Set<String> = emptySet(),
+    /** 点击不可用档位时的提示回调；为 `null` 时该档位真正禁用。 */
+    onChoiceUnavailableSelected: ((String) -> Unit)? = null,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
     enabled: Boolean = true,
@@ -87,6 +102,9 @@ fun SettingItem(
 ) {
 
     var showMenu by remember { mutableStateOf(false) }
+    val menuOptions = choiceOptions
+    val menuSelect = onChoiceSelect
+    val hasChoiceMenu = menuOptions != null && menuSelect != null
     val isExpandable = expandContent != null && onExpandChange != null
     val mochiGrouped = LocalMochiSettingsGroup.current
     val isCoui = LegadoTheme.composeEngine == ComposeEngine.Coui
@@ -94,18 +112,26 @@ fun SettingItem(
     val couiColors = if (isCoui) CouiPageDefaults.themeColors() else null
     val trailingOption = option.takeIf { isCoui && trailingContent == null && !isExpandable }
     val useOptionAnchor = LegadoTheme.composeEngine == ComposeEngine.Mochi &&
-        dropdownMenu != null && trailingContent == null && option != null
-    val menu: @Composable () -> Unit = {
-        dropdownMenu?.let {
-            RoundDropdownMenu(
-                expanded = showMenu,
+        hasChoiceMenu && trailingContent == null && option != null
+    // 受控弹层：本行负责开合与锚点位置，四引擎入口只渲染弹层，不包可点节点。
+    // 撑满取值区是必需的：Miuix 的 popup 要按调用点 bounds 定位，0 尺寸容器量不到锚点，
+    // 弹层不会出现。
+    val menu: @Composable BoxScope.() -> Unit = {
+        if (menuOptions != null && menuSelect != null) {
+            AppChoiceDropdown(
+                options = menuOptions,
+                selectedId = choiceSelectedId,
+                onSelect = menuSelect,
+                title = title,
+                modifier = Modifier.matchParentSize(),
+                unavailableIds = choiceUnavailableIds,
+                onUnavailableSelected = onChoiceUnavailableSelected,
+                embeddedExpanded = showMenu,
                 onDismissRequest = { showMenu = false },
-                mochiAnchorMaxWidth = 48.dp,
-                content = { dismiss -> it(dismiss) },
             )
         }
     }
-    val hasAction = onClick != null || onLongClick != null || dropdownMenu != null || isExpandable
+    val hasAction = onClick != null || onLongClick != null || hasChoiceMenu || isExpandable
     val interactionSource = if (isCoui && hasAction) remember { MutableInteractionSource() } else null
     val rowModifier = Modifier
         .semantics(mergeDescendants = !isCoui || hasAction) {
@@ -127,14 +153,14 @@ fun SettingItem(
                 role = semanticRole,
                 onClick = {
                     when {
-                        dropdownMenu != null -> showMenu = true
+                        hasChoiceMenu -> showMenu = true
                         isExpandable -> onExpandChange.invoke(!expanded)
                         else -> onClick?.invoke()
                     }
                 },
-                onLongClick = if (!isCoui || dropdownMenu != null || onLongClick != null) {
+                onLongClick = if (!isCoui || hasChoiceMenu || onLongClick != null) {
                     {
-                        if (dropdownMenu != null) showMenu = true
+                        if (hasChoiceMenu) showMenu = true
                         onLongClick?.invoke()
                     }
                 } else null,

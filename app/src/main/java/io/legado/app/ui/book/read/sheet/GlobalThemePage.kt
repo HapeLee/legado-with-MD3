@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -383,6 +384,8 @@ fun GlobalThemePage(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            // 这两张方卡都是 12dp 圆角；紧凑菜单入口要按同一形状裁剪水波纹。
+            val cardShape = RoundedCornerShape(12.dp)
             AppChoiceDropdown(
                 options = pageAnimChoices,
                 selectedId = pageAnim.toString(),
@@ -392,6 +395,8 @@ fun GlobalThemePage(
                 },
                 title = stringResource(R.string.page_anim),
                 compact = true,
+                // 触发内容是 12dp 圆角的方卡：不裁剪的话 M3 水波纹会从四个角溢出去。
+                triggerShape = cardShape,
                 modifier = Modifier.weight(1f),
             ) {
                 TinySettingItem(
@@ -420,6 +425,7 @@ fun GlobalThemePage(
                 },
                 title = stringResource(R.string.page_anim_speed),
                 compact = true,
+                triggerShape = cardShape,
             ) {
                 // 省略 onClick：方卡保持纯展示，由入口包装唯一可点控件。
                 NormalCard(

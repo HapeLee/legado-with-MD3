@@ -85,6 +85,23 @@ class GlassMenuAnchor(
     val icon: (@Composable () -> Unit)? = null,
 )
 
+/**
+ * 当前是否该用 OS4 玻璃菜单。
+ *
+ * 判定集中在 `AppScaffold` 建立的玻璃设施上：`LocalAppGlassOverlay` 只在
+ * 「Miuix + HyperOS 4 组件开关 + SDK 33+ + 原生采样可用」时才有值，
+ * `LocalHasMiuixPopupHost` 保证页面有 popup 宿主。所有自绘锚点菜单
+ * （[RoundDropdownMenu]、`MiuixGlassMenuHost` 的调用方）必须共用这一口径，
+ * 否则同一页会出现「顶栏玻璃、列表 ⋮ 仍是普通面板」的错位。
+ */
+@Composable
+internal fun isMiuixGlassMenuAvailable(): Boolean =
+    LegadoTheme.composeEngine == ComposeEngine.Miuix &&
+        LocalAppGlassOverlay.current != null &&
+        LocalHasMiuixPopupHost.current &&
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        LocalAppUiConfiguration.current.theme.useHyperOs4Components
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun RoundDropdownMenu(
@@ -102,10 +119,8 @@ fun RoundDropdownMenu(
     val engine = LegadoTheme.composeEngine
     val glassOverlay = LocalAppGlassOverlay.current
 
-    if (engine == ComposeEngine.Miuix && glassOverlay != null && LocalHasMiuixPopupHost.current &&
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-        LocalAppUiConfiguration.current.theme.useHyperOs4Components
-    ) {
+    if (isMiuixGlassMenuAvailable()) {
+        val glassHost = glassOverlay ?: return
         val key = remember { Any() }
         val backdrop = LocalMiuixBarBackdrop.current
         val localContext = currentCompositionLocalContext
@@ -125,10 +140,10 @@ fun RoundDropdownMenu(
                 content(onDismissRequest)
             }
         }
-        val popupContent = remember(glassOverlay) { mutableStateOf<@Composable BoxScope.() -> Unit>({}) }
+        val popupContent = remember(glassHost) { mutableStateOf<@Composable BoxScope.() -> Unit>({}) }
         SideEffect {
             popupContent.value = popup@{
-                val origin = glassOverlay.origin ?: return@popup
+                val origin = glassHost.origin ?: return@popup
                 if (anchorBounds.isEmpty) return@popup
                 CompositionLocalProvider(localContext) {
                     if (glassAnchor?.icon != null && origin == Offset.Zero) {
@@ -155,9 +170,9 @@ fun RoundDropdownMenu(
                 }
             }
         }
-        DisposableEffect(glassOverlay, key) {
-            glassOverlay.register(key) { popupContent.value(this) }
-            onDispose { glassOverlay.remove(key) }
+        DisposableEffect(glassHost, key) {
+            glassHost.register(key) { popupContent.value(this) }
+            onDispose { glassHost.remove(key) }
         }
         return
     }

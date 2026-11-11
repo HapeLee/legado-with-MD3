@@ -293,6 +293,8 @@ private fun ReplaceRulesPage(
                 onSelect = { onFilterChange(ReplaceFilter.valueOf(it)) },
                 title = stringResource(R.string.replace_filter),
                 compact = true,
+                // 与 CompactTextProcessTool 的 .clip(RoundedCornerShape(10.dp)) 同源。
+                triggerShape = RoundedCornerShape(10.dp),
             ) {
                 // 省略 onClick：工具方块保持纯展示，由入口包装唯一可点控件。
                 CompactTextProcessTool(

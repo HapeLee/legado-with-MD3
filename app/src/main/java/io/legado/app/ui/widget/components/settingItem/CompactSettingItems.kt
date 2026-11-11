@@ -37,10 +37,9 @@ import io.legado.app.ui.theme.LocalMiuixBarBackdrop
 import io.legado.app.ui.widget.components.TinySwitch
 import io.legado.app.ui.widget.components.ValueStepper
 import io.legado.app.ui.widget.components.card.TextCard
-import io.legado.app.ui.widget.components.coui.CouiSettingMenu
-import io.legado.app.ui.widget.components.coui.canUseCouiSettingMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppChoiceOption
 import io.legado.app.ui.widget.components.sliderAccessibility
+import kotlinx.collections.immutable.toImmutableList
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
 import top.yukonga.miuix.kmp.glass.GlassDropdownPreference
@@ -120,27 +119,8 @@ fun CompactDropdownSettingItem(
                     contentColor = MaterialTheme.colorScheme.onSurface,
                 )
             }
-            if (canUseCouiSettingMenu()) {
-                CouiSettingMenu(
-                    selectedValue = selectedValue,
-                    displayEntries = displayEntries,
-                    entryValues = entryValues,
-                    onValueChange = onValueChange,
-                ) { openMenu ->
-                    SettingItem(
-                        title = title,
-                        description = description,
-                        imageVector = imageVector,
-                        color = color,
-                        cornerRadius = cornerRadius,
-                        trailingContent = valueChip,
-                        onClick = openMenu,
-                        onLongClick = openMenu,
-                    )
-                }
-                return
-            }
-
+            // COUI 也走统一路径：`CouiSettingMenu` 的 `Menu` 拿的是整行 bounds，弹层会从
+            // 行左端展开；受控弹层的锚点落在右侧取值 Chip 上。
             SettingItem(
                 title = title,
                 description = description,
@@ -148,26 +128,13 @@ fun CompactDropdownSettingItem(
                 color = color,
                 cornerRadius = cornerRadius,
                 trailingContent = valueChip,
-                dropdownMenu = { onDismiss ->
-                    displayEntries.forEachIndexed { index, display ->
-                        RoundDropdownMenuItem(
-                            text = display,
-                            onClick = {
-                                onDismiss()
-                                onValueChange(entryValues[index])
-                            },
-                            trailingIcon = if (selectedValue == entryValues[index]) {
-                                {
-                                    Icon(
-                                        Icons.Default.Check,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            } else null
-                        )
-                    }
-                }
+                choiceOptions = remember(displayEntries, entryValues) {
+                    displayEntries.mapIndexed { index, display ->
+                        AppChoiceOption(id = entryValues[index], label = display)
+                    }.toImmutableList()
+                },
+                choiceSelectedId = selectedValue,
+                onChoiceSelect = onValueChange,
             )
         }
     }

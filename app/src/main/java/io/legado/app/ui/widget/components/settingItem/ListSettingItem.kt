@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
@@ -20,9 +21,8 @@ import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.LocalHasMiuixPopupHost
 import io.legado.app.ui.theme.LocalMiuixBarBackdrop
 import io.legado.app.ui.widget.components.SplicedColumnDivider
-import io.legado.app.ui.widget.components.coui.CouiSettingMenu
-import io.legado.app.ui.widget.components.coui.canUseCouiSettingMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppChoiceOption
+import kotlinx.collections.immutable.toImmutableList
 import top.yukonga.miuix.kmp.basic.DropdownItem
 import top.yukonga.miuix.kmp.glass.GlassDropdownPreference
 import top.yukonga.miuix.kmp.preference.OverlaySpinnerPreference
@@ -66,29 +66,8 @@ fun DropdownListSettingItem(
     }
     SplicedColumnDivider()
 
-    if (canUseCouiSettingMenu()) {
-        CouiSettingMenu(
-            selectedValue = selectedValue,
-            displayEntries = displayEntries,
-            entryValues = entryValues,
-            enabled = enabled,
-            unavailableValues = unavailableValues,
-            onUnavailableSelected = onUnavailableSelected,
-            onValueChange = onValueChange,
-        ) { openMenu ->
-            SettingItem(
-                title = title,
-                description = description,
-                option = displayEntries.getOrNull(entryValues.indexOf(selectedValue)) ?: selectedValue,
-                imageVector = imageVector,
-                enabled = enabled,
-                onClick = openMenu,
-                onLongClick = openMenu,
-            )
-        }
-        return
-    }
-
+    // COUI 也走下面这条统一路径：`CouiSettingMenu` 的 `Menu` 拿的是整行 bounds，
+    // 弹层会从行左端展开；受控弹层的锚点落在右侧取值区。
     when (composeEngine) {
         ComposeEngine.Miuix -> {
             val selectedIndex = entryValues.indexOf(selectedValue).coerceAtLeast(0)
@@ -157,33 +136,16 @@ fun DropdownListSettingItem(
                 imageVector = imageVector,
                 enabled = enabled,
                 onClick = { },
-                dropdownMenu = if (!enabled) null else { onDismiss ->
-                    displayEntries.forEachIndexed { index, display ->
-                        val value = entryValues[index]
-                        val unavailable = value in unavailableValues
-                        RoundDropdownMenuItem(
-                            text = display,
-                            enabled = !unavailable || onUnavailableSelected != null,
-                            // 视觉上灰掉，但仍可点击：点了给出"为什么用不了"，比无声无息更好。
-                            color = if (unavailable) {
-                                LegadoTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                            } else Color.Unspecified,
-                            onClick = {
-                                onDismiss()
-                                if (unavailable) onUnavailableSelected?.invoke(value) else onValueChange(value)
-                            },
-                            trailingIcon = if (selectedValue == value) {
-                                {
-                                    Icon(
-                                        Icons.Default.Check,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            } else null
-                        )
-                    }
-                }
+                choiceOptions = remember(displayEntries, entryValues) {
+                    displayEntries.mapIndexed { index, display ->
+                        AppChoiceOption(id = entryValues[index], label = display)
+                    }.toImmutableList()
+                },
+                choiceSelectedId = selectedValue,
+                onChoiceSelect = onValueChange,
+                // 视觉上灰掉，但仍可点击：点了给出「为什么用不了」，比无声无息更好。
+                choiceUnavailableIds = unavailableValues,
+                onChoiceUnavailableSelected = onUnavailableSelected,
             )
         }
     }

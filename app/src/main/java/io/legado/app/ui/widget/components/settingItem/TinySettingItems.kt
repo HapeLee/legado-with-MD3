@@ -9,6 +9,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -69,11 +70,10 @@ import io.legado.app.ui.widget.components.TinySwitch
 import io.legado.app.ui.widget.components.ValueStepper
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
-import io.legado.app.ui.widget.components.coui.CouiSettingMenu
-import io.legado.app.ui.widget.components.coui.canUseCouiSettingMenu
 import io.legado.app.ui.widget.components.icon.AppIcon
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppChoiceDropdown
+import io.legado.app.ui.widget.components.menu.AppChoiceOption
+import kotlinx.collections.immutable.toImmutableList
 import io.legado.app.ui.widget.components.text.AppText
 import ui.feice.mochi.effect.elastic.mochiPressDeform
 import ui.feice.mochi.shape.MochiCapsule
@@ -254,85 +254,50 @@ fun TinyDropdownSettingItem(
     val currentEntry =
         selectedDisplay ?: displayEntries.getOrNull(entryValues.indexOf(selectedValue))
         ?: selectedValue
-    val row: @Composable (onOpen: () -> Unit, anchoredMenu: (@Composable () -> Unit)?) -> Unit =
-        { onOpen, anchoredMenu ->
-            TinySettingItem(
-                title = title,
-                description = description,
-                imageVector = imageVector,
-                modifier = modifier,
-                color = color,
-                enabled = enabled,
-                trailingContent = {
-                    Box {
-                        TextCard(
-                            cornerRadius = 8.dp,
-                            horizontalPadding = 8.dp,
-                            verticalPadding = 4.dp,
-                            text = currentEntry,
-                            backgroundColor = LegadoTheme.colorScheme.surfaceContainerHigh,
-                            contentColor = LegadoTheme.colorScheme.onSurface,
-                        )
-                        anchoredMenu?.invoke()
-                    }
-                },
-                onClick = onOpen,
-            )
-        }
-    if (canUseCouiSettingMenu()) {
-        CouiSettingMenu(
-            selectedValue = selectedValue,
-            displayEntries = displayEntries,
-            entryValues = entryValues,
-            enabled = enabled,
-            unavailableValues = unavailableValues,
+    val menuOptions = remember(displayEntries, entryValues) {
+        displayEntries.mapIndexed { index, display ->
+            AppChoiceOption(id = entryValues[index], label = display)
+        }.toImmutableList()
+    }
+    // 受控弹层：本行持有开合，弹层放在取值 Chip 内。四引擎入口只渲染弹层、不包可点节点；
+    // 撑满 Chip 是必需的——Miuix 的 popup 要按调用点 bounds 定位，0 尺寸容器量不到锚点，
+    // COUI / Mochi 的显式锚点也会退回窗口原点（表现为弹层跑到屏幕左侧）。
+    val menu: @Composable BoxScope.() -> Unit = {
+        AppChoiceDropdown(
+            options = menuOptions,
+            selectedId = selectedValue,
+            onSelect = onValueChange,
+            title = title,
+            modifier = Modifier.matchParentSize(),
+            unavailableIds = unavailableValues,
             onUnavailableSelected = onUnavailableSelected,
-            onValueChange = onValueChange,
-        ) { openMenu ->
-            row(openMenu, null)
-        }
-        return
-    }
-    val menu: @Composable () -> Unit = {
-        RoundDropdownMenu(
-            expanded = showMenu,
+            embeddedExpanded = showMenu,
             onDismissRequest = { showMenu = false },
-            mochiAnchorMaxWidth = 48.dp,
-        ) { dismiss ->
-            displayEntries.forEachIndexed { index, display ->
-                val value = entryValues[index]
-                val unavailable = value in unavailableValues
-                RoundDropdownMenuItem(
-                    text = display,
-                    enabled = !unavailable || onUnavailableSelected != null,
-                    // 压灰但仍可点：由调用方说明该档位不可用的原因。
-                    color = if (unavailable) {
-                        LegadoTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                    } else Color.Unspecified,
-                    onClick = {
-                        dismiss()
-                        if (unavailable) onUnavailableSelected?.invoke(value)
-                        else onValueChange(value)
-                    },
-                    trailingIcon = if (selectedValue == value) {
-                        {
-                            AppIcon(
-                                Icons.Default.Check,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
-                    } else null,
+        )
+    }
+    TinySettingItem(
+        title = title,
+        description = description,
+        imageVector = imageVector,
+        modifier = modifier,
+        color = color,
+        enabled = enabled,
+        trailingContent = {
+            // 锚点落在右侧取值 Chip 上：挂在整行末尾会贴到行左端。
+            Box {
+                TextCard(
+                    cornerRadius = 8.dp,
+                    horizontalPadding = 8.dp,
+                    verticalPadding = 4.dp,
+                    text = currentEntry,
+                    backgroundColor = LegadoTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = LegadoTheme.colorScheme.onSurface,
                 )
+                menu()
             }
-        }
-    }
-
-    // 弹层锚点统一落在右侧的取值 Chip 上。M3 的 `DropdownMenu` 跟随调用点在组合树中的位置，
-    // 挂在整行 `Box` 末尾会贴到行左端；四套引擎都应表现为「值旁边弹出」。
-    Box(modifier = Modifier.fillMaxWidth()) {
-        row({ showMenu = true }, menu)
-    }
+        },
+        onClick = { showMenu = true },
+    )
 }
 
 @Composable

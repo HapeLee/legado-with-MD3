@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -942,6 +943,7 @@ private fun CloudTtsEngineEditorContent(
                     title = profile.displayName,
                     modifier = Modifier.fillMaxWidth(),
                     compact = true,
+                    triggerShape = IconButtonDefaults.extraSmallRoundShape,
                 ) {
                     MediumTonalButton(
                         onClick = null,
@@ -1043,7 +1045,8 @@ private fun CloudTtsEngineEditorContent(
                         title = modelTitle,
                         modifier = Modifier.fillMaxWidth(),
                         compact = true,
-                    ) {
+                        triggerShape = IconButtonDefaults.extraSmallRoundShape,
+                        ) {
                         MediumTonalButton(
                             onClick = null,
                             text = modelTitle,
@@ -1225,6 +1228,7 @@ private fun TtsVoicePresetEditorContent(
                                 title = styleTitle,
                                 modifier = Modifier.fillMaxWidth(),
                                 compact = true,
+                                triggerShape = IconButtonDefaults.extraSmallRoundShape,
                             ) {
                                 MediumTonalButton(
                                     onClick = null,
@@ -1254,6 +1258,7 @@ private fun TtsVoicePresetEditorContent(
                                 title = roleTitle,
                                 modifier = Modifier.fillMaxWidth(),
                                 compact = true,
+                                triggerShape = IconButtonDefaults.extraSmallRoundShape,
                             ) {
                                 MediumTonalButton(
                                     onClick = null,
@@ -1297,6 +1302,7 @@ private fun TtsVoicePresetEditorContent(
                             title = formatTitle,
                             modifier = Modifier.fillMaxWidth(),
                             compact = true,
+                            triggerShape = IconButtonDefaults.extraSmallRoundShape,
                         ) {
                             MediumTonalButton(
                                 onClick = null,

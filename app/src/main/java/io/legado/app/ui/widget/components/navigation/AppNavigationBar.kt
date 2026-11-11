@@ -143,6 +143,7 @@ fun RowScope.AppNavigationBarItem(
                 .fillMaxHeight()
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
+                    // 导航项专用的无界 32dp 反馈：刻意不随主题 indication 分发。
                     indication = ripple(bounded = false, radius = 32.dp),
                     onClick = onClick
                 ),

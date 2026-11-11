@@ -15,6 +15,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -186,6 +187,8 @@ fun <T> HomepageModuleManageSheet(
                     onSelect = { groupFilter = it.ifBlank { null } },
                     title = filterTitle,
                     compact = true,
+                    // MediumTonalButton 用 SeriesButton 默认形状，裁剪必须同源。
+                    triggerShape = IconButtonDefaults.extraSmallRoundShape,
                 ) {
                     MediumTonalButton(
                         onClick = null,
