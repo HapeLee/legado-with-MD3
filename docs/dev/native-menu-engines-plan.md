@@ -844,7 +844,18 @@ enum class AppMenuAnchor { Row, Icon }   // 决定 Miuix 用 Preference 还是 I
      `LaunchedEffect`；`AppActionMenu` 不暴露展开态（Miuix 分支由库自持），迁移会回退该行为；
    - `SettingItem` / `TinySettingItems` 虽有 `interactive = false` 的纯展示约定，但
      `dropdownMenu` 是任意内容槽（`(onDismiss) -> Unit`），改成 `groups` 属破坏性 API 变更，
-     需要单独一轮连同调用方一起改；
+     需要单独一轮连同调用方一起改；`SettingItem` 的 `dropdownMenu` 全仓只有
+     `CompactSettingItems` 一个调用方。
+   **第二十二轮**：设置行下拉的锚点统一到**右侧取值区**。`TinySettingItems` 原先只有 Mochi
+   把菜单塞进取值 Chip（`useValueAnchor`），其余引擎挂在整行 `Box` 末尾、弹层贴行左端；
+   现已四引擎统一。`SettingItem` 本来就把 `menu()` 放在 `trailing` 槽，保持不动；它的
+   `useOptionAnchor` 特例（Mochi 且 `option != null`）是因为取值文本渲染在标题下方、
+   锚点必须跟随取值，不是遗漏。
+   真正迁移这两处仍需要给 `AppChoiceDropdown` 增加「**受控弹层模式**」
+   （`expanded` + `onDismissRequest`，只渲染弹层、不包 trigger）：设置行的锚点在 trailing
+   取值区，不能由入口把整行包成可点节点。四引擎的弹层容器本身都是受控的
+   （Miuix `show`、Mochi `expanded`、COUI `Menu`、M3 `DropdownMenu`），该模式可表达；
+   `MiuixIconChoice` 的库 Icon 弹层不支持受控，受控模式下需退回 popup 形态。
    顶栏 content 只剩 `RssSourceScreen`（伪子菜单 +
    嵌套 popup，刻意保留）。带文字标题的 4 处列表项菜单 trigger 是长按 / 图标按钮，
    需单独建交互基线，**不能复用顶栏 `menuGroups` 槽**；

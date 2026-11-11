@@ -293,7 +293,6 @@ fun TinyDropdownSettingItem(
         }
         return
     }
-    val useValueAnchor = LegadoTheme.composeEngine == ComposeEngine.Mochi
     val menu: @Composable () -> Unit = {
         RoundDropdownMenu(
             expanded = showMenu,
@@ -329,10 +328,10 @@ fun TinyDropdownSettingItem(
         }
     }
 
+    // 弹层锚点统一落在右侧的取值 Chip 上。M3 的 `DropdownMenu` 跟随调用点在组合树中的位置，
+    // 挂在整行 `Box` 末尾会贴到行左端；四套引擎都应表现为「值旁边弹出」。
     Box(modifier = Modifier.fillMaxWidth()) {
-        row({ showMenu = true }, menu.takeIf { useValueAnchor })
-
-        if (!useValueAnchor) menu()
+        row({ showMenu = true }, menu)
     }
 }
 
