@@ -44,7 +44,7 @@ import kotlin.math.roundToInt
 
 private val GlassTabShadowPadding = 8.dp
 
-/** Material uses zero insets; COUI uses at least 12dp inside its content; OS4 includes shadow space. */
+/** Material tabs use zero insets; COUI uses at least 12dp inside its content; OS4 includes shadow space. */
 @Composable
 fun AppTabRow(
     tabTitles: List<String>,
@@ -71,7 +71,12 @@ fun AppTabRow(
         else -> 0.dp
     }
     val startPadding = (contentInset - tabInset).coerceAtLeast(0.dp)
-    val endPadding = if (trailingAction == null) startPadding else contentInset
+    val endPadding = when {
+        trailingAction == null -> startPadding
+        // Align the action with Material's indicator inset without adding a tab-row inset.
+        composeEngine == ComposeEngine.Material -> 16.dp
+        else -> contentInset
+    }
     val couiContentPadding = PaddingValues(
         start = contentInset,
         end = if (trailingAction == null) contentInset else 8.dp,

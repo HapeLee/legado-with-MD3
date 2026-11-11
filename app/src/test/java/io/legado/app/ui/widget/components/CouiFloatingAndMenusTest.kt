@@ -314,6 +314,7 @@ class CouiFloatingAndMenusTest {
         val margin = with(compose.density) { 12.dp.toPx() }
         for (engine in engines) {
             val expectedMargin = if (engine == "material") 0f else margin
+            val expectedActionMargin = if (engine == "material") with(compose.density) { 16.dp.toPx() } else margin
             compose.runOnIdle {
                 activeEngine.value = engine
                 showAction.value = true
@@ -326,11 +327,11 @@ class CouiFloatingAndMenusTest {
             assertTrue("$engine button left edge: $button in $header", button.left >= header.left + expectedMargin - 1f)
             assertTrue("$engine action overlaps last tab: $button, $last", button.left >= last.right)
             assertTrue("$engine first tab left edge: $first in $header", first.left >= header.left + expectedMargin - 1f)
-            assertTrue("$engine button right edge: $button in $header", button.right <= header.right - expectedMargin + 1f)
+            assertTrue("$engine button right edge: $button in $header", button.right <= header.right - expectedActionMargin + 1f)
             assertTrue("$engine last tab right edge: $last in $header", last.right <= header.right - expectedMargin + 1f)
             if (engine != "mochi") {
                 assertEquals(expectedMargin, first.left - header.left, 1f)
-                assertEquals(expectedMargin, header.right - button.right, 1f)
+                assertEquals(expectedActionMargin, header.right - button.right, 1f)
                 assertEquals(with(compose.density) { 8.dp.toPx() }, button.left - last.right, 1f)
             }
             action.performClick()
@@ -355,12 +356,19 @@ class CouiFloatingAndMenusTest {
         val direction = mutableStateOf(LayoutDirection.Ltr)
         val selected = mutableStateOf(0)
         val requestedPadding = mutableStateOf(12.dp)
+        val showAction = mutableStateOf(false)
         val titles = List(8) { "Tab $it" }
         compose.setContent {
             AppTheme(AppUiConfiguration(appShell = AppShellSettings(composeEngine = engine.value))) {
                 CompositionLocalProvider(LocalLayoutDirection provides direction.value) {
                     Box(Modifier.width(240.dp).testTag("header")) {
-                        AppTabRow(titles, selected.value, { selected.value = it }, horizontalPadding = requestedPadding.value)
+                        AppTabRow(
+                            titles, selected.value, { selected.value = it },
+                            horizontalPadding = requestedPadding.value,
+                            trailingAction = if (showAction.value) {
+                                { AppTabRowIconButton(Icons.Filled.Menu, "Browse", {}) }
+                            } else null,
+                        )
                     }
                 }
             }
@@ -383,6 +391,13 @@ class CouiFloatingAndMenusTest {
                 compose.runOnIdle { selected.value = titles.lastIndex }
                 val last = compose.onNodeWithText(titles.last()).assertIsDisplayed().assertIsSelected().fetchSemanticsNode().boundsInRoot
                 assertEquals(inset, if (layoutDirection == LayoutDirection.Ltr) header.right - last.right else last.left - header.left, 1f)
+                if (value == "material") {
+                    compose.runOnIdle { showAction.value = true }
+                    val button = compose.onNode(hasContentDescription("Browse") and hasClickAction()).fetchSemanticsNode().boundsInRoot
+                    val actionMargin = if (layoutDirection == LayoutDirection.Ltr) header.right - button.right else button.left - header.left
+                    assertEquals(with(compose.density) { 16.dp.toPx() }, actionMargin, 1f)
+                    compose.runOnIdle { showAction.value = false }
+                }
             }
         }
     }
