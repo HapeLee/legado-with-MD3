@@ -83,6 +83,37 @@ class SettingItemAnchorContractTest {
         assertTrue("受控弹层未使用该容器", source.contains("Box(containerModifier)"))
     }
 
+    /**
+     * COUI 通过 `AppMenuTriggerScope.modifier` 把 `couiMenuAnchor` 注入 trigger；纯展示
+     * trigger 不透传 `this.modifier` 就没有注册锚点的节点，弹层同样退回窗口原点。
+     * `MediumTonalButton` 的 KDoc 明确要求透传，`CloudTtsScreen` 的 5 处是正确样本。
+     * 静态契约只保证 modifier 到位，不证明弹层在场上的实际像素位置。
+     */
+    @Test
+    fun pureDisplayTriggersForwardScopeModifier() {
+        assertTrue(
+            "COUI 分支须继续把锚点注入 scope.modifier",
+            sourceOf(APP_CHOICE).contains("modifier = Modifier.couiMenuAnchor(couiAnchor)"),
+        )
+        listOf(
+            "io/legado/app/ui/main/homepage/HomepageModuleManageSheet.kt",
+            "io/legado/app/ui/book/readaloud/cloudtts/CloudTtsScreen.kt",
+        ).forEach { path ->
+            val blocks = Regex("MediumTonalButton\\((.*?)\\)", RegexOption.DOT_MATCHES_ALL)
+                .findAll(sourceOf(path))
+                .map { it.groupValues[1] }
+                .filter { it.contains("onClick = null") }
+                .toList()
+            assertTrue("$path 应有纯展示 MediumTonalButton trigger", blocks.isNotEmpty())
+            blocks.forEach { block ->
+                assertTrue(
+                    "$path 的纯展示 trigger 必须透传 this.modifier，否则 COUI 锚点节点未注册",
+                    block.contains("modifier = this.modifier"),
+                )
+            }
+        }
+    }
+
     /** 三个设置行包装器不再走 `CouiSettingMenu`：它的 `Menu` 拿整行 bounds，弹层从行左端展开。 */
     @Test
     fun settingWrappersNoLongerAnchorOnWholeRow() {

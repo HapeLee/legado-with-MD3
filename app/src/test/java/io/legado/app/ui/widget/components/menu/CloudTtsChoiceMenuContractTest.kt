@@ -44,14 +44,15 @@ class CloudTtsChoiceMenuContractTest {
             "纯展示 trigger 不应再引入平行组件，沿用 MediumTonalButton(onClick = null)",
             source.contains("MediumTonalButtonDisplay"),
         )
+        val displayTriggers = Regex("onClick = null").findAll(source).count()
         assertEquals(
             "纯展示 trigger 数量（5 处纯单选 + 区域混合菜单）",
             6,
-            Regex("onClick = null").findAll(source).count(),
+            displayTriggers,
         )
         assertEquals(
-            "每个 trigger 都必须透传入口给的锚点 modifier",
-            5,
+            "每个纯展示 trigger 都必须透传入口给的锚点 modifier（区域混合菜单同样依赖 COUI 锚点，不留例外）",
+            displayTriggers,
             Regex("modifier = this\\.modifier\\.fillMaxWidth\\(\\)").findAll(source).count(),
         )
     }

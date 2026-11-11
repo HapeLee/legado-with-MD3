@@ -174,9 +174,9 @@ git diff --check
   受控淡出（§5.2）、自绘行重构（§5.3）、`MiuixIconChoice`（§5.4）**均未动**。
 - 新发现：`BaseCard` 主题动态圆角导致剩余 8 处不能硬编码，连已传的 `GlobalThemePage`
   12dp 也需真机复核；这是 §5.5 剩余工作的主要难点，**先做设计决策再动手**。
-- 未修的相邻问题：`HomepageModuleManageSheet` 的 `MediumTonalButton` trigger 没有透传
+- 相邻问题：`HomepageModuleManageSheet` 的 `MediumTonalButton` trigger 没有透传
   `modifier = this.modifier`（`MediumTonalButton` KDoc 明确要求），COUI 锚点在该页可能仍会丢；
-  与本轮形状裁剪是两件事，需真机确认后再单独修。
+  与本轮形状裁剪是两件事。**已在 §10 修复**：静态证据充分，不必等真机。
 - 第二轮续作见 §8：组件侧已去掉写死的 ripple，主题 provider 等 fork 的库级 `Indication`
   落地后再加（当前注入只能是 no-op 或丢反馈）。**截至本文件更新，仍未执行任何 git 写操作**。
 
@@ -250,7 +250,8 @@ COUI / Mochi 的库级 `Indication` 还不存在（现在只有 Modifier 扩展�
 ## 9. §5.5 收尾：形状单一真源（2026-11-12 第三轮续作）
 
 **状态订正**：§3 / §7 里「仍未执行任何 git 写操作」的声明已过时——§1~§8 的改动
-已于 2026-11-12 提交为 `2c4d0856b`。**本节的改动未暂存、未提交**。
+已于 2026-11-12 提交为 `2c4d0856b`，§9 提交为 `4dcd2b0d9`。后续提交状态以 `git log`
+为准，本文件不再维护。
 
 ### 方案
 
@@ -283,3 +284,27 @@ COUI / Mochi 的库级 `Indication` 还不存在（现在只有 Modifier 扩展�
   是玻璃 morph 起点半径，与 `triggerShape` 不是一回事）；§5.1 / §5.3 / §5.4 仍未动。
 - 未验证：真机上「覆盖卡片圆角」开关（0–40dp）与 Mochi 引擎下的波纹贴合；
   Robolectric 里 `LocalAppUiConfiguration` 取默认快照，源码契约覆盖不到实际取值。
+
+## 10. COUI trigger 锚点 modifier 透传（2026-11-12 第四轮续作）
+
+**静态证据，不需要等真机**：
+
+- `AppChoiceDropdown.kt:491-495` 的 `CouiChoice` 把 `Modifier.couiMenuAnchor(couiAnchor)`
+  注入 `AppMenuTriggerScopeImpl.modifier`；非受控分支里 trigger 是唯一注册该锚点的节点。
+- `MediumTonalButton.kt:13-18` 的 KDoc 明写：`onClick = null` 的纯展示调用方
+  「必须把入口给的锚点 modifier 透传给本组件，否则菜单定位会丢」。
+- `AppActionMenu.kt:286-291` 的 `CouiActions` 同样把锚点注入 scope.modifier，
+  Row trigger 与 `AppChoiceDropdown` 一样依赖透传。
+- `HomepageModuleManageSheet.kt` 的分组筛选按钮漏传；`CloudTtsScreen.kt:1018` 的区域菜单
+  （`AppActionMenu` 的 Row trigger）只写 `Modifier.fillMaxWidth()`，也没透传。
+  对照 `CloudTtsScreen.kt` 另 5 处与 `TextProcessingSheet.kt:300` 都传了 `this.modifier`。
+
+**修复**：两处补透传 —— 筛选按钮补 `modifier = this.modifier`；区域菜单改成
+`this.modifier.fillMaxWidth()`，保留布局同时挂上锚点。`SettingItemAnchorContractTest` 新增
+`pureDisplayTriggersForwardScopeModifier`，锁定 COUI 两个分支仍注入锚点，且两处文件的所有
+`MediumTonalButton(onClick = null)` 都透传 `this.modifier`。第二处缺陷是该契约用例跑出来的，
+不在 §7 原始记录里。`CloudTtsChoiceMenuContractTest` 原先把透传数冻结为 5（等于默许
+第 6 个 trigger 漏传），现改为与 `onClick = null` 数量联动，不再留例外。
+
+**未验证**：真机上 COUI 引擎下首页分组筛选弹层的实际位置。契约只保证 modifier 到位，
+`CouiMenuAnchor.getPositionInWindow()` 的运行时行为仍归 §5.1 真机回归。

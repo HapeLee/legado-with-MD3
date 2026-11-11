@@ -1015,7 +1015,7 @@ private fun CloudTtsEngineEditorContent(
                         MediumTonalButton(
                             onClick = null,
                             text = regionTitle,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = this.modifier.fillMaxWidth(),
                         )
                     }
                     if (customRegion) {

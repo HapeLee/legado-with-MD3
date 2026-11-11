@@ -194,6 +194,7 @@ fun <T> HomepageModuleManageSheet(
                         onClick = null,
                         icon = Icons.Default.FilterList,
                         contentDescription = filterTitle,
+                        modifier = this.modifier,
                     )
                 }
             }
