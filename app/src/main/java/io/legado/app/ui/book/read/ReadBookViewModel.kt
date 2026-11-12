@@ -2001,8 +2001,11 @@ class ReadBookViewModel(
         titleBottomSpacing = ReadBookConfig.titleBottomSpacing,
         titleColor = ReadBookConfig.titleColor,
         titleColorNight = ReadBookConfig.titleColorNight,
-        textColorDay = ReadBookConfig.textColor,
+        // 白天/夜间各自那一份（不是当前生效值）：规则弹层要能单独预览另一套。
+        textColorDay = ReadBookConfig.textColorDay,
         textColorNight = ReadBookConfig.textColorNight,
+        bgColorDay = ReadBookConfig.previewBackgroundColor(isNightTheme = false),
+        bgColorNight = ReadBookConfig.previewBackgroundColor(isNightTheme = true),
         textShadow = ReadBookConfig.textShadow,
         textShadowColor = ReadBookConfig.durConfig.curTextShadowColor(),
         shadowRadius = ReadBookConfig.shadowRadius,

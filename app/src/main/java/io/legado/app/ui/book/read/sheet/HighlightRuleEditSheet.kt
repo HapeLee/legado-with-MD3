@@ -19,6 +19,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -93,6 +94,7 @@ import io.legado.app.feature.reader.platform.AndroidReaderTextShaper
 import io.legado.app.feature.reader.platform.ReaderAndroidPaintFactory
 import io.legado.app.feature.reader.platform.ReaderPageDecorationDrawCache
 import io.legado.app.feature.reader.platform.ReaderTextBackgroundLoader
+import io.legado.app.help.config.ReadStyleResolver
 import io.legado.app.ui.book.read.ReadSheetConfigUiState
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
@@ -104,7 +106,7 @@ import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
-import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinyColorModeSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
@@ -166,6 +168,11 @@ fun HighlightRuleEditSheet(
         )
     }
     var hasUnderlineColor by remember(show, rule) { mutableStateOf(initial.underlineColor != null) }
+    // 深浅两套颜色：夜间为空 = 跟随白天。老规则读进来就是空，行为与加这个能力之前一致；
+    // 只有用户在「浅色/深色」药丸切到深色再选了颜色，才写入一个独立的夜间值。
+    var textColorNight by remember(show, rule) { mutableStateOf(initial.textColorNight) }
+    var bgColorNight by remember(show, rule) { mutableStateOf(initial.bgColorNight) }
+    var underlineColorNight by remember(show, rule) { mutableStateOf(initial.underlineColorNight) }
     var underlineWidth by remember(show, rule) { mutableFloatStateOf(initial.underlineWidth) }
     var underlineOffset by remember(show, rule) { mutableFloatStateOf(initial.underlineOffset) }
     var underlineSvgPath by remember(
@@ -182,6 +189,7 @@ fun HighlightRuleEditSheet(
     var borderColor by remember(show, rule) {
         mutableIntStateOf(initial.borderColor ?: 0xFF63C37D.toInt())
     }
+    var borderColorNight by remember(show, rule) { mutableStateOf(initial.borderColorNight) }
     var borderWidth by remember(show, rule) { mutableFloatStateOf(initial.borderWidth) }
     var borderRadius by remember(show, rule) { mutableFloatStateOf(initial.borderRadius) }
 
@@ -223,12 +231,13 @@ fun HighlightRuleEditSheet(
     var hasFont by remember(show, rule) { mutableStateOf(initial.fontPath?.isNotBlank() == true) }
     var fontPath by remember(show, rule) { mutableStateOf(initial.fontPath.orEmpty()) }
 
-    // Color picker state
-    var showTextColorPicker by remember(show, rule) { mutableStateOf(false) }
-    var showBgColorPicker by remember(show, rule) { mutableStateOf(false) }
-    var showUnderlineColorPicker by remember(show, rule) { mutableStateOf(false) }
-    var showBorderColorPicker by remember(show, rule) { mutableStateOf(false) }
+    // Color picker state：一栏一套颜色，四栏 × 深浅两套都在同一个取色器里选，
+    // 靠 [RuleColorTarget] 记住这一轮改的是哪一格。
+    var colorPickerTarget by remember(show, rule) { mutableStateOf<RuleColorTarget?>(null) }
     var showFontSelect by remember(show, rule) { mutableStateOf(false) }
+
+    // 预览看哪一套：默认当前阅读模式（打开就能看到这一刻正文的颜色），切成另一套就能单独调。
+    var previewNight by remember(show, rule) { mutableStateOf(currentReadModeIsNight()) }
 
     // Validation
     var patternError by remember(show, rule) { mutableStateOf<String?>(null) }
@@ -294,12 +303,16 @@ fun HighlightRuleEditSheet(
         enabled = enabled,
         position = initial.position,
         textColor = if (hasTextColor) textColor else null,
+        textColorNight = if (hasTextColor) textColorNight else null,
         bgColor = if (hasBgColor) bgColor else null,
+        bgColorNight = if (hasBgColor) bgColorNight else null,
         borderColor = if (hasBorder) borderColor else null,
+        borderColorNight = if (hasBorder) borderColorNight else null,
         borderWidth = borderWidth,
         borderRadius = borderRadius,
         underlineMode = if (hasUnderline) underlineMode else 0,
         underlineColor = if (hasUnderlineColor && hasUnderline) underlineColor else null,
+        underlineColorNight = if (hasUnderlineColor && hasUnderline) underlineColorNight else null,
         underlineWidth = underlineWidth,
         underlineOffset = underlineOffset,
         underlineSvgPath = underlineSvgPath.ifBlank { null },
@@ -436,10 +449,14 @@ fun HighlightRuleEditSheet(
                     onCheckedChange = { hasTextColor = it },
                 )
                 AnimatedVisibility(visible = hasTextColor) {
-                    TinyColorSettingItem(
+                    TinyColorModeSettingItem(
                         title = stringResource(R.string.select_color),
-                        colorValue = textColor,
-                        onClick = { showTextColorPicker = true },
+                        dayColor = textColor,
+                        nightColor = textColorNight ?: textColor,
+                        onClickColor = { isNight ->
+                            colorPickerTarget =
+                                if (isNight) RuleColorTarget.TextNight else RuleColorTarget.TextDay
+                        },
                     )
                 }
 
@@ -506,10 +523,17 @@ fun HighlightRuleEditSheet(
                             onCheckedChange = { hasUnderlineColor = it },
                         )
                         AnimatedVisibility(visible = hasUnderlineColor) {
-                            TinyColorSettingItem(
+                            TinyColorModeSettingItem(
                                 title = stringResource(R.string.select_color),
-                                colorValue = underlineColor,
-                                onClick = { showUnderlineColorPicker = true },
+                                dayColor = underlineColor,
+                                nightColor = underlineColorNight ?: underlineColor,
+                                onClickColor = { isNight ->
+                                    colorPickerTarget = if (isNight) {
+                                        RuleColorTarget.UnderlineNight
+                                    } else {
+                                        RuleColorTarget.UnderlineDay
+                                    }
+                                },
                             )
                         }
 
@@ -547,10 +571,14 @@ fun HighlightRuleEditSheet(
                     onCheckedChange = { hasBgColor = it },
                 )
                 AnimatedVisibility(visible = hasBgColor) {
-                    TinyColorSettingItem(
+                    TinyColorModeSettingItem(
                         title = stringResource(R.string.select_color),
-                        colorValue = bgColor,
-                        onClick = { showBgColorPicker = true },
+                        dayColor = bgColor,
+                        nightColor = bgColorNight ?: bgColor,
+                        onClickColor = { isNight ->
+                            colorPickerTarget =
+                                if (isNight) RuleColorTarget.BgNight else RuleColorTarget.BgDay
+                        },
                     )
                 }
 
@@ -658,10 +686,17 @@ fun HighlightRuleEditSheet(
                 )
                 AnimatedVisibility(visible = hasBorder) {
                     Column {
-                        TinyColorSettingItem(
+                        TinyColorModeSettingItem(
                             title = stringResource(R.string.select_color),
-                            colorValue = borderColor,
-                            onClick = { showBorderColorPicker = true },
+                            dayColor = borderColor,
+                            nightColor = borderColorNight ?: borderColor,
+                            onClickColor = { isNight ->
+                                colorPickerTarget = if (isNight) {
+                                    RuleColorTarget.BorderNight
+                                } else {
+                                    RuleColorTarget.BorderDay
+                                }
+                            },
                         )
                         TinySliderSettingItem(
                             title = stringResource(R.string.highlight_border_width),
@@ -812,9 +847,30 @@ fun HighlightRuleEditSheet(
                         .onFocusEvent { typingFocused = it.hasFocus },
                 )
 
+                // 预览哪一套：默认当前阅读模式，切成另一套就能在同一个弹层里把夜间色也调完，
+                // 不用等到「晚上自动切换」才发现那套颜色不对。
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    PreviewModeChip(
+                        label = stringResource(R.string.day),
+                        selected = !previewNight,
+                        onClick = { previewNight = false },
+                    )
+                    PreviewModeChip(
+                        label = stringResource(R.string.night),
+                        selected = previewNight,
+                        onClick = { previewNight = true },
+                    )
+                }
+
                 HighlightPreviewCard(
                     rule = previewRule,
                     config = config,
+                    isNightTheme = previewNight,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 8.dp),
@@ -831,6 +887,7 @@ fun HighlightRuleEditSheet(
                 HighlightPreviewCard(
                     rule = previewRule,
                     config = config,
+                    isNightTheme = previewNight,
                     floating = true,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -840,41 +897,35 @@ fun HighlightRuleEditSheet(
         }
     }
 
-    // Color pickers
+    // Color picker：四栏 × 深浅两套共用一个弹层，靠 colorPickerTarget 决定写回哪一格
+    val colorPickerTargetValue = colorPickerTarget
     ColorPickerSheet(
-        show = showTextColorPicker,
-        initialColor = textColor,
-        onDismissRequest = { showTextColorPicker = false },
-        onColorSelected = { color ->
-            textColor = color
-            showTextColorPicker = false
+        show = colorPickerTargetValue != null,
+        initialColor = when (colorPickerTargetValue) {
+            RuleColorTarget.TextDay -> textColor
+            RuleColorTarget.TextNight -> textColorNight ?: textColor
+            RuleColorTarget.BgDay -> bgColor
+            RuleColorTarget.BgNight -> bgColorNight ?: bgColor
+            RuleColorTarget.BorderDay -> borderColor
+            RuleColorTarget.BorderNight -> borderColorNight ?: borderColor
+            RuleColorTarget.UnderlineDay -> underlineColor
+            RuleColorTarget.UnderlineNight -> underlineColorNight ?: underlineColor
+            null -> textColor
         },
-    )
-    ColorPickerSheet(
-        show = showBgColorPicker,
-        initialColor = bgColor,
-        onDismissRequest = { showBgColorPicker = false },
+        onDismissRequest = { colorPickerTarget = null },
         onColorSelected = { color ->
-            bgColor = color
-            showBgColorPicker = false
-        },
-    )
-    ColorPickerSheet(
-        show = showUnderlineColorPicker,
-        initialColor = underlineColor,
-        onDismissRequest = { showUnderlineColorPicker = false },
-        onColorSelected = { color ->
-            underlineColor = color
-            showUnderlineColorPicker = false
-        },
-    )
-    ColorPickerSheet(
-        show = showBorderColorPicker,
-        initialColor = borderColor,
-        onDismissRequest = { showBorderColorPicker = false },
-        onColorSelected = { color ->
-            borderColor = color
-            showBorderColorPicker = false
+            when (colorPickerTargetValue) {
+                RuleColorTarget.TextDay -> textColor = color
+                RuleColorTarget.TextNight -> textColorNight = color
+                RuleColorTarget.BgDay -> bgColor = color
+                RuleColorTarget.BgNight -> bgColorNight = color
+                RuleColorTarget.BorderDay -> borderColor = color
+                RuleColorTarget.BorderNight -> borderColorNight = color
+                RuleColorTarget.UnderlineDay -> underlineColor = color
+                RuleColorTarget.UnderlineNight -> underlineColorNight = color
+                null -> Unit
+            }
+            colorPickerTarget = null
         },
     )
 
@@ -888,6 +939,7 @@ fun HighlightRuleEditSheet(
         initialBottom = npBottom,
         previewRule = previewRule,
         config = config,
+        isNightTheme = previewNight,
         onDismissRequest = { showNinePatchEditor = false },
         onSave = { left, right, top, bottom ->
             npLeft = left
@@ -946,6 +998,8 @@ internal fun HighlightPreviewCard(
     config: ReadSheetConfigUiState,
     modifier: Modifier = Modifier,
     floating: Boolean = false,
+    /** 按哪一套深浅色渲染：白天/夜间各自有自己的底色、正文色与规则颜色。 */
+    isNightTheme: Boolean = false,
 ) {
     NormalCard(
         modifier = modifier,
@@ -968,6 +1022,7 @@ internal fun HighlightPreviewCard(
         HighlightRulePreview(
             rule = rule,
             config = config,
+            isNightTheme = isNightTheme,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(if (floating) 144.dp else 168.dp)
@@ -994,14 +1049,25 @@ internal fun HighlightPreviewCard(
 private fun HighlightRulePreview(
     rule: HighlightRule,
     config: ReadSheetConfigUiState,
+    isNightTheme: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    // 这一套深浅色下正文的底色与字色。来源与正文同一份（阅读背景的白天/夜间两支、
+    // 正文色的白天/夜间两支），所以预览里看到的对比度就是夜里真正会看到的对比度。
+    val previewBackground = if (isNightTheme) config.bgColorNight else config.bgColorDay
+    val bodyTextColor = if (isNightTheme) {
+        config.textColorNight.takeIf { it != 0 } ?: config.textColor
+    } else {
+        config.textColorDay.takeIf { it != 0 } ?: config.textColor
+    }
     // 正文分页读的就是窗口宽：视口取同一份，断行才会与正文一致。
     val bodyViewportWidthPx = LocalWindowInfo.current.containerSize.width
     val baseTextSizePx = config.textSize.toFloat().spToPx()
     val layout = rememberReaderPreviewLayout(
         rule = rule,
         config = config,
+        isNightTheme = isNightTheme,
+        bodyTextColor = bodyTextColor,
         sample = rule.normalizedSampleText(),
         viewportWidthPx = bodyViewportWidthPx,
         // 视口给高：示例句必须全落在第一页，不然一拉「命中行行距」就把最后一行挤到丢掉的第二页，
@@ -1012,6 +1078,10 @@ private fun HighlightRulePreview(
     val backgroundPaint = remember { Paint(Paint.FILTER_BITMAP_FLAG) }
     val stylePaints = remember { mutableMapOf<ReaderTextStyle, Paint>() }
     Canvas(modifier) {
+        // 先铺这一套模式的阅读底色（背景是图片时为 0，露出卡片自己的主题表面）。
+        if (previewBackground != 0) {
+            drawRect(Color(previewBackground))
+        }
         val page = layout?.page
         if (page != null && decorations != null && bodyViewportWidthPx > 0 && size.width > 0f) {
             val runs = page.textBackgroundRuns()
@@ -1067,17 +1137,29 @@ private data class ReaderPreviewLayout(val page: ReaderPage, val background: Bit
 private fun rememberReaderPreviewLayout(
     rule: HighlightRule,
     config: ReadSheetConfigUiState,
+    isNightTheme: Boolean,
+    bodyTextColor: Int,
     sample: String,
     viewportWidthPx: Int,
     viewportHeightPx: Int,
 ): ReaderPreviewLayout? {
     var layout by remember { mutableStateOf<ReaderPreviewLayout?>(null) }
-    LaunchedEffect(rule, config, sample, viewportWidthPx, viewportHeightPx) {
+    LaunchedEffect(
+        rule,
+        config,
+        isNightTheme,
+        bodyTextColor,
+        sample,
+        viewportWidthPx,
+        viewportHeightPx,
+    ) {
         if (viewportWidthPx <= 1 || viewportHeightPx <= 1) return@LaunchedEffect
         layout = withContext(Dispatchers.Default) {
             buildReaderPreviewLayout(
                 rule = rule,
                 config = config,
+                isNightTheme = isNightTheme,
+                bodyTextColor = bodyTextColor,
                 sample = sample,
                 viewportWidthPx = viewportWidthPx,
                 viewportHeightPx = viewportHeightPx,
@@ -1090,6 +1172,8 @@ private fun rememberReaderPreviewLayout(
 private suspend fun buildReaderPreviewLayout(
     rule: HighlightRule,
     config: ReadSheetConfigUiState,
+    isNightTheme: Boolean,
+    bodyTextColor: Int,
     sample: String,
     viewportWidthPx: Int,
     viewportHeightPx: Int,
@@ -1097,7 +1181,7 @@ private suspend fun buildReaderPreviewLayout(
     // 基础样式与页边距照抄正文那一份装配（见 LegacyReaderPaginationStyleFactory.create）：
     // 字号、字重、斜体、字色、字距、行距、段首缩进、四边页距，一项都不另算。
     val baseStyle = ReaderTextStyle(
-        colorArgb = config.textColor,
+        colorArgb = bodyTextColor,
         fontSizePx = config.textSize.toFloat().spToPx(),
         fontWeight = LegacyReaderPaginationStyleFactory.resolveWeight(config.textBold),
         italic = config.textItalic,
@@ -1147,11 +1231,13 @@ private suspend fun buildReaderPreviewLayout(
                     endExclusive = hitEnd,
                     target = ReaderStyleTarget.BODY,
                     priority = 0,
+                    isNightTheme = isNightTheme,
                 )
             } ?: LegacyReaderStyleRangeMapper.map(
                 source = source,
                 rules = listOf(rule.copy(enabled = true, targetScope = HighlightRule.TARGET_ALL)),
                 processes = emptyList(),
+                isNightTheme = isNightTheme,
             ),
         ),
     ) as? ReaderChapterMeasureResult.Success ?: return null
@@ -1222,6 +1308,7 @@ internal fun NinePatchEditorDialog(
     initialBottom: Float,
     previewRule: HighlightRule,
     config: ReadSheetConfigUiState,
+    isNightTheme: Boolean,
     onDismissRequest: () -> Unit,
     onSave: (left: Float, right: Float, top: Float, bottom: Float) -> Unit,
 ) {
@@ -1377,6 +1464,7 @@ internal fun NinePatchEditorDialog(
                     npBottom = bottom,
                 ),
                 config = config,
+                isNightTheme = isNightTheme,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp, vertical = 8.dp),
@@ -1448,6 +1536,51 @@ private data class NineSlicePreviewRect(
 ) {
     val right get() = left + width
     val bottom get() = top + height
+}
+
+/** 预览的深浅色切换：两枚小卡，与「应用排版」那排同一个形状。 */
+@Composable
+private fun PreviewModeChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    NormalCard(
+        onClick = onClick,
+        containerColor = if (selected) {
+            LegadoTheme.colorScheme.secondaryContainer
+        } else {
+            LegadoTheme.colorScheme.surfaceContainerLow
+        },
+        cornerRadius = 8.dp,
+    ) {
+        AppText(
+            label,
+            style = LegadoTheme.typography.labelMedium,
+            color = if (selected) {
+                LegadoTheme.colorScheme.onSecondaryContainer
+            } else {
+                LegadoTheme.colorScheme.onSurfaceVariant
+            },
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+    }
+}
+
+/** 这一刻正文用的是不是夜间那套：与渲染链路同一个口径（墨水屏是白底，不算夜间）。 */
+private fun currentReadModeIsNight(): Boolean =
+    ReadStyleResolver.currentMode() == ReadStyleResolver.ReadStyleMode.Night
+
+/** 取色器这一轮在改哪一栏的哪一套颜色。 */
+private enum class RuleColorTarget {
+    TextDay,
+    TextNight,
+    BgDay,
+    BgNight,
+    BorderDay,
+    BorderNight,
+    UnderlineDay,
+    UnderlineNight,
 }
 
 private fun nineSlicePreviewRect(

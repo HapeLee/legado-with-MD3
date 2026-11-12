@@ -8,10 +8,12 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.AppShellSettingsGateway
+import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.model.settings.OtherSettings
 import io.legado.app.domain.model.settings.AppShellSettings
+import io.legado.app.domain.model.settings.ThemeSettings
 import io.legado.app.domain.model.settings.ReadAloudSettings
 import io.legado.app.domain.model.settings.ReadSettings
 import io.legado.app.feature.reader.core.model.ReaderTextStyle
@@ -77,6 +79,8 @@ class ReadAloudBookSessionTest {
             single<ReadSettingsGateway> { ReadingSettings() }
             single<OtherSettingsGateway> { OtherPreferences() }
             single<AppShellSettingsGateway> { ShellSettings() }
+            // 分页要按当前阅读模式取高亮规则的颜色（ReadStyleResolver），它还会读主题设置判墨水屏。
+            single<ThemeSettingsGateway> { ThemeSettingsStub() }
         }) }
         flag("isRun", false)
         flag("stopRequested", false)
@@ -253,6 +257,13 @@ class ReadAloudBookSessionTest {
         override val settings = MutableStateFlow(OtherSettings())
         override val currentSettings get() = settings.value
         override suspend fun update(transform: (OtherSettings) -> OtherSettings) {
+            settings.value = transform(settings.value)
+        }
+    }
+    private class ThemeSettingsStub : ThemeSettingsGateway {
+        override val settings = MutableStateFlow(ThemeSettings())
+        override val currentSettings get() = settings.value
+        override suspend fun update(transform: (ThemeSettings) -> ThemeSettings) {
             settings.value = transform(settings.value)
         }
     }

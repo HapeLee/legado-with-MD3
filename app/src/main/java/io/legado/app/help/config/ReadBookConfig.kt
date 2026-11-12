@@ -61,12 +61,31 @@ object ReadBookConfig {
         }
 
     val textColor: Int get() = durConfig.curTextColor()
+    val textColorDay: Int
+        get() = try {
+            durConfig.getTextColor().toColorInt()
+        } catch (_: Exception) {
+            0xFF3E3D3B.toInt()
+        }
     val textColorNight: Int
         get() = try {
             durConfig.getTextColorNight().toColorInt()
         } catch (_: Exception) {
             0xFFADADAD.toInt()
         }
+
+    /**
+     * 预览用的阅读背景色：背景是纯色就给 ARGB，是图片就给 0（预览回落到主题表面）。
+     *
+     * 取的是与正文同一份 白天/夜间/墨水屏 背景（[ReadStyleResolver.currentBackground]），
+     * 所以规则弹层里看到的底色就是那一刻正文的底色。
+     */
+    fun previewBackgroundColor(isNightTheme: Boolean): Int {
+        val background = ReadStyleResolver.currentBackground(durConfig, isNightTheme)
+        if (background.type != 0) return 0
+        return runCatching { background.value.toColorInt() }.getOrDefault(0)
+    }
+
     val textAccentColor: Int get() = durConfig.curTextAccentColor()
     val textShadowColor: Int get() = durConfig.curTextShadowColor()
     val menuColor: Int get() = readMenuAccentColor

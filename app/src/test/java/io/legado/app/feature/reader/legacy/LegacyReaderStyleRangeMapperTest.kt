@@ -40,10 +40,14 @@ class LegacyReaderStyleRangeMapperTest {
         adaptSpecialStyle = false,
     )
 
-    private fun rangesFor(rule: HighlightRule) = LegacyReaderStyleRangeMapper.map(
-        body("张三：“我是李四。”他惊了！"),
-        listOf(rule),
-        emptyList(),
+    private fun rangesFor(
+        rule: HighlightRule,
+        isNightTheme: Boolean = false,
+    ) = LegacyReaderStyleRangeMapper.map(
+        source = body("张三：“我是李四。”他惊了！"),
+        rules = listOf(rule),
+        processes = emptyList(),
+        isNightTheme = isNightTheme,
     )
 
     @Test
@@ -123,6 +127,7 @@ class LegacyReaderStyleRangeMapperTest {
             endExclusive = 8,
             target = ReaderStyleTarget.BODY,
             priority = 0,
+            isNightTheme = false,
         )
 
         assertEquals(listOf(3, 4, 7), ranges.map { it.start })
@@ -133,9 +138,51 @@ class LegacyReaderStyleRangeMapperTest {
         // 空区间什么都不产出，调用方可以据此退回按正则命中
         assertTrue(
             LegacyReaderStyleRangeMapper
-                .rangesForLiteralRange(rule, 5, 5, ReaderStyleTarget.BODY, 0)
+                .rangesForLiteralRange(rule, 5, 5, ReaderStyleTarget.BODY, 0, isNightTheme = false)
                 .isEmpty(),
         )
+    }
+
+    /**
+     * 深浅两套颜色：夜间那一栏没设就跟随白天（老规则行为逐字节不变），设了只在夜间那套生效。
+     * 墨水屏由调用方判成白天，这里只负责「给哪一套用哪一套」。
+     */
+    @Test
+    fun nightColorsOnlyApplyInNightModeAndOtherwiseFallBackToDayColors() {
+        val rule = HighlightRule(
+            pattern = "我是李四",
+            targetScope = HighlightRule.TARGET_BODY,
+            textColor = 0xFF8B0000.toInt(),
+            bgColor = 0x20FFEB3B,
+            underlineMode = 1,
+            underlineColor = 0xFF8B0000.toInt(),
+        )
+
+        val dayColors = rangesFor(rule, isNightTheme = false)
+        assertEquals(0xFF8B0000.toInt(), dayColors.first().style.colorArgb)
+        assertEquals(0x20FFEB3B, dayColors.first().style.backgroundArgb)
+        assertEquals(0xFF8B0000.toInt(), dayColors.first().style.underline?.colorArgb)
+
+        // 夜间栏为空：仍是白天那套，与加夜间色之前一模一样
+        val nightFallback = rangesFor(rule, isNightTheme = true)
+        assertEquals(0xFF8B0000.toInt(), nightFallback.first().style.colorArgb)
+        assertEquals(0x20FFEB3B, nightFallback.first().style.backgroundArgb)
+
+        val withNight = rule.copy(
+            textColorNight = 0xFFFFB6C1.toInt(),
+            bgColorNight = 0x33FFB6C1,
+            underlineColorNight = 0xFFFFB6C1.toInt(),
+        )
+        // 白天那套不受夜间值影响
+        assertEquals(
+            0xFF8B0000.toInt(),
+            rangesFor(withNight, isNightTheme = false).first().style.colorArgb,
+        )
+        // 夜间按夜间那套画，四栏各归各的
+        val nightColors = rangesFor(withNight, isNightTheme = true)
+        assertEquals(0xFFFFB6C1.toInt(), nightColors.first().style.colorArgb)
+        assertEquals(0x33FFB6C1, nightColors.first().style.backgroundArgb)
+        assertEquals(0xFFFFB6C1.toInt(), nightColors.first().style.underline?.colorArgb)
     }
 
     /** 边框三件套按 dp→px 原样进样式；没设颜色时粗细与圆角不许单独跑出来。 */
@@ -200,6 +247,7 @@ class LegacyReaderStyleRangeMapperTest {
             ),
             processes = emptyList(),
             castBubbles = mapOf("张三" to bubble),
+            isNightTheme = false,
         ).filter { it.priority == LegacyReaderStyleRangeMapper.CAST_BUBBLE_PRIORITY }
 
         // 引号段（连同引号与句首的角色胶囊）整段被气泡盖住
@@ -268,6 +316,7 @@ class LegacyReaderStyleRangeMapperTest {
             ),
             processes = emptyList(),
             castBubbles = mapOf("张三" to cast),
+            isNightTheme = false,
         ).filter { it.priority == LegacyReaderStyleRangeMapper.CAST_BUBBLE_PRIORITY }
 
         // 设过的栏全部换成角色的那一份，与规则的数值大小无关
@@ -311,6 +360,7 @@ class LegacyReaderStyleRangeMapperTest {
             rules = emptyList(),
             processes = emptyList(),
             castBubbles = mapOf("王五" to ReaderCharacterStyle(backgroundImage = bubbleImage())),
+            isNightTheme = false,
         ).filter { it.priority == LegacyReaderStyleRangeMapper.CAST_BUBBLE_PRIORITY }
 
         // 气泡落在第二段自己的坐标上：从本段的开引号起、到本段闭引号后一位
@@ -355,6 +405,7 @@ class LegacyReaderStyleRangeMapperTest {
             castBubbles = mapOf(
                 "张三" to ReaderCharacterStyle(colorArgb = 0xFFEEDDCC.toInt()),
             ),
+            isNightTheme = false,
         ).filter { it.priority == LegacyReaderStyleRangeMapper.CAST_BUBBLE_PRIORITY }
 
         // 引号跨段时整句都画不出气泡：闭引号那一段查不到归属标记，

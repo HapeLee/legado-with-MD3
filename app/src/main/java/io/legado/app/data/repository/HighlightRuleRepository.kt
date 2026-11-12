@@ -167,12 +167,17 @@ class HighlightRuleRepository(
             enabled = runCatching { rule.enabled }.getOrDefault(true),
             position = runCatching { rule.position }.getOrDefault(0),
             textColor = runCatching { rule.textColor }.getOrNull(),
+            // 夜间色为 null = 跟随白天：老规则与只调过白天的规则都保持那一套，不做隐式复制。
+            textColorNight = runCatching { rule.textColorNight }.getOrNull(),
             bgColor = runCatching { rule.bgColor }.getOrNull(),
+            bgColorNight = runCatching { rule.bgColorNight }.getOrNull(),
             borderColor = runCatching { rule.borderColor }.getOrNull(),
+            borderColorNight = runCatching { rule.borderColorNight }.getOrNull(),
             borderWidth = runCatching { rule.borderWidth }.getOrDefault(1f).coerceIn(0.5f, 10f),
             borderRadius = runCatching { rule.borderRadius }.getOrDefault(4f).coerceIn(0f, 24f),
             underlineMode = runCatching { rule.underlineMode }.getOrDefault(0).coerceIn(0, 7),
             underlineColor = runCatching { rule.underlineColor }.getOrNull(),
+            underlineColorNight = runCatching { rule.underlineColorNight }.getOrNull(),
             underlineWidth = runCatching { rule.underlineWidth }.getOrDefault(1f)
                 .coerceIn(0.1f, 10f),
             underlineOffset = runCatching { rule.underlineOffset }.getOrDefault(2f)
