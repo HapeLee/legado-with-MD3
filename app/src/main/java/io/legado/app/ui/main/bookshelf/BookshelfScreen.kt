@@ -704,21 +704,23 @@ fun BookshelfScreen(
                                         label = stringResource(
                                             if (searchFirst) R.string.bookshelf_filter else R.string.search
                                         ),
-                                        icon = if (searchFirst) AppIcons.Filter else AppIcons.Search,
+                                        icon = AppIcons.leadingOrNull(
+                                            if (searchFirst) AppIcons.Filter else AppIcons.Search
+                                        ),
                                     )
                                 )
                             }
-                            add(AppAction("add_remote", stringResource(R.string.add_remote_book), icon = Icons.Default.Wifi))
-                            add(AppAction("add_local", stringResource(R.string.book_local), icon = Icons.Default.Save))
-                            add(AppAction("update_toc", stringResource(R.string.update_toc), icon = Icons.Default.Refresh))
-                            add(AppAction("layout", stringResource(R.string.layout_setting), icon = Icons.Default.GridView))
-                            add(AppAction("group_manage", stringResource(R.string.group_manage), icon = Icons.Outlined.ViewCarousel))
-                            add(AppAction("add_url", stringResource(R.string.add_url), icon = Icons.Default.Link))
-                            add(AppAction("selection_mode", stringResource(R.string.selection_mode), icon = Icons.Default.Edit))
-                            add(AppAction("bookshelf_management", stringResource(R.string.bookshelf_management), icon = Icons.Default.Bookmarks))
-                            add(AppAction("export", stringResource(R.string.export_bookshelf), icon = Icons.Default.UploadFile))
-                            add(AppAction("import", stringResource(R.string.import_bookshelf), icon = Icons.Default.CloudDownload))
-                            add(AppAction("log", stringResource(R.string.log), icon = Icons.Default.History))
+                            add(AppAction("add_remote", stringResource(R.string.add_remote_book), icon = AppIcons.leadingOrNull(Icons.Default.Wifi)))
+                            add(AppAction("add_local", stringResource(R.string.book_local), icon = AppIcons.leadingOrNull(Icons.Default.Save)))
+                            add(AppAction("update_toc", stringResource(R.string.update_toc), icon = AppIcons.leadingOrNull(Icons.Default.Refresh)))
+                            add(AppAction("layout", stringResource(R.string.layout_setting), icon = AppIcons.leadingOrNull(Icons.Default.GridView)))
+                            add(AppAction("group_manage", stringResource(R.string.group_manage), icon = AppIcons.leadingOrNull(Icons.Outlined.ViewCarousel)))
+                            add(AppAction("add_url", stringResource(R.string.add_url), icon = AppIcons.leadingOrNull(Icons.Default.Link)))
+                            add(AppAction("selection_mode", stringResource(R.string.selection_mode), icon = AppIcons.leadingOrNull(Icons.Default.Edit)))
+                            add(AppAction("bookshelf_management", stringResource(R.string.bookshelf_management), icon = AppIcons.leadingOrNull(Icons.Default.Bookmarks)))
+                            add(AppAction("export", stringResource(R.string.export_bookshelf), icon = AppIcons.leadingOrNull(Icons.Default.UploadFile)))
+                            add(AppAction("import", stringResource(R.string.import_bookshelf), icon = AppIcons.leadingOrNull(Icons.Default.CloudDownload)))
+                            add(AppAction("log", stringResource(R.string.log), icon = AppIcons.leadingOrNull(Icons.Default.History)))
                         }.toImmutableList()
                         AppActionMenu(
                             groups = persistentListOf(

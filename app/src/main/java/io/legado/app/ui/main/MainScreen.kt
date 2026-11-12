@@ -116,7 +116,6 @@ import top.yukonga.miuix.kmp.glass.GlassNavigationBarDefaults
 import top.yukonga.miuix.kmp.glass.GlassNavigationItem
 import com.itos.coui.backdrop.couiBackdrop
 import com.itos.coui.backdrop.rememberCouiBackdrop
-import com.itos.coui.icons.CouiIcons
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.FloatingBottomBar
@@ -1060,17 +1059,8 @@ private fun NavigationIcon(
             modifier = modifier.size(if (useCouiIcons) 24.dp else 40.dp)
         )
     } else {
-        val icon = if (useCouiIcons) {
-            when (destination) {
-                MainDestination.Home -> CouiIcons.Filled.Grid
-                MainDestination.Bookshelf -> CouiIcons.Filled.BookOpen
-                MainDestination.Explore -> if (selected) CouiIcons.Filled.WandSpark else CouiIcons.Outlined.WandSpark
-                MainDestination.Rss -> if (selected) CouiIcons.Filled.CloudLink else CouiIcons.Outlined.CloudLink
-                MainDestination.My -> CouiIcons.Filled.UserCircle
-            }
-        } else AppIcons.mainDestination(destination, selected)
         AppIcon(
-            icon,
+            AppIcons.mainDestination(destination, selected),
             contentDescription = null,
             modifier = if (useCouiIcons) modifier.size(24.dp) else modifier,
             tint = tint,
