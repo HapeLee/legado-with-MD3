@@ -29,6 +29,7 @@ import io.legado.app.feature.reader.platform.ReaderAndroidPaintFactory
 import io.legado.app.feature.reader.platform.ReaderPerfTrace
 import io.legado.app.help.book.BookContent
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.help.config.ReadStyleResolver
 import io.legado.app.model.ImageProvider
 import io.legado.app.utils.dpToPx
 import kotlinx.coroutines.CancellationException
@@ -127,6 +128,12 @@ object LegacyReaderChapterPaginator {
         contentPaddingBottomPx: Int = 0,
         paginationStyle: ReaderAndroidPaginationStyle,
         highlightRules: List<HighlightRule>,
+        /**
+         * 高亮规则用白天还是夜间那套颜色。口径与阅读背景一致（见 [ReadStyleResolver]）：
+         * 墨水屏是白底，走白天那套。
+         */
+        isNightTheme: Boolean = ReadStyleResolver.currentMode() ==
+            ReadStyleResolver.ReadStyleMode.Night,
         /** 多角色分配渲染选项（默认关闭）。 */
         castOptions: ReaderCastOptions = ReaderCastOptions.Disabled,
         /** 每页成型即回调（对照旧 View `TextChapterLayout` 的 `channel.trySend`）；为空表示只要整章批次。 */
@@ -167,6 +174,7 @@ object LegacyReaderChapterPaginator {
             processes = content.effectiveContentProcesses,
             // 角色自己设的气泡：同一句上它赢过高亮规则的气泡那两栏，其余字段仍归规则
             castBubbles = castOptions.bubbles,
+            isNightTheme = isNightTheme,
         )
         val bodyPaint = paginationStyle.bodyPaint
         val titlePaint = paginationStyle.titlePaint

@@ -65,32 +65,66 @@ data class HighlightRule(
     /** 边框圆角（dp）：0 = 直角。色块填充跟随同一个圆角，色块与描边才对得上。 */
     @ColumnInfo(defaultValue = "4")
     var borderRadius: Float = 4f,
+    /**
+     * 深色模式（夜间）颜色：为 null 表示跟随同名的浅色那一栏。
+     *
+     * 阅读背景本来就是白天/夜间/墨水屏三套（`bgStr` / `bgStrNight` / `bgStrEInk`），
+     * 高亮规则按同一口径给深浅两套颜色：白天与夜间各自取一套，墨水屏是白底、用浅色那一套。
+     * 解析口径统一在 [colorsFor] 里，各渲染点不要再各写一遍 `?: textColor`。
+     */
+    var textColorNight: Int? = null,
+    /** 深色模式背景色：null = 跟随 [bgColor]。 */
+    var bgColorNight: Int? = null,
+    /** 深色模式边框颜色：null = 跟随 [borderColor]。 */
+    var borderColorNight: Int? = null,
+    /** 深色模式下划线/删除线颜色：null = 跟随 [underlineColor]。 */
+    var underlineColorNight: Int? = null,
 ) {
+
+    /**
+     * 一条规则在**指定阅读模式**下真正生效的四栏颜色。
+     *
+     * 深色那一栏为空就跟随浅色：老规则没有夜间色，读回来的颜色与加这个能力之前逐字节一致。
+     * 墨水屏走浅色那一套（白底），不要按系统深浅色误判成夜间。
+     */
+    fun colorsFor(isNightTheme: Boolean): HighlightRuleColors {
+        if (!isNightTheme) {
+            return HighlightRuleColors(
+                textColor = textColor,
+                bgColor = bgColor,
+                borderColor = borderColor,
+                underlineColor = underlineColor,
+            )
+        }
+        return HighlightRuleColors(
+            textColor = textColorNight ?: textColor,
+            bgColor = bgColorNight ?: bgColor,
+            borderColor = borderColorNight ?: borderColor,
+            underlineColor = underlineColorNight ?: underlineColor,
+        )
+    }
 
     fun styleSummary(): String {
         val parts = ArrayList<String>(4)
         parts.add(targetScopeLabel())
-        textColor?.let {
-            parts.add("字色 ${it.toHexColor()}")
-        }
-        bgColor?.let {
-            parts.add("背景色 ${it.toHexColor()}")
-        }
-        borderColor?.let {
-            parts.add("边框 ${it.toHexColor()}")
-        }
+        summaryColor("字色", textColor, textColorNight)?.let(parts::add)
+        summaryColor("背景色", bgColor, bgColorNight)?.let(parts::add)
+        summaryColor("边框", borderColor, borderColorNight)?.let(parts::add)
         if (underlineMode != 0) {
+            val underlineLabel = when (underlineMode) {
+                1 -> "实线下划线"
+                2 -> "虚线下划线"
+                3 -> "波浪下划线"
+                4 -> "双下划线"
+                5 -> "自定义SVG"
+                6 -> "删除线"
+                7 -> "荧光"
+                else -> "下划线"
+            }
             parts.add(
-                when (underlineMode) {
-                    1 -> "实线下划线"
-                    2 -> "虚线下划线"
-                    3 -> "波浪下划线"
-                    4 -> "双下划线"
-                    5 -> "自定义SVG"
-                    6 -> "删除线"
-                    7 -> "荧光"
-                    else -> "下划线"
-                } + underlineColor?.let { " ${it.toHexColor()}" }.orEmpty()
+                underlineLabel + summaryColor("", underlineColor, underlineColorNight)
+                    ?.let { " $it" }
+                    .orEmpty()
             )
         }
         if (!bgImage.isNullOrBlank()) {
@@ -148,6 +182,17 @@ data class HighlightRule(
         return if (start < 0) null else start to start + SAMPLE_HIT_TEXT.length
     }
 
+    /**
+     * 摘要里的颜色：白天色永远显示；夜间色与白天不同才补一段「夜 #...」，
+     * 两者一致时不重复占位。
+     */
+    private fun summaryColor(label: String, day: Int?, night: Int?): String? {
+        if (day == null) return null
+        val nightPart = night?.takeIf { it != day }?.let { " / 夜 ${it.toHexColor()}" }.orEmpty()
+        val prefix = if (label.isEmpty()) "" else "$label "
+        return "$prefix${day.toHexColor()}$nightPart"
+    }
+
     fun copyWithNewId(): HighlightRule {
         return copy(id = Uuid.random().toString())
     }
@@ -176,3 +221,15 @@ data class HighlightRule(
         fun Int.toHexColor(): String = String.format("#%08X", this)
     }
 }
+
+/**
+ * [HighlightRule.colorsFor] 的产物：已按阅读模式解析过的四栏颜色。
+ *
+ * 独立成类型是为了让「深色跟随浅色」这条回落只存在一处；渲染侧拿到的永远是最终值。
+ */
+data class HighlightRuleColors(
+    val textColor: Int?,
+    val bgColor: Int?,
+    val borderColor: Int?,
+    val underlineColor: Int?,
+)

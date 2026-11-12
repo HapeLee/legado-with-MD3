@@ -147,6 +147,9 @@ data class ReadSheetConfigUiState(
     val titleColorNight: Int = 0,
     val textColorDay: Int = 0,
     val textColorNight: Int = 0,
+    /** 预览底色：白天/夜间那两套阅读背景（背景是图时为 0，预览回落到主题表面）。 */
+    val bgColorDay: Int = 0,
+    val bgColorNight: Int = 0,
     val textShadow: Boolean = false,
     val textShadowColor: Int = 0,
     val shadowRadius: Float = 0f,

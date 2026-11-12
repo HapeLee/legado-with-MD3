@@ -136,7 +136,7 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 134,
+    version = 135,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
@@ -283,6 +283,9 @@ val appDb by lazy {
         AutoMigration(from = 132, to = 133),
         // 旧下载记录只有成功文件清单，无法从中判断是否整章完成。
         AutoMigration(from = 133, to = 134),
+        // highlight_rules 新增四列夜间颜色：可空（null = 跟随白天那一栏），老规则读回来
+        // 四列都是 NULL，解析口径见 HighlightRule.colorsFor。
+        AutoMigration(from = 134, to = 135),
     ]
 )
 abstract class AppDatabase : RoomDatabase() {

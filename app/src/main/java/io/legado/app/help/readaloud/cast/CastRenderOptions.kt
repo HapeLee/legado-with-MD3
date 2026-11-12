@@ -7,6 +7,7 @@ import io.legado.app.feature.reader.core.layout.ReaderCastOptions
 import io.legado.app.feature.reader.core.layout.ReaderCastProfile
 import io.legado.app.feature.reader.legacy.LegacyReaderStyleRangeMapper
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.help.config.ReadStyleResolver
 import io.legado.app.ui.config.readConfig.ReadConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -68,6 +69,10 @@ object CastRenderOptions {
             CastCapsuleStyleStore.preload(CastCapsuleStyleStore.current(type))
         }
         return withContext(Dispatchers.IO) {
+            // 气泡与高亮规则同构（存的也是一条规则 JSON），深浅两套颜色的取法必须与正文同一口径，
+            // 否则同一句台词的气泡字色会和压在它下面的规则字色分家。
+            val isNightTheme = ReadStyleResolver.currentMode() ==
+                ReadStyleResolver.ReadStyleMode.Night
             ReaderCastOptions(
                 enabled = true,
                 profiles = profiles.associate {
@@ -89,7 +94,9 @@ object CastRenderOptions {
                     .mapNotNull { character ->
                         character.bubbleRule()
                             ?.takeIf { it.appliesToCurrentConfig() }
-                            ?.let { character.name to LegacyReaderStyleRangeMapper.styleOf(it) }
+                            ?.let {
+                                character.name to LegacyReaderStyleRangeMapper.styleOf(it, isNightTheme)
+                            }
                     }
                     .toMap(),
             )

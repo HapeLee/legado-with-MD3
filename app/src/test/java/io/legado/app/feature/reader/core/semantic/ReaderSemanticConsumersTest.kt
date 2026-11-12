@@ -42,11 +42,23 @@ class ReaderSemanticConsumersTest {
             val source = ReaderChapterSourceParser.parse(0, "A&😀B", listOf(processed.text), true, true, AndroidReaderHtmlSemanticTextResolver)
             assertEquals("A&😀B\n\n", source.semanticContent)
             assertTrue(ReaderSemanticContract.validate(source).isEmpty())
-            val ranges = LegacyReaderStyleRangeMapper.map(source, emptyList(), processed.effectiveProcesses)
+            val ranges = LegacyReaderStyleRangeMapper.map(
+                source = source,
+                rules = emptyList(),
+                processes = processed.effectiveProcesses,
+                isNightTheme = false,
+            )
             assertEquals(0, ranges.single().start)
             assertEquals(5, ranges.single().endExclusive)
             val missing = process.copy(anchorJson = GSON.toJson(anchor.copy(selectedText = "missing")))
-            assertTrue(LegacyReaderStyleRangeMapper.map(source, emptyList(), listOf(missing)).isEmpty())
+            assertTrue(
+                LegacyReaderStyleRangeMapper.map(
+                    source = source,
+                    rules = emptyList(),
+                    processes = listOf(missing),
+                    isNightTheme = false,
+                ).isEmpty()
+            )
             val search = ReaderSearchMatcher.find(source.semanticContent, "A&😀B", ReaderSearchRequest(6, 5, 1, false), "A&😀B")!!
             assertFalse(search.isTitle)
             assertEquals(0, search.start)
