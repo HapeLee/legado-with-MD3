@@ -3,10 +3,13 @@ package io.legado.app.ui.widget.components.coui
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import com.itos.coui.effect.LocalCouiContourGlowEnabled
 import com.itos.coui.floatingactionbutton.CouiFabDefaults
@@ -26,9 +29,12 @@ internal fun AppCouiFloatingActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     containerColor: Color,
-    contentColor: Color,
     content: @Composable () -> Unit,
 ) {
+    // 原生 Fab 提供 COUI 的内容色；项目的 M3 Icon/Text 也需要相同的内容色。
+    val fabContent: @Composable () -> Unit = {
+        CompositionLocalProvider(LocalContentColor provides Color.White, content = content)
+    }
     val backdrop = LocalCouiPageBackdrop.current
     // 与标签行共用同一个渲染器工厂，材质不可用时返回 null 而不是抛给页面。
     val renderer = if (backdrop == null) null else rememberCouiCapsuleRenderer()
@@ -43,7 +49,8 @@ internal fun AppCouiFloatingActionButton(
             CouiFabDefaults.shadow(containerColor, density, contourGlow)
         }
         Fab(
-            modifier = modifier,
+            // 外层 M3 显隐修饰器会缓存内容录制；独立图层让原生几何可自行失效和重录。
+            modifier = modifier.graphicsLayer(),
             backdrop = backdrop,
             renderer = renderer,
             onClick = onClick,
@@ -51,8 +58,8 @@ internal fun AppCouiFloatingActionButton(
             shape = CouiFabDefaults.circleShape,
             material = material,
             shadow = shadow,
-            contentColor = contentColor,
-            content = content,
+            contentColor = Color.White,
+            content = fabContent,
         )
     } else {
         FloatingActionButton(
@@ -60,8 +67,8 @@ internal fun AppCouiFloatingActionButton(
             modifier = modifier,
             shape = CouiFabDefaults.circleShape,
             containerColor = containerColor,
-            contentColor = contentColor,
-            content = content,
+            contentColor = Color.White,
+            content = fabContent,
         )
     }
 }
