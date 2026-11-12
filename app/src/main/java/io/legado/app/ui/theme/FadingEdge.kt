@@ -66,17 +66,21 @@ fun Modifier.fadingEdge(
     listState: LazyListState,
     gradientWidth: Dp = 24.dp
 ): Modifier {
-    val leftAlpha = animateFloatAsState(
+    val startAlpha = animateFloatAsState(
         targetValue = if (listState.canScrollBackward) 1f else 0f,
         animationSpec = tween(300),
-        label = "LeftFadeAlpha"
+        label = "StartFadeAlpha"
     )
-    val rightAlpha = animateFloatAsState(
+    val endAlpha = animateFloatAsState(
         targetValue = if (listState.canScrollForward) 1f else 0f,
         animationSpec = tween(300),
-        label = "RightFadeAlpha"
+        label = "EndFadeAlpha"
     )
-    return fadingEdge(leftAlpha, rightAlpha, gradientWidth)
+    return if (LocalLayoutDirection.current == LayoutDirection.Rtl) {
+        fadingEdge(endAlpha, startAlpha, gradientWidth)
+    } else {
+        fadingEdge(startAlpha, endAlpha, gradientWidth)
+    }
 }
 
 /**

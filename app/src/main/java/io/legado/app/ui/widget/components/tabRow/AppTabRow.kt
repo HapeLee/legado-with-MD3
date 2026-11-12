@@ -136,13 +136,15 @@ private fun AppTabRowContent(
         }
         ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             if (isScrollable) {
+                val scrollState = rememberScrollState()
                 PrimaryScrollableTabRow(
                     selectedTabIndex = selectedTabIndex,
+                    scrollState = scrollState,
                     edgePadding = 0.dp,
                     divider = { },
                     containerColor = Color.Transparent,
                     minTabWidth = 0.dp,
-                    modifier = modifier
+                    modifier = modifier.fadingEdge(scrollState, gradientWidth = 16.dp)
                 ) {
                     tabTitles.forEachIndexed { index, title ->
                         AppTab(

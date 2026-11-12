@@ -35,6 +35,7 @@ import com.itos.coui.effect.couiButtonFeedback
 import com.itos.coui.shape.CouiCapsuleShape
 import com.itos.coui.theme.CouiTheme
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.widget.components.coui.LocalAppCouiTopBarHost
 import io.legado.app.ui.widget.components.coui.rememberCouiCapsuleRenderer
 import io.legado.app.ui.widget.components.text.AppText
@@ -67,7 +68,7 @@ internal fun AppCouiTabRow(
             if (!selectedVisible) listState.animateScrollToItem(selectedIndex)
         }
         LazyRow(
-            modifier = rowModifier,
+            modifier = rowModifier.fadingEdge(listState, gradientWidth = 16.dp),
             state = listState,
             contentPadding = contentPadding,
             horizontalArrangement = spacing,

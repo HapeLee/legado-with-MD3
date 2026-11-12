@@ -7,6 +7,9 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +37,43 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class FadingEdgeTest {
     @get:Rule val compose = createComposeRule()
+
+    @Test
+    fun lazyRowFadesOnlyOverflowAndTracksRtl() {
+        val direction = mutableStateOf(LayoutDirection.Ltr)
+        val itemCount = mutableStateOf(3)
+        val itemWidth = mutableStateOf(100.dp)
+        lateinit var list: LazyListState
+        compose.setContent {
+            CompositionLocalProvider(LocalLayoutDirection provides direction.value) {
+                list = rememberLazyListState()
+                Box(Modifier.width(120.dp).background(Color.White).testTag("viewport")) {
+                    LazyRow(Modifier.width(120.dp).fadingEdge(list, 16.dp), state = list) {
+                        items(itemCount.value) {
+                            Box(Modifier.width(itemWidth.value).height(40.dp).background(Color.Red))
+                        }
+                    }
+                }
+            }
+        }
+        fun assertEdges(leftFaded: Boolean, rightFaded: Boolean) {
+            val pixels = compose.onNodeWithTag("viewport").captureToImage().toPixelMap()
+            val left = pixels[1, pixels.height / 2].green
+            val right = pixels[pixels.width - 2, pixels.height / 2].green
+            assertTrue("Left edge: $left", if (leftFaded) left > 0.8f else left < 0.1f)
+            assertTrue("Right edge: $right", if (rightFaded) right > 0.8f else right < 0.1f)
+        }
+        for (layoutDirection in listOf(LayoutDirection.Ltr, LayoutDirection.Rtl)) {
+            compose.runOnIdle { direction.value = layoutDirection }
+            runBlocking { list.scrollToItem(0) }
+            assertEdges(layoutDirection == LayoutDirection.Rtl, layoutDirection == LayoutDirection.Ltr)
+            runBlocking { list.scrollToItem(2) }
+            assertEdges(layoutDirection == LayoutDirection.Ltr, layoutDirection == LayoutDirection.Rtl)
+        }
+        // Both edges remain opaque when the contents exactly fit the viewport.
+        compose.runOnIdle { itemCount.value = 1; itemWidth.value = 120.dp }
+        assertEdges(leftFaded = false, rightFaded = false)
+    }
 
     @Test
     fun scrollFadeTracksThePhysicalOverflowEdgeInLtrAndRtl() {
