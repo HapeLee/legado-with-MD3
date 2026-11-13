@@ -22,6 +22,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
+import com.itos.coui.dialog.CouiDialogAction
+import com.itos.coui.dialog.CouiDialogActionStyle
+import com.itos.coui.dialog.CouiDialogDefaults
+import com.itos.coui.dialog.CouiDialogPlacement
+import com.itos.coui.dialog.Dialog as CouiDialog
+import com.itos.coui.menu.rememberCouiWindowBackdrop
+import com.itos.coui.theme.CouiTheme
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
@@ -60,6 +68,8 @@ fun AppAlertDialog(
     confirmEnabled: Boolean = true,
     dismissText: String = "取消",
     onDismiss: (() -> Unit)? = null,
+    /** 仅 COUI 引擎：使用弹窗材质。需要 API 33+ 与页面窗口背景源，缺少时退回不透明表面。 */
+    couiMaterial: Boolean = true,
 ) {
     when (composeEngine) {
         ComposeEngine.Miuix -> {
@@ -195,7 +205,7 @@ fun AppAlertDialog(
                 }
             }
         }
-        ComposeEngine.Material, ComposeEngine.Coui -> {
+        ComposeEngine.Material -> {
             if (show) {
                 AlertDialog(
                     onDismissRequest = onDismissRequest,
@@ -251,6 +261,64 @@ fun AppAlertDialog(
                 )
             }
         }
+        ComposeEngine.Coui -> {
+            val windowBackdrop = rememberCouiWindowBackdrop()
+            // 材质实时采样页面窗口；缺源或低于 API 33 时退回不透明表面，不让库的 check 抛错。
+            val useMaterial = couiMaterial &&
+                windowBackdrop != null &&
+                CouiDialogDefaults.isMaterialSupported()
+            val dark = CouiTheme.isDark
+            CouiDialog(
+                modifier = modifier,
+                onDismissRequest = onDismissRequest,
+                title = title,
+                message = text,
+                dark = dark,
+                confirmAction = onConfirm?.let {
+                    CouiDialogAction(
+                        text = confirmText,
+                        onClick = it,
+                        enabled = confirmEnabled,
+                        style = CouiDialogActionStyle.Primary,
+                        colors = CouiDialogDefaults.primaryActionColors(CouiTheme.colorScheme.accent),
+                    )
+                },
+                dismissAction = onDismiss?.let { CouiDialogAction(text = dismissText, onClick = it) },
+                placement = CouiDialogPlacement.Bottom,
+                material = if (useMaterial) CouiDialogDefaults.material(dark) else null,
+                backdrop = windowBackdrop.takeIf { useMaterial },
+                properties = DialogProperties(
+                    usePlatformDefaultWidth = false,
+                    windowTitle = title.orEmpty(),
+                ),
+                visible = show,
+            ) {
+                if (content != null) {
+                    ProvideAppDensity {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    start = CouiDialogDefaults.contentPadding,
+                                    end = CouiDialogDefaults.contentPadding,
+                                    top = if (title.isNullOrEmpty() && text.isNullOrEmpty()) {
+                                        CouiDialogDefaults.contentPadding
+                                    } else {
+                                        16.dp
+                                    },
+                                    bottom = if (onConfirm == null && onDismiss == null) {
+                                        CouiDialogDefaults.messageBottom
+                                    } else {
+                                        0.dp
+                                    },
+                                )
+                        ) {
+                            content()
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -271,7 +339,8 @@ fun <T> AppAlertDialog(
     dismissText: String = "取消",
     onDismiss: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
-    content: (@Composable (T) -> Unit)? = null
+    content: (@Composable (T) -> Unit)? = null,
+    couiMaterial: Boolean = true,
 ) {
     var cachedData by remember { mutableStateOf(data) }
 
@@ -299,7 +368,8 @@ fun <T> AppAlertDialog(
             confirmEnabled = confirmEnabled,
             dismissText = dismissText,
             onDismiss = onDismiss,
-            content = content?.let { { it(currentData) } }
+            content = content?.let { { it(currentData) } },
+            couiMaterial = couiMaterial,
         )
     }
 }
