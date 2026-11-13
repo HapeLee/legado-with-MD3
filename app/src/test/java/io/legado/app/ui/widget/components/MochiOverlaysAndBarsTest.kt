@@ -855,8 +855,10 @@ class MochiOverlaysAndBarsTest {
                 )
             }
         }
-        compose.onNode(hasScrollToIndexAction() and hasAnyAncestor(hasTestTag("overflow-tabs")))
-            .performScrollToIndex(7)
+        // HyperOS 4 玻璃标签栏用 horizontalScroll 承载溢出：语义树只暴露 ScrollBy，
+        // 没有 ScrollToIndex/IndexForKey，因此按内容滚动而不是按索引滚动。
+        compose.onNode(hasScrollAction() and hasAnyAncestor(hasTestTag("overflow-tabs")))
+            .performScrollToNode(hasText("Group 8"))
         compose.onNodeWithText("Group 8").performTouchInput { click() }
         compose.runOnIdle { assertEquals(7, selected) }
     }
