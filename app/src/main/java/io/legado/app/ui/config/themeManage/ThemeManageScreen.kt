@@ -171,6 +171,7 @@ fun ThemeManageScreen(
                 value = (state.dialog as? ThemeManageDialog.Save)?.name.orEmpty(),
                 onValueChange = { onIntent(ThemeManageIntent.UpdateSaveName(it)) },
                 placeholder = { AppText(text = stringResource(R.string.theme_manage_name_hint)) },
+                placeholderText = stringResource(R.string.theme_manage_name_hint),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )

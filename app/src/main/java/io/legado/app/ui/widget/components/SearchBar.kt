@@ -144,6 +144,7 @@ fun SearchBar(
                         .fillMaxWidth()
                         .focusRequester(focusRequester),
                     placeholder = { AppText(resolvedPlaceholder) },
+                    placeholderText = resolvedPlaceholder,
                     leadingIcon = leadingIcon,
                     trailingIcon = trailingIcon,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),

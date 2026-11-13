@@ -185,6 +185,7 @@ fun AiTextRewriteSheet(
                             placeholder = {
                                 AppText(stringResource(R.string.ai_rewrite_temporary_instruction_hint))
                             },
+                            placeholderText = stringResource(R.string.ai_rewrite_temporary_instruction_hint),
                             minLines = 2,
                             maxLines = 5,
                         )

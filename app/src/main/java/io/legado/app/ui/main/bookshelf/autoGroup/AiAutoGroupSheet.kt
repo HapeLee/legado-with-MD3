@@ -291,6 +291,7 @@ private fun AutoGroupPreflightContent(
                     color = LegadoTheme.colorScheme.onSurfaceVariant,
                 )
             },
+            placeholderText = stringResource(R.string.ai_auto_group_instruction_hint),
         )
 
         state.error?.let { error ->

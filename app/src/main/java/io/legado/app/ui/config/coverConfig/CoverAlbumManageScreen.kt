@@ -441,6 +441,7 @@ private fun CoverAlbumNameDialog(
                 value = name,
                 onValueChange = { name = it },
                 placeholder = { AppText(stringResource(R.string.cover_album_name)) },
+                placeholderText = stringResource(R.string.cover_album_name),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )

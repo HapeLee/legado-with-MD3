@@ -346,6 +346,7 @@ fun MarkingSelectionMenu(
                                     .fillMaxWidth()
                                     .heightIn(min = 88.dp),
                                 placeholder = { AppText(stringResource(R.string.bookmark_mark_note_hint)) },
+                                placeholderText = stringResource(R.string.bookmark_mark_note_hint),
                             )
 
                             if (state.editing != null) {

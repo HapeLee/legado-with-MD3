@@ -264,6 +264,7 @@ fun ReplaceEditScreen(
                     onValueChange = { onIntent(ReplaceEditIntent.OnPatternChange(it)) },
                     label = stringResource(R.string.match_pattern),
                     placeholder = { AppText(stringResource(R.string.input_regex_or_keyword)) },
+                    placeholderText = stringResource(R.string.input_regex_or_keyword),
                     backgroundColor = LegadoTheme.colorScheme.surfaceInput,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -277,6 +278,7 @@ fun ReplaceEditScreen(
                     onValueChange = { onIntent(ReplaceEditIntent.OnReplacementChange(it)) },
                     label = stringResource(R.string.replace_with),
                     placeholder = { AppText(stringResource(R.string.input_replacement_or_group)) },
+                    placeholderText = stringResource(R.string.input_replacement_or_group),
                     backgroundColor = LegadoTheme.colorScheme.surfaceInput,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -322,6 +324,7 @@ fun ReplaceEditScreen(
                     onValueChange = { onIntent(ReplaceEditIntent.OnScopeChange(it)) },
                     label = stringResource(R.string.specific_scope),
                     placeholder = { AppText(stringResource(R.string.scope_hint)) },
+                    placeholderText = stringResource(R.string.scope_hint),
                     backgroundColor = LegadoTheme.colorScheme.surfaceInput,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -335,6 +338,7 @@ fun ReplaceEditScreen(
                     onValueChange = { onIntent(ReplaceEditIntent.OnExcludeScopeChange(it)) },
                     label = stringResource(R.string.exclude_scope),
                     placeholder = { AppText(stringResource(R.string.exclude_scope_hint)) },
+                    placeholderText = stringResource(R.string.exclude_scope_hint),
                     backgroundColor = LegadoTheme.colorScheme.surfaceInput,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -348,6 +352,7 @@ fun ReplaceEditScreen(
                     onValueChange = { onIntent(ReplaceEditIntent.OnTimeoutChange(it)) },
                     label = stringResource(R.string.timeout_ms),
                     placeholder = { AppText("3000") },
+                    placeholderText = "3000",
                     backgroundColor = LegadoTheme.colorScheme.surfaceInput,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -382,6 +387,7 @@ fun GroupSelector(
             label = stringResource(R.string.group),
             backgroundColor = backgroundColor,
             placeholder = { AppText("默认") },
+            placeholderText = "默认",
             modifier = Modifier.weight(1f)
         )
         // 下拉触发按钮移到输入框旁：自由输入能力不变，建议列表交给四引擎原生单选入口。

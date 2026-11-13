@@ -452,6 +452,7 @@ fun ExploreShowScreen(
                         jumpPageInput = input.filter(Char::isDigit).take(4)
                     },
                     placeholder = { AppText(stringResource(R.string.explore_jump_page_hint)) },
+                    placeholderText = stringResource(R.string.explore_jump_page_hint),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
             },

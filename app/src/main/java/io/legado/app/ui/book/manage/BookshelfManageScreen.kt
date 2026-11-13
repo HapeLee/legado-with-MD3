@@ -1234,7 +1234,8 @@ private fun BookshelfManageScreen(
                     onValueChange = { exportFileNameInput = it },
                     modifier = Modifier.fillMaxWidth(),
                     label = exportFileNameText,
-                    placeholder = { AppText(exportFileNameHintText) }
+                    placeholder = { AppText(exportFileNameHintText) },
+                    placeholderText = exportFileNameHintText,
                 )
             }
         },
@@ -1325,6 +1326,7 @@ private fun BookshelfManageScreen(
                         modifier = Modifier.fillMaxWidth(),
                         label = exportChapterIndexText,
                         placeholder = { AppText("1-5,8,10-18") },
+                        placeholderText = "1-5,8,10-18",
                         supportingText = {
                             customEpubScopeError?.let { msg ->
                                 AppText(text = msg)
@@ -1343,7 +1345,8 @@ private fun BookshelfManageScreen(
                         onValueChange = { customEpisodeExportNameInput = it },
                         modifier = Modifier.fillMaxWidth(),
                         label = exportFileNameText,
-                        placeholder = { AppText(exportFileNameHintText) }
+                        placeholder = { AppText(exportFileNameHintText) },
+                    placeholderText = exportFileNameHintText,
                     )
                     if (episodeTemplateValid) {
                         AppText(

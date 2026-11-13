@@ -261,6 +261,7 @@ fun MarkingSheet(
                 placeholder = {
                     AppText(stringResource(R.string.bookmark_mark_note_hint))
                 },
+                placeholderText = stringResource(R.string.bookmark_mark_note_hint),
             )
         }
     }
