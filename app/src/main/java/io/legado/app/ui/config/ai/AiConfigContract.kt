@@ -45,8 +45,10 @@ data class AiModelListItemUi(
 sealed interface AiConfigIntent
 {
     data class SetDefaultModel(val modelProfileId: String) : AiConfigIntent
+    data class SaveSkill(val skill: AiSkillConfig) : AiConfigIntent
 }
 
 sealed interface AiConfigEffect {
     data class ShowMessage(val message: String) : AiConfigEffect
+    data class ShowSkillSaved(val message: String) : AiConfigEffect
 }
