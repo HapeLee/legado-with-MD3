@@ -1477,8 +1477,8 @@
     <string name="show_book_count">顯示分組書籍數量</string>
     <string name="dynamic_colors_summary">使用基於桌布的主題顏色</string>
     <string name="input_value_range">輸入數值（%1$d-%2$d）</string>
-    <string name="miuix_monet">Miuix Monet</string>
-    <string name="miuix_monet_summary">為 Miuix 使用 Monet 演算法生成配色。目前主題為動態主題且系統為 Android 12 或以上時，會優先使用系統取色；否則使用下方種子色。</string>
+    <string name="miuix_monet">自訂主題色</string>
+    <string name="miuix_monet_summary">為主題風格使用自訂配色。目前主題為動態主題且系統為 Android 12 或以上時，會優先使用系統取色；否則使用下方種子色。</string>
     <string name="bookshelf_total_count">共%1$d本</string>
     <string name="bookshelf_selected_count">已選%1$d本</string>
     <string name="bookshelf_edit_subtitle">%1$s · %2$s</string>
@@ -1830,7 +1830,6 @@
     <string name="complete_required_information">填寫所有必填資訊</string>
     <string name="compose_engine">主題樣式</string>
     <string name="coui_theme_requires_android_14">COUI（需要 Android 14 或更新版本）</string>
-    <string name="coui_default_palette">COUI 預設</string>
     <string name="compose_related">Compose 相關</string>
     <string name="blur_effects">模糊效果</string>
     <string name="top_bottom_bar_settings">頂欄與底欄</string>
@@ -2143,10 +2142,6 @@
     <string name="text_animation_subtle">輕柔</string>
     <string name="text_animation_standard">標準</string>
     <string name="text_animation_strong">明顯</string>
-    <string name="text_animation_preview">文字動畫示例</string>
-    <string name="text_animation_preview_summary">點按切換示例文字</string>
-    <string name="text_animation_example_reading">正在閱讀</string>
-    <string name="text_animation_example_finished">已讀完</string>
     <string name="predictive_back_summary">啟用系統預測性返回手勢</string>
     <string name="preferred_contrast">偏好對比度</string>
     <string name="preview_effect">預覽效果</string>

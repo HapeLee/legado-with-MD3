@@ -10,17 +10,21 @@
 > 知识 / 角色详情纯单选 3 处、翻页动画 / 九宫格点击区域 compact 单选 2 处、
 > 导入面板「配置页 / 列表页」切换 2 处、替换规则顶栏 + 直链上传规则菜单 2 处、
 > CloudTts 引擎页顶栏命令菜单 1 处、RSS 排序页主菜单 2 处、详情页顶栏「更多」1 处，
-> 累计 50 处（第三十轮口径；第三十一～五十轮另见 §9，业务调用点已由 20 降至 0）。
+> 累计 50 处（第三十轮口径；第三十一～五十一轮另见 §9，业务调用点已由 20 降至 0）。
 > 2026-11-11 用户确认「分段线可以不保留文字」，四引擎分段线语义已统一。
-> **截至 2026-11-13 第五十轮，阶段 C 收尾：源码实测 `RoundDropdownMenu(` 4 处 =
-> 组件定义 1 + 三入口内部 3，业务调用点 0 处**（第四十五～五十轮只做回归修复、
-> 设置项组件配色统一、编辑页布局调整、撤销库侧兜底与文档清理，计数不变）。
+> **截至 2026-11-13 第五十一轮，阶段 C 收尾：源码实测 `RoundDropdownMenu(` 4 处 =
+> 组件定义 1 + 三入口内部 3，业务调用点 0 处**（第四十五～五十一轮只做回归修复、
+> 设置项组件配色统一、编辑页布局调整、撤销库侧兜底、COUI 主题设置对齐与文档清理，
+> 计数不变）。
 > 2026-11-13 用户真机复核：受控玻璃锚点回归（弹层落点 / 关闭崩溃）已通过；
 > 同日双变体 lint 回到 0 error（第五十轮修 COUI 胶囊 `NewApi`）。
 > 业务侧迁移已完成，剩余是迁移后四引擎外观 / TalkBack / lint 复核与 §9 下一阶段的其余项。
 > 历史计数（55 / 51 / 38 / 36 / 34 / 33 / 31 / 28 / 27 / 26 处）见 §9 各轮记录，
 > 以本节当前值 + 源码为准。
-> 用户另实测发现部分按钮（搜索按钮、主题风格设置项）与同页其它按钮样式不一致。
+> 用户另实测发现部分按钮（搜索按钮、主题风格设置项）与同页其它按钮样式不一致；
+> **主题风格设置项已于第五十一轮统一到 `DropdownListSettingItem`**（与导航动画同组件）；
+> **主题模式列表首项已改回「动态取色」并恢复系统动态取色**（均见 §9）；
+> 搜索按钮仍待真机复核。
 > **第四轮（用户侧）已交付 `0.2.1-menu3`**：Mochi 走 anchor-only「点击松手才弹」，
 > 大圆库按钮消失，顶栏 MoreVert 穿上项目 `MochiBarIconButton`，真机效果已调整完成；
 > 详见 §9 实施记录与本文下一阶段第 1 条（已归档）。
@@ -1477,6 +1481,99 @@ enum class AppMenuAnchor { Row, Icon }   // 决定 Miuix 用 Preference 还是 I
    ⚠️ 环境：双变体 lint 并行跑时 `lintAnalyzeAppComicDebug` 出现过一次
    `OutOfMemoryError`（Kotlin UAST 分析），改成分变体单独跑即通过；属构建内存问题，
    不是代码问题，CI 若并行需留足内存。
+   **第五十一轮（COUI 主题设置对齐 Miuix + 主题风格项形态统一 + 首项恢复动态取色，
+   计数仍 4/0）**：用户要求 COUI 的主题风格相关设置与 Miuix 一致、去掉主题模式
+   区域顶部的示例组件，并调查「主题风格」设置项为何与同页其它菜单设置项形态不同。
+   用户定案：关闭「自定义主题色」时**与 Miuix 一致隐藏**配色列表（开启时显示 14 项）；
+   「主题风格」项与同页下拉项统一到 `DropdownListSettingItem`。随后用户复核首项并追加
+   定案：**首项恒为「动态取色」，名字与行为都改** —— 开启开关后必须真正走系统动态
+   取色，关闭开关时才由 COUI 内置预设接管。
+   - 调查结论：三条口径分别是 `R.string.theme`（配色 / 主题模式）、
+     `R.string.theme_mode`（深浅模式）、`R.string.compose_engine`（主题风格）。
+     同页下拉项（如「导航动画」）走 `DropdownListSettingItem` →
+     `SettingItem(choiceOptions)`；主题风格项因第一轮 P0-0 阻塞（Mochi 浮层挂在
+     DecorView，切换根主题必须等浮层收起再提交）需要 `commitAfterDismiss = true`，
+     当时包装器没有该参数，于是直接拿顶层 `AppChoiceDropdown` 包一个
+     `SettingItem(interactive = false)` 纯展示 trigger，绕过了设置项组件族 ——
+     这是形态不一致的来源，**不是引擎差异**。
+   - 二次复核（用户以「导航动画是正常的设置项」举例）：改成直接调
+     `SettingItem(choiceOptions)` 仍不一致 —— `SwitchSettingItem` /
+     `ClickableSettingItem` / `DropdownListSettingItem` 这些**包装器**都会先画
+     `SplicedColumnDivider()`，底层 `SettingItem` 不会；且 Miuix 下包装器走
+     `GlassDropdownPreference` / `OverlaySpinnerPreference` 库原生行，自绘
+     `SettingItem` 不是。故最终改为走 `DropdownListSettingItem`，并把
+     `commitAfterDismiss` 加到包装器上透传。
+   - 首项根因：`themes_item` 首项本就是「动态取色」（`appTheme == "0"` →
+     `AppThemeMode.Dynamic`），但 `ThemeConfigScreen` 两处把 COUI 下的 `value == "0"`
+     改名成 `R.string.coui_default_palette`，`AppTheme.kt` 的
+     `useCouiDefaultColors = Coui && Dynamic` 与 `ThemeEngine.getColorScheme` 的
+     COUI + Dynamic 特例又把它实际替换成 `CouiPresets` 固定色板、`useDynamicColor`
+     置 false —— 不只是名字，选中拿到的也不是系统动态取色。
+   - 改动（`ThemeConfigScreen.kt`）：新增 `isCouiEngine` 与
+     `useBuiltInPaletteEngine = isMiuixEngine || isCouiEngine`，统一门控 `ThemeCard`
+     预览卡（COUI 不再显示）、「自定义主题色」开关（COUI 可见）、14 项配色列表
+     （关闭开关时隐藏）与 `appTheme == "12"` 的自定义颜色入口；下拉列表与
+     `ThemeColorSelector` 都去掉首项替换，直接用 `visibleThemes.map { it.first }`
+     和 `label`，4 份 `values*/strings.xml` 的 `coui_default_palette` 一并删除。
+   - 改动（`ThemeEngine.kt` / `AppTheme.kt`）：`getColorScheme` 新增
+     `useBuiltInPalette: Boolean = false`，COUI 预设分支由它控制；`AppTheme` 把
+     `useCouiDefaultColors` 改成 `useBuiltInPalette = Coui && !themeSettings.useMiuixMonet
+     && appThemeMode == Dynamic`，同时用于 `useDynamicColor`、两处 `remember` 缓存键、
+     `ProvideCouiTheme(useDefaultColors = …)` 与 `ThemeEngine` 入参。**保留
+     `appThemeMode == Dynamic` 这个限定**：既有
+     `AppThemeEngineTest.couiDefaultUsesNativeColorsAndKeepsExplicitPaletteOverrides`
+     要求 `appTheme == "12"` 的显式配色覆盖仍能穿透 COUI 预设。
+     `ProvideColorSchemeOverride`（书籍详情按封面取色等局部覆盖）仍用单参数版
+     `ProvideCouiTheme`，刻意尊重传入的 colorScheme，本次未改。
+   - 改动（`SettingItem.kt` / `ListSettingItem.kt`）：`SettingItem` 新增
+     `choiceCommitAfterDismiss: Boolean = false` 并透传给受控
+     `AppChoiceDropdown(commitAfterDismiss = …)`；`DropdownListSettingItem` 新增
+     `commitAfterDismiss: Boolean = false`，在 Material / Mochi / COUI 分支透传成
+     `choiceCommitAfterDismiss`。两个默认值让全仓 30+ 既有调用方保持不变；
+     Miuix 原生 spinner / 无 popup host 的 tiny 分支不涉及 DecorView 浮层，忽略该参数。
+     主题风格项改用 `DropdownListSettingItem(displayEntries = entries,
+     entryValues = values, unavailableValues = …, commitAfterDismiss = true)`，
+     删掉手工构造的 `AppChoiceOption` 列表、`SettingItem` 直调与两个 import；
+     低于 Android 14 的 COUI 不可用档位与「收起后再切根主题」行为都保留。
+   - 用户复核后决定**直接删除「文字动画示例」行**（二次复核查出的 Miuix 双重
+     内边距就来自它绕过包装器、直调底层 `SettingItem`：`SettingCard` 的
+     `BasicComponent` 默认 `insideMargin = 16.dp` 再套一层 M3 `ListItem` 内边距，
+     而同页其它行走 `SwitchPreference` / `ArrowPreference` /
+     `GlassDropdownPreference` 只有一层）：删掉 `TextAnimationSettings` 里的预览行、
+     `ExtendedSettingsSearchTest` 的示例点击断言与 4 份 `values*/strings.xml`
+     各 4 条专属文案，保留「文字动画等级」下拉项与 `SettingsSearchCatalog` 的
+     `theme.text_animation_level` 条目；顺带清掉 `widthIn` / `mutableStateOf` /
+     `rememberSaveable` / `SplicedColumnDivider` / `SettingItem` /
+     `AnimatedTextLine` 六个无用 import。契约新增 `textAnimationPreviewRowIsRemoved`。
+   - 文案：`miuix_monet` / `miuix_monet_summary` 在 4 份 `values*/strings.xml`
+     通用化（「自定义主题色」/「为主题风格使用自定义配色…」），不再点名 Miuix，
+     否则 COUI 开关下会显示「为 Miuix…」。资源 key 不变，不动调用点。
+   - 契约：`ThemeConfigCouiThemeContractTest` 共 9 例（两引擎共用内置配色门控、
+     首项保持动态取色且不再有 COUI 默认替换、主题风格项与导航动画同走
+     `DropdownListSettingItem` 且不再直调底层 `SettingItem`、`SettingItem` 与
+     `DropdownListSettingItem` 两级透传 `commitAfterDismiss`、包装器仍画拼接分隔线、
+     示例行已删除且等级项保留 / 四份专属文案清零、四份文案不再点名 Miuix，
+     以及内置配色开关口径 / 缓存键 / 动态取色路径）；
+     `AppThemeEngineTest` 新增 `couiCustomColorSwitchRestoresDynamicFirstTheme`
+     共 12 例，实测开启开关后 `LegadoTheme.useDynamicColor == true` 且
+     `MaterialTheme.colorScheme.primary` / `CouiTheme.colorScheme` 不再是
+     `CouiPresets.Light`，关掉开关后回到预设（同时验证缓存键生效）；
+     `ExtendedSettingsSearchTest` 删掉示例点击断言后 12 例全绿。
+   验证：双变体 Kotlin 编译 + `testAppCoreDebugUnitTest` 定向 `themeConfig.*` /
+   `AppThemeEngineTest` / `menu.*` / `feature.settings.search.*` +
+   `assembleAppCoreDebug` 同批 `BUILD SUCCESSFUL`（3m43s）；契约 XML
+   `tests="9" failures="0"`、`AppThemeEngineTest` `tests="12" failures="0"`、
+   `ExtendedSettingsSearchTest` `tests="12" failures="0"`；
+   `verifyConfigArchitecture` 随测试任务通过；`git diff --check` 干净、
+   改动文件 IDE 0 诊断。上一轮 `lintAppCoreDebug` 已
+   `0 error / 32 warnings`，本轮未重跑 lint / 全量单测 / comic 变体
+   （本轮无新增 Android API 调用，lint 风险面不变）。
+   ⚠️ 未复核：真机上 COUI / Miuix 主题设置页外观（预览卡消失、开关落点、配色列表
+   隐藏 / 显示、首项「动态取色」选中后的实际取色、主题风格行与导航动画是否一致）、
+   **Miuix 原生 spinner 选中后立刻切根主题是否会与弹层收起动画冲突**、
+   TalkBack 语义、低版本 COUI 回退、Android 12~13 下动态取色回退到 GR 色板的观感；
+   第四十九轮的 9 个漫画 / insets 既有单测失败、`lint-baseline.xml` 19 条旧条目、
+   阶段 D 清理、搜索按钮样式差异仍未处理。
 3. ~~逐个把 18 个 `TopBarOverflowMenu` 页面从 `externalTrigger = true` 切到主入口~~
    **（2026-11-11 第十五轮实测：这条已基本完成）** 16 个列表页已改传 `menuGroups`
    走 `TopBarActionMenu`；`dropDownMenuContent` 只剩 `RssSourceScreen` 1 处（刻意保留，

@@ -79,6 +79,7 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarScrollBehavior
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarAnimatedActionButton
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -257,6 +258,54 @@ class AppThemeEngineTest {
         compose.runOnIdle {
             assertEquals(customPrimary, nativeColors?.accent)
             assertEquals(customPrimary, materialColors.primary)
+        }
+    }
+
+    @Test
+    fun couiCustomColorSwitchRestoresDynamicFirstTheme() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        val configuration = mutableStateOf(
+            AppUiConfiguration(
+                appShell = AppShellSettings(composeEngine = "coui"),
+                theme = ThemeSettings(useMiuixMonet = true),
+            )
+        )
+        var dynamicColor = false
+        var materialPrimary = Color.Unspecified
+        var nativeColors: CouiColorScheme? = null
+        compose.setContent {
+            AppTheme(configuration.value, applyBackground = false) {
+                val dynamic = LegadoTheme.useDynamicColor
+                val primary = MaterialTheme.colorScheme.primary
+                val native = CouiTheme.colorScheme
+                SideEffect {
+                    dynamicColor = dynamic
+                    materialPrimary = primary
+                    nativeColors = native
+                }
+            }
+        }
+        compose.runOnIdle {
+            assertTrue("开启自定义主题色后首项应标记为动态取色", dynamicColor)
+            assertTrue(
+                "首项不应再被 CouiPresets 固定预设接管",
+                materialPrimary != CouiPresets.Light.accent,
+            )
+            assertTrue(
+                "COUI 原生控件应跟随动态取色而非固定预设",
+                nativeColors != CouiPresets.Light,
+            )
+        }
+
+        compose.runOnIdle {
+            configuration.value = configuration.value.copy(
+                theme = ThemeSettings(useMiuixMonet = false),
+            )
+        }
+        compose.runOnIdle {
+            assertFalse("关闭自定义主题色后应由 COUI 内置预设接管", dynamicColor)
+            assertEquals(CouiPresets.Light, nativeColors)
+            assertEquals(CouiPresets.Light.accent, materialPrimary)
         }
     }
 

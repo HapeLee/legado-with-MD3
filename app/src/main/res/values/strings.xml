@@ -42,10 +42,6 @@
     <string name="text_animation_subtle">Subtle</string>
     <string name="text_animation_standard">Standard</string>
     <string name="text_animation_strong">Pronounced</string>
-    <string name="text_animation_preview">Text animation preview</string>
-    <string name="text_animation_preview_summary">Tap to change the sample text</string>
-    <string name="text_animation_example_reading">Reading</string>
-    <string name="text_animation_example_finished">Finished</string>
     <string name="reader_shared_element">Reader shared element transition</string>
     <string name="reader_shared_element_summary">Expand the cover when opening the reader. Use a fade transition when disabled.</string>
     <string name="predictive_back_summary">Enable system predictive back gestures</string>
@@ -1991,8 +1987,8 @@
     <string name="light_mode">Light</string>
     <string name="dark_mode">Dark</string>
     <string name="pure_black">True Black Mode</string>
-    <string name="miuix_monet">Miuix Monet</string>
-    <string name="miuix_monet_summary">Use Monet to generate the Miuix palette. If the current theme is Dynamic on Android 12+, the system accent is used; otherwise the seed color below is used.</string>
+    <string name="miuix_monet">Custom theme color</string>
+    <string name="miuix_monet_summary">Use a custom palette for the theme style. If the current theme is Dynamic on Android 12+, the system accent is used; otherwise the seed color below is used.</string>
     <string name="transparent_theme_alarm">Please set the transparent theme after setting a background image.</string>
     <string name="seed_color_summary">Create a theme from a seed color</string>
     <string name="seed_color">Seed Color</string>
@@ -2132,7 +2128,6 @@
     <string name="adapt_special_style">Adapt Special Styles</string>
     <string name="compose_engine">Theme Style</string>
     <string name="coui_theme_requires_android_14">COUI (requires Android 14 or later)</string>
-    <string name="coui_default_palette">COUI default</string>
     <string name="container_opacity">Container Opacity</string>
     <string name="container_opacity_summary">%d</string>
     <string name="top_bar_opacity">Top Bar Opacity</string>

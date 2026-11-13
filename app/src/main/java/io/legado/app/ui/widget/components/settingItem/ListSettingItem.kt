@@ -43,6 +43,12 @@ fun DropdownListSettingItem(
     unavailableValues: Set<String> = emptySet(),
     /** 点到本产物不提供的档位时的反馈；不提供则静默忽略。 */
     onUnavailableSelected: ((String) -> Unit)? = null,
+    /**
+     * 选中后等弹层收起再回调。切换根主题这类会立刻重建 composition 的操作必须开启：
+     * Mochi 的浮层挂在 DecorView 上，测量期间摘除子视图会出问题。默认 false。
+     * Miuix 原生 spinner / 无 popup host 的 tiny 分支不涉及 DecorView 浮层，忽略此参数。
+     */
+    commitAfterDismiss: Boolean = false,
     onValueChange: (String) -> Unit
 ) {
     val composeEngine = LegadoTheme.composeEngine
@@ -146,6 +152,7 @@ fun DropdownListSettingItem(
                 // 视觉上灰掉，但仍可点击：点了给出「为什么用不了」，比无声无息更好。
                 choiceUnavailableIds = unavailableValues,
                 onChoiceUnavailableSelected = onUnavailableSelected,
+                choiceCommitAfterDismiss = commitAfterDismiss,
             )
         }
     }

@@ -41,10 +41,6 @@
     <string name="text_animation_subtle">轻柔</string>
     <string name="text_animation_standard">标准</string>
     <string name="text_animation_strong">明显</string>
-    <string name="text_animation_preview">文字动画示例</string>
-    <string name="text_animation_preview_summary">点按切换示例文字</string>
-    <string name="text_animation_example_reading">正在阅读</string>
-    <string name="text_animation_example_finished">已读完</string>
     <string name="reader_shared_element">阅读界面共享元素动画</string>
     <string name="reader_shared_element_summary">进入阅读界面时从封面展开，关闭后使用渐变过渡</string>
     <string name="predictive_back_summary">启用系统预见性返回手势</string>
@@ -1937,7 +1933,7 @@
     <string name="dark_mode">深色</string>
     <string name="pure_black">纯黑深色模式</string>
     <string name="miuix_monet">自定义主题色</string>
-    <string name="miuix_monet_summary">为 Miuix 使用自定义主题配色</string>
+    <string name="miuix_monet_summary">为主题风格使用自定义配色，关闭时由内置配色决定</string>
     <string name="transparent_theme_alarm">透明主题请于设置背景图片后设置</string>
     <string name="seed_color_summary">使用种子颜色生成主题颜色</string>
     <string name="seed_color">种子色</string>
@@ -2075,7 +2071,6 @@
     <string name="adapt_special_style">适配特殊样式</string>
     <string name="compose_engine">主题风格</string>
     <string name="coui_theme_requires_android_14">COUI（需要 Android 14 或更高版本）</string>
-    <string name="coui_default_palette">COUI 默认</string>
     <string name="container_opacity">容器背景不透明度</string>
     <string name="container_opacity_summary">%d</string>
     <string name="top_bar_opacity">顶栏不透明度</string>

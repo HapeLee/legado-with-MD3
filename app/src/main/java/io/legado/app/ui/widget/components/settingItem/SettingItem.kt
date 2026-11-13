@@ -83,6 +83,11 @@ fun SettingItem(
     choiceUnavailableIds: Set<String> = emptySet(),
     /** 点击不可用档位时的提示回调；为 `null` 时该档位真正禁用。 */
     onChoiceUnavailableSelected: ((String) -> Unit)? = null,
+    /**
+     * 选中后等弹层收起再回调。切换根主题这类会立刻重建 composition 的操作必须开启：
+     * Mochi 的浮层挂在 DecorView 上，测量期间摘除子视图会出问题。默认 false 保持既有调用方。
+     */
+    choiceCommitAfterDismiss: Boolean = false,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
     enabled: Boolean = true,
@@ -125,6 +130,7 @@ fun SettingItem(
                 modifier = Modifier.matchParentSize(),
                 unavailableIds = choiceUnavailableIds,
                 onUnavailableSelected = onChoiceUnavailableSelected,
+                commitAfterDismiss = choiceCommitAfterDismiss,
                 embeddedExpanded = showMenu,
                 onDismissRequest = { showMenu = false },
             )

@@ -126,11 +126,6 @@ class ExtendedSettingsSearchTest {
             assertEquals(TextAnimationLevel.Strong, shell.textAnimationLevel)
             assertEquals(engine, shell.composeEngine)
         }
-        compose.onNodeWithText(app.getString(R.string.text_animation_preview))
-            .performScrollTo()
-            .performClick()
-        compose.onNodeWithText(app.getString(R.string.text_animation_example_finished)).assertIsDisplayed()
-        compose.onNodeWithText(app.getString(R.string.text_animation_example_reading)).assertDoesNotExist()
     }
 
     @Test

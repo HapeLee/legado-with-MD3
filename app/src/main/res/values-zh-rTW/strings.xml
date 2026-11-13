@@ -1471,8 +1471,8 @@
     <string name="show_book_count">顯示分組書籍數量</string>
     <string name="dynamic_colors_summary">使用基於桌布的主題顏色</string>
     <string name="input_value_range">輸入數值（%1$d-%2$d）</string>
-    <string name="miuix_monet">Miuix Monet</string>
-    <string name="miuix_monet_summary">為 Miuix 使用 Monet 演算法產生配色。目前主題為動態主題且系統為 Android 12 以上時，會優先使用系統取色；否則使用下方種子色。</string>
+    <string name="miuix_monet">自訂主題色</string>
+    <string name="miuix_monet_summary">為主題風格使用自訂配色。目前主題為動態主題且系統為 Android 12 以上時，會優先使用系統取色；否則使用下方種子色。</string>
 	<string name="layout_setting">佈局設定</string>
 	<string name="cover_info_orientation">封面資訊方向</string>
 	<string name="rule_segment">Rule</string>
@@ -1618,10 +1618,6 @@
     <string name="text_animation_subtle">輕柔</string>
     <string name="text_animation_standard">標準</string>
     <string name="text_animation_strong">明顯</string>
-    <string name="text_animation_preview">文字動畫示例</string>
-    <string name="text_animation_preview_summary">點按切換示例文字</string>
-    <string name="text_animation_example_reading">正在閱讀</string>
-    <string name="text_animation_example_finished">已讀完</string>
     <string name="predictive_back_summary">啟用系統預測性返回手勢</string>
     <string name="restart_to_apply">重新啟動以套用</string>
     <string name="custom_theme">自訂主題</string>
@@ -2116,7 +2112,6 @@
     <string name="adapt_special_style">適配特殊樣式</string>
     <string name="compose_engine">主題樣式</string>
     <string name="coui_theme_requires_android_14">COUI（需要 Android 14 或更新版本）</string>
-    <string name="coui_default_palette">COUI 預設</string>
     <string name="container_opacity">容器不透明度</string>
     <string name="container_opacity_summary">%d</string>
     <string name="web_service_auto_start">開啟應用時啟動 Web 服務</string>
