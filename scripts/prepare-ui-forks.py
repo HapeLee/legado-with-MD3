@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""从固定子模块生成当前项目专用的 Maven 依赖；需要 Python 3.11+ 和 JDK 21。"""
+"""生成当前项目专用的 Maven 依赖并校验所有 UI fork 来源；需要 Python 3.11+ 和 JDK 21。"""
 
 import argparse
 import os
@@ -15,6 +15,10 @@ FORKS = (
     ("coui", "io.github.itoseo", ("coui", "coui-material3", "coui-icons")),
     ("mochi", "io.github.feice11", ("mochi-compose", "mochi-ios")),
 )
+# Miuix 走 settings.gradle 的 includeBuild（composite build 源码替换），不发布 Maven 产物。
+# 但它同样由本地源码编译：若不校验，开发机改了 vendored 源码，CI 会用干净子模块构建而
+# 不报错，线上与本地就此分叉。因此只做来源校验，不做 publishToMavenLocal。
+CHECK_ONLY_FORKS = ("miuix",)
 
 
 def android_environment() -> dict[str, str]:
@@ -47,6 +51,32 @@ def android_environment() -> dict[str, str]:
     return environment
 
 
+def validate_fork(name: str, versions: dict[str, str], *, strict_suffix: bool) -> str:
+    """校验子模块 HEAD == gitlink、版本串含 commit、工作树干净，返回当前 commit。"""
+    directory = ROOT / "modules" / name
+    commit = subprocess.check_output(
+        ["git", "-C", str(directory), "rev-parse", "HEAD"], text=True
+    ).strip()
+    entry = subprocess.check_output(
+        ["git", "-C", str(ROOT), "ls-files", "--stage", f"modules/{name}"], text=True
+    ).split()
+    if len(entry) != 4 or entry[0] != "160000" or entry[1] != commit:
+        raise RuntimeError(f"modules/{name} 与记录的子模块提交不一致，请确认后更新子模块指针")
+    version = versions[name]
+    if strict_suffix and not version.endswith(f"-legado.{commit[:12]}"):
+        raise RuntimeError(f"{name} 版本 {version} 与提交 {commit[:12]} 不一致，请更新 libs.versions.toml")
+    if commit[:12] not in version:
+        raise RuntimeError(f"{name} 版本 {version} 缺少提交 {commit[:12]}，请更新 libs.versions.toml")
+    # porcelain 连未跟踪文件一起看：composite build 直接编译子模块源码目录，
+    # 一个未跟踪的 .kt 也足以让本地与 CI 的构建结果不同。
+    dirty = subprocess.check_output(
+        ["git", "-C", str(directory), "status", "--porcelain"], text=True
+    ).strip()
+    if dirty:
+        raise RuntimeError(f"modules/{name} 工作树不干净，请先提交或撤销本地改动：\n{dirty}")
+    return commit
+
+
 def prepare(check_only: bool) -> None:
     with (ROOT / "gradle/libs.versions.toml").open("rb") as source:
         versions = tomllib.load(source)["versions"]
@@ -58,18 +88,8 @@ def prepare(check_only: bool) -> None:
         wrapper = directory / ("gradlew.bat" if os.name == "nt" else "gradlew")
         if not wrapper.is_file():
             raise RuntimeError("请先运行 git submodule update --init modules/miuix modules/coui modules/mochi")
-        commit = subprocess.check_output(
-            ["git", "-C", str(directory), "rev-parse", "HEAD"], text=True
-        ).strip()
-        entry = subprocess.check_output(
-            ["git", "-C", str(ROOT), "ls-files", "--stage", f"modules/{name}"], text=True
-        ).split()
-        if len(entry) != 4 or entry[0] != "160000" or entry[1] != commit:
-            raise RuntimeError(f"modules/{name} 与记录的子模块提交不一致，请确认后更新子模块指针")
+        commit = validate_fork(name, versions, strict_suffix=True)
         version = versions[name]
-        if not version.endswith(f"-legado.{commit[:12]}"):
-            raise RuntimeError(f"{name} 版本 {version} 与提交 {commit[:12]} 不一致，请更新 libs.versions.toml")
-        subprocess.run(["git", "-C", str(directory), "diff", "--exit-code", "HEAD", "--"], check=True)
         command = ([str(wrapper)] if os.name == "nt" else ["bash", str(wrapper)]) + [
             *(f":{artifact}:publishToMavenLocal" for artifact in artifacts),
             f"-PVERSION_NAME={version}",
@@ -82,6 +102,13 @@ def prepare(check_only: bool) -> None:
         ]
         commands.append((directory, command, group, artifacts, version))
         print(f"{name}: {commit} -> {group}:{{{', '.join(artifacts)}}}:{version}", flush=True)
+
+    for name in CHECK_ONLY_FORKS:
+        directory = ROOT / "modules" / name
+        if not (directory / "settings.gradle.kts").is_file():
+            raise RuntimeError("请先运行 git submodule update --init modules/miuix modules/coui modules/mochi")
+        commit = validate_fork(name, versions, strict_suffix=False)
+        print(f"{name}: {commit} -> includeBuild 源码（只校验，不发布 Maven 产物）", flush=True)
 
     print(f"Maven repository: {REPOSITORY}", flush=True)
     if check_only:
