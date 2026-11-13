@@ -10,6 +10,8 @@ import io.legado.app.ui.theme.AppTheme
 import io.legado.app.ui.widget.components.settingItem.SettingItem
 import kotlinx.collections.immutable.persistentListOf
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -103,5 +105,37 @@ class AppMenuTriggerContractTest {
         compose.waitForIdle()
         compose.onNodeWithText("Two", useUnmergedTree = true).performClick()
         assertEquals("two", selected)
+    }
+
+    /**
+     * 设置项下拉曾直接使用 M3 `DropdownMenu`，与其他菜单的 `RoundDropdownMenu` 分叉：
+     * 圆角 4dp vs 12dp、容器色 surfaceContainer vs surfaceContainerLow、条目间距 0 vs 8dp，
+     * 同一页会出现两种弹层。两个入口必须共用同一容器。
+     */
+    @Test
+    fun choiceAndActionMenusShareTheSameContainer() {
+        val choice = sourceOf(CHOICE)
+        val actions = sourceOf(ACTIONS)
+        assertFalse(
+            "设置项下拉不应再直接使用 M3 DropdownMenu",
+            choice.contains("import androidx.compose.material3.DropdownMenu"),
+        )
+        assertTrue("设置项下拉应复用统一菜单容器", choice.contains("RoundDropdownMenu("))
+        assertTrue("命令菜单应复用同一容器", actions.contains("RoundDropdownMenu("))
+    }
+
+    private fun sourceOf(path: String): String {
+        var directory = java.io.File("").absoluteFile
+        while (directory != null) {
+            val candidate = java.io.File(directory, "app/src/main/java/$path")
+            if (candidate.isFile) return candidate.readText()
+            directory = directory.parentFile
+        }
+        error("从 ${java.io.File("").absolutePath} 向上找不到 $path")
+    }
+
+    private companion object {
+        const val CHOICE = "io/legado/app/ui/widget/components/menu/AppChoiceDropdown.kt"
+        const val ACTIONS = "io/legado/app/ui/widget/components/menu/AppActionMenu.kt"
     }
 }

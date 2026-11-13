@@ -2,7 +2,6 @@ package io.legado.app.ui.widget.components.menu
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,6 +36,7 @@ import io.legado.app.ui.widget.components.coui.rememberCouiCapsuleRenderer
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.menuItem.MiuixGlassMenuHost
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.menuItem.isMiuixGlassMenuAvailable
 import top.yukonga.miuix.kmp.glass.glassPopupAnchor
@@ -69,7 +69,8 @@ import ui.feice.mochi.basic.MochiItem
  * 因此开合是「点击松手后」，没有按下即开和按住滑选。
  *
  * 当前阶段的边界：Mochi 走 fork 的 `MochiDropdownMenu`（只有锚点）；COUI 走原生 [Menu] +
- * `CouiMenuAnchor`（Android 14+ 且阴影渲染器可用，否则降级 M3）；Material 走 M3 [DropdownMenu]；
+ * `CouiMenuAnchor`（Android 14+ 且阴影渲染器可用，否则降级 M3）；Material 与 COUI 降级都复用
+ * [RoundDropdownMenu]，容器圆角、容器色和条目间距与 [AppActionMenu] 一致；
  * Miuix 默认复用已原生化的 [DropdownListSettingItem]（设置行形态，由库渲染整行，
  * [trigger] 不生效）。[compact] 用于紧凑/自定义 trigger：四套分支都由入口包装
  * [trigger]，Miuix 在 HyperOS 4 玻璃可用时走 `MiuixGlassMenuHost` 的原生玻璃菜单
@@ -603,13 +604,13 @@ private fun MaterialChoice(
                     .semantics { text = AnnotatedString(title) },
             ) { scope.trigger() }
         }
-        DropdownMenu(
+        RoundDropdownMenu(
             expanded = isOpen && enabled,
             onDismissRequest = {
                 expanded = false
                 onDismissRequest()
             },
-        ) {
+        ) { _ ->
             options.forEach { option ->
                 if (option.dividerBefore) PillDivider()
                 val blocked = option.id in unavailableIds && onUnavailableSelected == null
