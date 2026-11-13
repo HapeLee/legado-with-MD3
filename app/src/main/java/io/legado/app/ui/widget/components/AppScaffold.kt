@@ -97,8 +97,9 @@ fun AppScaffold(
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
     val liquidGlassEnabled = composeEngine == ComposeEngine.Material && topBar != null && themeSettings.topBarButtonStyle == "liquid"
     val backdropBaseColor = LegadoTheme.colorScheme.background
+    // COUI 的顶栏材质是外观的一部分，不再受 enableBlur 控制。
     val couiBackdrop = if (composeEngine == ComposeEngine.Coui && ThemeResolver.isCouiSupported() &&
-        nativeSamplingSupported && topBar != null && themeSettings.enableBlur
+        nativeSamplingSupported && topBar != null
     ) {
         rememberCouiBackdrop {
             drawRect(backdropBaseColor)
@@ -112,9 +113,10 @@ fun AppScaffold(
     val density = LocalDensity.current
     val miuixEngine = composeEngine == ComposeEngine.Miuix
     val miuixSurfaceColor = MiuixTheme.colorScheme.surface
-    val miuixBarBlur = miuixEngine && nativeSamplingSupported && hasBars && themeSettings.enableBlur
+    // Miuix 的顶/底栏模糊同样常开，enableBlur 只作用于 Material / Mochi。
+    val miuixBarBlur = miuixEngine && nativeSamplingSupported && hasBars
     val miuixGlassMenus = miuixEngine && themeSettings.useHyperOs4Components &&
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        ThemeResolver.isBlurSupported()
     val miuixBackdrop = if (nativeSamplingSupported && (miuixBarBlur || miuixGlassMenus)) {
         rememberMiuixLayerBackdrop {
             // The scaffold surface sits outside this recording. Match its visible base color.

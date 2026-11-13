@@ -15,15 +15,11 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
-import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.LocalMiuixBarBackdrop
 import io.legado.app.ui.theme.isMiuixHyperOs4Enabled
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
-import top.yukonga.miuix.kmp.blur.textureBlur
 import top.yukonga.miuix.kmp.glass.GlassTopAppBar as NativeGlassTopAppBar
 
 internal val LocalMiuixGlassTopBar = compositionLocalOf { false }
@@ -56,7 +52,6 @@ internal fun MiuixNativeTopBar(
     compactActions: Boolean = false,
     defaultBar: @Composable () -> Unit,
 ) {
-    val theme = LocalAppUiConfiguration.current.theme
     if (!isMiuixHyperOs4Enabled()) {
         defaultBar()
         return
@@ -70,9 +65,8 @@ internal fun MiuixNativeTopBar(
         transitionSpec = { tween(350, easing = LinearEasing) },
         label = "miuixTopBarActionMaterial",
     ) { if (it) 1f else 0f }
-    val blurBackdrop = backdrop.takeIf { theme.enableBlur }
-    val progressiveBlur = blurBackdrop != null && theme.enableProgressiveBlur
-    val bandVisibility = if (blurBackdrop != null && (!progressiveBlur || isContentScrolled != null)) {
+    // HyperOS 4 顶栏恒为渐进模糊材质：能采到 backdrop 就启用，不再读取模糊开关。
+    val bandVisibility = if (backdrop != null && isContentScrolled != null) {
         transition.animateFloat(
             transitionSpec = { tween(100, easing = LinearEasing) },
             label = "miuixTopBarBlurVisibility",
@@ -84,14 +78,6 @@ internal fun MiuixNativeTopBar(
         LocalMiuixGlassTopBarActionProgress provides actionProgress,
     ) {
         Box(modifier) {
-            if (blurBackdrop != null && !progressiveBlur) {
-                // The native non-progressive band is a color gradient. Sample the page for regular blur.
-                Box(
-                    Modifier.matchParentSize()
-                        .graphicsLayer { alpha = bandVisibility?.value ?: 1f }
-                        .textureBlur(backdrop = blurBackdrop, shape = RectangleShape, blurRadius = 25f),
-                )
-            }
             NativeGlassTopAppBar(
                 title = title,
                 isContentScrolled = floating,
@@ -100,10 +86,10 @@ internal fun MiuixNativeTopBar(
                 scrollBehavior = scrollBehavior,
                 defaultWindowInsetsPadding = defaultWindowInsetsPadding,
                 backdrop = backdrop,
-                progressiveBlur = progressiveBlur,
+                progressiveBlur = backdrop != null,
                 bandBrush = SolidColor(Color.Transparent),
                 bandOverhang = 0.dp,
-                backgroundAlpha = { if (progressiveBlur) bandVisibility?.value ?: 1f else 0f },
+                backgroundAlpha = { if (backdrop != null) bandVisibility?.value ?: 1f else 0f },
                 navigationIcon = navigationIcon,
                 actions = { MiuixGlassTopBarActions(compactActions, actions) },
                 bottomContent = bottomContent,

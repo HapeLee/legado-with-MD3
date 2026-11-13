@@ -491,7 +491,7 @@ class AppThemeEngineTest {
 
     @Test
     @Config(sdk = [34])
-    fun couiToolbarSamplesOnlyWithBlurEnabledAndKeepsItsActions() {
+    fun couiToolbarSamplesEvenWithoutBlurToggleAndKeepsItsActions() {
         RuntimeEnvironment.getApplication().injectAsAppCtx()
         val blur = mutableStateOf(false)
         val compact = mutableStateOf(false)
@@ -532,8 +532,8 @@ class AppThemeEngineTest {
         }
         compose.onNodeWithText("Page").assertIsDisplayed()
         compose.runOnIdle {
-            assertEquals(false, toolbarSamples)
-            blur.value = true
+            // COUI 顶栏材质是外观本身，enableBlur=false 也采样。
+            assertTrue(toolbarSamples)
         }
         compose.onNodeWithText("Page").assertIsDisplayed()
         compose.onNodeWithContentDescription("Apply").performClick()

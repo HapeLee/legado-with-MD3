@@ -21,6 +21,7 @@ import io.legado.app.ui.theme.AppTheme
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.text.AppText
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -44,7 +45,7 @@ import java.io.File
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class, sdk = [34])
-@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@GraphicsMode(GraphicsMode.Mode.LEGACY)
 @LooperMode(LooperMode.Mode.PAUSED)
 class CouiAlertDialogTest {
     @get:Rule val compose = createComposeRule()
@@ -75,7 +76,6 @@ class CouiAlertDialogTest {
                 onConfirm = { confirmed++ },
                 dismissText = "取消",
                 onDismiss = { dismissed++ },
-                couiMaterial = false,
             )
         }
         compose.onNodeWithText("删除书源").assertIsDisplayed()
@@ -101,7 +101,6 @@ class CouiAlertDialogTest {
                 confirmEnabled = enabled.value,
                 onConfirm = { confirmed++ },
                 onDismiss = {},
-                couiMaterial = false,
             )
         }
         compose.onNode(hasText("保存") and hasClickAction()).assertIsNotEnabled()
@@ -120,7 +119,6 @@ class CouiAlertDialogTest {
                 content = {
                     Column { AppText("异步任务已完成") }
                 },
-                couiMaterial = false,
             )
         }
         compose.onNodeWithText("提示").assertIsDisplayed()
@@ -128,14 +126,12 @@ class CouiAlertDialogTest {
     }
 
     @Test
-    fun materialIsOnByDefaultAndDegradesWithoutWindowSupport() {
-        // 缺背景源或低于 API 33 必须退回不透明表面，不能抛库内 check。
+    fun materialIsAlwaysUsedForCouiDialogs() {
         val source = sourceOf(DIALOG)
-        assertTrue("材质默认开启", source.contains("couiMaterial: Boolean = true,"))
+        assertFalse("COUI 弹窗不应再有可关闭材质的入口", source.contains("couiMaterial"))
         assertTrue(
-            "材质必须同时要求开关、背景源和平台支持",
-            source.contains("val useMaterial = couiMaterial &&") &&
-                source.contains("windowBackdrop != null &&") &&
+            "材质只由页面背景源与平台能力决定",
+            source.contains("val useMaterial = windowBackdrop != null &&") &&
                 source.contains("CouiDialogDefaults.isMaterialSupported()"),
         )
         assertTrue("材质与背景源必须成对传入", source.contains("backdrop = windowBackdrop.takeIf { useMaterial }"))

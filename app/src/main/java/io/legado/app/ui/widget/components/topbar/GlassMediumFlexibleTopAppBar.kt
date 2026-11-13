@@ -216,9 +216,8 @@ object GlassTopAppBarDefaults {
         return if (composeEngine == ComposeEngine.Miuix) {
             val miuixBehavior = MiuixScrollBehavior()
             remember(miuixBehavior) { MiuixGlassScrollBehavior(miuixBehavior) }
-        } else if (composeEngine == ComposeEngine.Coui && configuration.theme.useFlexibleTopAppBar &&
-            configuration.theme.enableBlur
-        ) {
+        } else if (composeEngine == ComposeEngine.Coui && configuration.theme.useFlexibleTopAppBar) {
+            // COUI 顶栏恒为玻璃材质，enableBlur 不再影响滚动行为。
             val behavior = CouiTopAppBarDefaults.exitUntilCollapsedScrollBehavior()
             remember(behavior) { CouiGlassScrollBehavior(behavior) }
         } else if (configuration.theme.useFlexibleTopAppBar) {

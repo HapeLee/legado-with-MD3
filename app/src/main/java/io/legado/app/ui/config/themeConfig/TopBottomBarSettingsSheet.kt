@@ -135,8 +135,13 @@ fun TopBottomBarSettingsSheet(
                 }
             }
             val blurSupported = engine == ComposeEngine.Material || nativeEffectsSupported
-            val blurEnabled = if (engine == ComposeEngine.Mochi) theme.mochiScrollEdgeBlurEnabled else theme.enableBlur
-            if (theme.enableBlur && blurSupported && engine != ComposeEngine.Mochi && engine != ComposeEngine.Coui) {
+            val blurEnabled = when (engine) {
+                ComposeEngine.Mochi -> theme.mochiScrollEdgeBlurEnabled
+                // Miuix 的顶/底栏模糊常开，半径设置始终有意义。
+                ComposeEngine.Miuix -> true
+                else -> theme.enableBlur
+            }
+            if (blurEnabled && blurSupported && engine != ComposeEngine.Mochi && engine != ComposeEngine.Coui) {
                 if (!miuixGlassStyle) {
                     SliderSettingItem(
                         title = stringResource(R.string.theme_manage_top_bar_blur_radius),

@@ -318,8 +318,9 @@ fun ThemeConfigScreen(
                             SwitchSettingItem(
                                 title = stringResource(R.string.hyper_os4_components),
                                 description = stringResource(R.string.hyper_os4_components_summary),
-                                checked = theme.useHyperOs4Components,
-                                enabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU,
+                                // 没有模糊就没有这套外观：不支持时既不能打开，也不显示为已开启。
+                                checked = theme.useHyperOs4Components && ThemeResolver.isBlurSupported(),
+                                enabled = ThemeResolver.isBlurSupported(),
                                 onCheckedChange = { enabled ->
                                     updateTheme {
                                         it.copy(
@@ -629,37 +630,37 @@ fun ThemeConfigScreen(
                     }
                 }
 
-                SplicedColumnGroup(title = stringResource(R.string.blur_effects)) {
-                    val isMochi = composeEngine == ComposeEngine.Mochi
-                    val blurSupported = when (composeEngine) {
-                        ComposeEngine.Material -> true
-                        ComposeEngine.Miuix, ComposeEngine.Mochi ->
+                // COUI / Miuix 的模糊是外观本身，不能关闭；只有 Material / Mochi 保留开关。
+                if (composeEngine == ComposeEngine.Material || composeEngine == ComposeEngine.Mochi) {
+                    SplicedColumnGroup(title = stringResource(R.string.blur_effects)) {
+                        val isMochi = composeEngine == ComposeEngine.Mochi
+                        val blurSupported = if (isMochi) {
                             Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-                        ComposeEngine.Coui -> ThemeResolver.isCouiSupported()
-                    }
-                    val blurEnabled = if (isMochi) theme.mochiScrollEdgeBlurEnabled else theme.enableBlur
-                    SearchableSetting("theme.is_blur_enable") {
-                        SwitchSettingItem(
-                            title = stringResource(R.string.is_blur_enable),
-                            checked = blurSupported && blurEnabled,
-                            enabled = blurSupported,
-                            onCheckedChange = { enabled ->
-                                if (isMochi) updateTheme { it.copy(mochiScrollEdgeBlurEnabled = enabled) }
-                                else onIntent(ThemeConfigIntent.SetBlurEnabled(enabled))
-                            }
-                        )
-                    }
-                    AnimatedVisibility(visible = !isMochi && composeEngine != ComposeEngine.Coui &&
-                        blurSupported && theme.enableBlur
-                    ) {
-                        SearchableSetting("theme.is_blur_progressive_enable") {
+                        } else {
+                            true
+                        }
+                        val blurEnabled = if (isMochi) theme.mochiScrollEdgeBlurEnabled else theme.enableBlur
+                        SearchableSetting("theme.is_blur_enable") {
                             SwitchSettingItem(
-                                title = stringResource(R.string.is_blur_progressive_enable),
-                                checked = theme.enableProgressiveBlur,
-                                onCheckedChange = { value ->
-                                    updateTheme { it.copy(enableProgressiveBlur = value) }
+                                title = stringResource(R.string.is_blur_enable),
+                                checked = blurSupported && blurEnabled,
+                                enabled = blurSupported,
+                                onCheckedChange = { enabled ->
+                                    if (isMochi) updateTheme { it.copy(mochiScrollEdgeBlurEnabled = enabled) }
+                                    else onIntent(ThemeConfigIntent.SetBlurEnabled(enabled))
                                 }
                             )
+                        }
+                        AnimatedVisibility(visible = !isMochi && blurSupported && theme.enableBlur) {
+                            SearchableSetting("theme.is_blur_progressive_enable") {
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.is_blur_progressive_enable),
+                                    checked = theme.enableProgressiveBlur,
+                                    onCheckedChange = { value ->
+                                        updateTheme { it.copy(enableProgressiveBlur = value) }
+                                    }
+                                )
+                            }
                         }
                     }
                 }

@@ -1,6 +1,5 @@
 package io.legado.app.ui.widget.components.modalBottomSheet
 
-import android.os.Build
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -37,7 +36,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -82,9 +80,9 @@ import ui.feice.mochi.theme.MochiTheme
 private val MochiModalTopShape = ContinuousRoundedRectangle(32.dp, 32.dp, 0.dp, 0.dp, MochiContinuity)
 
 /**
- * A window-level sheet has no popup host, but its content still inherits the parent Scaffold's
- * locals. Override them so nested dropdowns do not register into a host they cannot be drawn in.
- * A glass sheet lives in that same root host, so its dropdowns must keep the host signal.
+ * 只在 HyperOS 4 开关关闭时使用窗口级 sheet。它的内容虽继承 Scaffold 的 local，但并不在
+ * root host 中，必须清掉宿主信号，避免子菜单注册到画不到的地方；玻璃 sheet 与 root host 同根，
+ * 保留信号。
  */
 @Composable
 private fun MiuixSheetLocals(
@@ -106,14 +104,17 @@ private fun MiuixSheetLocals(
 }
 
 enum class MochiSheetLayout {
-    /** Floating half-height panel. The content owns its vertical scrolling. */
+    /** 按内容高度停靠，超过可用高度时停在全屏；滚动由调用方自己的容器负责。 */
     HalfScreen,
 
-    /** Full-height native panel. The content owns its vertical scrolling. */
+    /** 同 [HalfScreen]；保留名称以兼容已有调用方。 */
     FullScreen,
 
-    /** Floating half-height panel with a scrollable body supplied by the sheet. */
+    /** 按内容高度停靠，超过可用高度时停在全屏；面板自带可滚正文，调用方不要再套滚动容器。 */
     Compact,
+
+    /** 同 [Compact]，显式声明贴合内容；面板自带可滚正文，调用方不要再套滚动容器。 */
+    FitContent,
 
     /** Use the modal window for callers that depend on its presentation contract. */
     Compatibility,
@@ -149,14 +150,11 @@ fun AppModalBottomSheet(
         MochiOverlayAccessibility(show)
         val backdrop = rememberMochiOverlayBackdrop(show)
         val registry = LocalMochiBackdropRegistry.current
-        val detent = if (mochiLayout == MochiSheetLayout.FullScreen) {
-            MochiSheetDetent.Large
-        } else {
-            MochiSheetDetent.Medium
-        }
-        val state = key(detent) {
-            rememberMochiSheetState(detents = listOf(detent))
-        }
+        // 与 M3 / Miuix 一致：先按内容高度停靠，内容超过可用高度时停在全屏并让正文滚动。
+        // Large 只作为可上拉的上限，初始停靠点始终是 FitContent。
+        val state = rememberMochiSheetState(
+            detents = listOf(MochiSheetDetent.FitContent, MochiSheetDetent.Large),
+        )
         LaunchedEffect(state, show) {
             if (show) state.show() else state.hide()
         }
@@ -167,7 +165,7 @@ fun AppModalBottomSheet(
                 color = sheetContainerColor,
                 hideNavigationBar = false,
             ) {
-                if (detent == MochiSheetDetent.Large && registry != null) {
+                if (registry != null) {
                     DisposableEffect(registry, state) {
                         registry.addSheet(state)
                         onDispose { registry.removeSheet(state) }
@@ -192,7 +190,9 @@ fun AppModalBottomSheet(
                                 .imePadding()
                                 .let { if (animateContentSize) it.animateContentSize() else it }
                                 .then(modifier)
-                            if (mochiLayout == MochiSheetLayout.Compact && contentPaddingEnabled) {
+                            val scrollable = mochiLayout == MochiSheetLayout.Compact ||
+                                mochiLayout == MochiSheetLayout.FitContent
+                            if (scrollable && contentPaddingEnabled) {
                                 MochiSheetContent(
                                     modifier = bodyModifier,
                                     verticalArrangement = Arrangement.Top,
@@ -223,9 +223,10 @@ fun AppModalBottomSheet(
     when (composeEngine) {
         ComposeEngine.Miuix -> {
             val themeSettings = LocalAppUiConfiguration.current.theme
+            // 开关打开后只走玻璃；无玻璃设施的独立窗口（如朗读悬浮窗）才退回窗口面板。
             val useGlassContainer = themeSettings.useHyperOs4Components &&
-                LocalHasMiuixPopupHost.current &&
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                ThemeResolver.isBlurSupported() &&
+                LocalAppGlassOverlay.current != null
             val backdrop = LocalMiuixBarBackdrop.current
             val insideMargin = if (contentPaddingEnabled) DpSize(16.dp, 0.dp) else DpSize(0.dp, 0.dp)
             val wrappedStartAction: (@Composable () -> Unit)? = startAction?.let { action ->

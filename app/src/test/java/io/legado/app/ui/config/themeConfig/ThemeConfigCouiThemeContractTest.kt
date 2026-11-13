@@ -67,7 +67,7 @@ class ThemeConfigCouiThemeContractTest {
         val array = repoFileOf(THEMES_ARRAY_CN)
             .substringAfter("<string-array name=\"themes_item\">")
             .substringBefore("</string-array>")
-        assertTrue("themes_item 首项不再是动态取色", array.contains("<item>动态取色</item>"))
+        assertTrue("themes_item 首项应为动态取色", array.contains("<item>动态取色</item>"))
     }
 
     @Test
@@ -164,6 +164,71 @@ class ThemeConfigCouiThemeContractTest {
     }
 
     @Test
+    fun blurIsMandatoryForCouiAndHyperOs4() {
+        val themeConfig = sourceOf(THEME_CONFIG)
+        assertTrue(
+            "HyperOS 4 开关未按模糊能力门控",
+            themeConfig.contains("enabled = ThemeResolver.isBlurSupported(),"),
+        )
+        assertTrue(
+            "不支持模糊时开关仍显示为已开启",
+            themeConfig.contains("checked = theme.useHyperOs4Components && ThemeResolver.isBlurSupported(),"),
+        )
+        assertTrue(
+            "模糊开关未只在 Material / Mochi 下保留",
+            themeConfig.contains(
+                "if (composeEngine == ComposeEngine.Material || composeEngine == ComposeEngine.Mochi) {",
+            ),
+        )
+        assertFalse(
+            "COUI / Miuix 仍可通过模糊开关关闭材质",
+            themeConfig.contains("ComposeEngine.Coui -> ThemeResolver.isCouiSupported()"),
+        )
+
+        val resolver = sourceOf(THEME_RESOLVER)
+        assertTrue("未提供统一的模糊能力判定", resolver.contains("internal fun isBlurSupported()"))
+        assertTrue(
+            "COUI 未建立在模糊能力之上",
+            resolver.contains("isBlurSupported() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE"),
+        )
+
+        val scaffold = sourceOf(APP_SCAFFOLD)
+        assertFalse(
+            "COUI 顶栏仍被 enableBlur 门控",
+            scaffold.contains("nativeSamplingSupported && topBar != null && themeSettings.enableBlur"),
+        )
+        assertFalse(
+            "Miuix 顶栏模糊仍被 enableBlur 门控",
+            scaffold.contains("miuixEngine && nativeSamplingSupported && hasBars && themeSettings.enableBlur"),
+        )
+    }
+
+    @Test
+    fun couiFloatingToolbarOnlyRunsInTheActivityWindow() {
+        val bar = sourceOf(SELECTION_BAR)
+        assertTrue(
+            "COUI 胶囊操作栏未限制在页面窗口",
+            bar.contains(
+                "val inActivityWindow = LocalView.current.rootView === LocalActivity.current?.window?.decorView",
+            ),
+        )
+        assertTrue(
+            "COUI 分支未使用窗口判断",
+            bar.contains("if (LegadoTheme.composeEngine == ComposeEngine.Coui && inActivityWindow) {"),
+        )
+    }
+
+    @Test
+    fun hyperOs4TopBarIsAlwaysProgressive() {
+        val topBar = sourceOf(MIUIX_TOP_BAR)
+        assertFalse("OS4 顶栏仍受渐进模糊开关控制", topBar.contains("enableProgressiveBlur"))
+
+        val effects = sourceOf(MIUIX_BAR_EFFECTS)
+        assertTrue("OS4 顶栏未使用渐进模糊", effects.contains("ProgressiveBlur.Top.copy(curve = 2.2f)"))
+        assertFalse("OS4 顶栏仍保留整块模糊分支", effects.contains("val progressive ="))
+    }
+
+    @Test
     fun dropdownListSettingItemForwardsCommitAfterDismiss() {
         val source = sourceOf(LIST_SETTING_ITEM)
         assertTrue(
@@ -239,6 +304,11 @@ class ThemeConfigCouiThemeContractTest {
         const val LIST_SETTING_ITEM = "io/legado/app/ui/widget/components/settingItem/ListSettingItem.kt"
         const val APP_THEME = "io/legado/app/ui/theme/AppTheme.kt"
         const val THEME_ENGINE = "io/legado/app/ui/theme/ThemeEngine.kt"
+        const val THEME_RESOLVER = "io/legado/app/ui/theme/ThemeResolver.kt"
+        const val APP_SCAFFOLD = "io/legado/app/ui/widget/components/AppScaffold.kt"
+        const val SELECTION_BAR = "io/legado/app/ui/widget/components/SelectionBottomBar.kt"
+        const val MIUIX_TOP_BAR = "io/legado/app/ui/widget/components/topbar/MiuixNativeTopBar.kt"
+        const val MIUIX_BAR_EFFECTS = "io/legado/app/ui/theme/MiuixBarEffects.kt"
         const val THEMES_ARRAY_CN = "app/src/main/res/values-zh-rCN/arrays.xml"
         const val STRINGS = "app/src/main/res/values/strings.xml"
         const val STRINGS_ZH_CN = "app/src/main/res/values-zh-rCN/strings.xml"

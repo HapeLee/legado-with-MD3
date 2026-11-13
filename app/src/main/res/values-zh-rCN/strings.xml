@@ -2070,7 +2070,7 @@
     <string name="use_underline">总是使用下划线表示强调文本</string>
     <string name="adapt_special_style">适配特殊样式</string>
     <string name="compose_engine">主题风格</string>
-    <string name="coui_theme_requires_android_14">COUI（需要 Android 14 或更高版本）</string>
+    <string name="coui_theme_requires_android_14">COUI（需要 Android 14 与系统模糊支持）</string>
     <string name="container_opacity">容器背景不透明度</string>
     <string name="container_opacity_summary">%d</string>
     <string name="top_bar_opacity">顶栏不透明度</string>
@@ -4021,5 +4021,5 @@
     <string name="a11y_open_playback_named">打开《%1$s》的播放界面</string>
     <string name="a11y_reorder_position">第 %1$d 项，共 %2$d 项</string>
     <string name="hyper_os4_components">HyperOS 4 风格组件</string>
-    <string name="hyper_os4_components_summary">在 Miuix 主题下使用新的玻璃顶栏、标签页与下拉菜单。</string>
+    <string name="hyper_os4_components_summary">在 Miuix 主题下使用玻璃顶栏、标签页与下拉菜单。需要 Android 13 与系统模糊支持。</string>
 </resources>

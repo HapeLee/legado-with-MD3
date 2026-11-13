@@ -1,6 +1,5 @@
 package io.legado.app.ui.theme
 
-import android.os.Build
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -23,14 +22,13 @@ import top.yukonga.miuix.kmp.blur.highlight.Highlight
 import top.yukonga.miuix.kmp.blur.progressiveBlur
 import top.yukonga.miuix.kmp.blur.progressiveTextureBlur
 import top.yukonga.miuix.kmp.blur.runtimeShaderEffect
-import top.yukonga.miuix.kmp.blur.textureBlur
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 internal fun isMiuixHyperOs4Enabled(): Boolean =
     LegadoTheme.composeEngine == ComposeEngine.Miuix &&
         LocalAppUiConfiguration.current.theme.useHyperOs4Components &&
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        ThemeResolver.isBlurSupported()
 
 internal val LocalMiuixBarBackdrop = compositionLocalOf<LayerBackdrop?> { null }
 
@@ -53,8 +51,9 @@ internal fun MiuixBlurredTopBar(
     val backdrop = LocalMiuixBarBackdrop.current
     val theme = LocalAppUiConfiguration.current.theme
     Box(modifier) {
-        if (backdrop != null && theme.enableBlur) {
-            val progressive = theme.enableProgressiveBlur
+        // HyperOS 4 的顶栏模糊是外观本身，不再受 enableBlur / enableProgressiveBlur 控制；
+        // 顶栏恒为渐进模糊，不保留整块均匀模糊的分支。
+        if (backdrop != null) {
             val radius = if (fixedStyle) 24f else theme.topBarBlurRadius.toFloat()
             val colors = BlurDefaults.blurColors(
                 blendColors = if (fixedStyle) emptyList() else listOf(
@@ -64,31 +63,21 @@ internal fun MiuixBlurredTopBar(
                     ),
                 ),
             )
-            val background = Modifier.matchParentSize()
             Box(
-                if (progressive) {
-                    background
-                        // Fade the sampled background while leaving title and actions fully opaque.
-                        .graphicsLayer {
-                            alpha = scrollBehavior?.state?.let {
-                                (-it.contentOffset / 48.dp.toPx()).coerceIn(0f, 1f)
-                            } ?: 1f
-                        }
-                        .progressiveTextureBlur(
-                            backdrop = backdrop,
-                            shape = RectangleShape,
-                            blurRadius = radius,
-                            gradient = ProgressiveBlur.Top.copy(curve = 2.2f),
-                            colors = colors,
-                        )
-                } else {
-                    background.textureBlur(
+                Modifier.matchParentSize()
+                    // Fade the sampled background while leaving title and actions fully opaque.
+                    .graphicsLayer {
+                        alpha = scrollBehavior?.state?.let {
+                            (-it.contentOffset / 48.dp.toPx()).coerceIn(0f, 1f)
+                        } ?: 1f
+                    }
+                    .progressiveTextureBlur(
                         backdrop = backdrop,
                         shape = RectangleShape,
                         blurRadius = radius,
+                        gradient = ProgressiveBlur.Top.copy(curve = 2.2f),
                         colors = colors,
-                    )
-                },
+                    ),
             )
         }
         content()
@@ -99,7 +88,6 @@ internal fun MiuixBlurredTopBar(
 internal fun Modifier.miuixBottomBarBlur(): Modifier {
     val backdrop = LocalMiuixBarBackdrop.current ?: return this
     val theme = LocalAppUiConfiguration.current.theme
-    if (!theme.enableBlur) return this
     val radius = theme.bottomBarBlurRadius.dp
     val alpha = theme.bottomBarBlurAlpha / 100f
     val tint = GlassDefaults.secondaryColorOr { MiuixTheme.colorScheme.surface }.copy(alpha = alpha)

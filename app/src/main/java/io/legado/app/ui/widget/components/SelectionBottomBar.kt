@@ -1,6 +1,7 @@
 package io.legado.app.ui.widget.components
 
 import android.os.Build
+import androidx.activity.compose.LocalActivity
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.itos.coui.backdrop.CouiBackdrop
@@ -77,14 +79,6 @@ data class ActionItem(
     val onClick: () -> Unit
 )
 
-/**
- * COUI 原生胶囊操作栏的背景模糊半径（设备像素）。
- *
- * `CAPSULE_1` 系统胶囊材质在顶栏里不带模糊，因为顶栏背景本身已经渐进模糊；操作栏直接浮在正文上，
- * 零半径会让列表文字清晰透出。这档 20px 默认值已随 fork `pr/floating-toolbar` 合进
- * `CouiFloatingToolbarDefaults.style()`，这里不再显式补齐（数值相同，不会二次叠加）。
- */
-
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SelectionBottomBar(
@@ -113,8 +107,10 @@ fun SelectionBottomBar(
         .scale(if (compact) 0.85f else 1f)
 
     // COUI：走原生胶囊操作栏。它需要所属页面的背景采样源（AppTheme 的 ProvideCouiMenuBackdrop
-    // 挂在窗口内容根上），采样源缺失或原生材质不可用时落回 M3 工具栏，操作与语义保持一致。
-    if (LegadoTheme.composeEngine == ComposeEngine.Coui) {
+    // 挂在窗口内容根上），且采样源必须和操作栏在同一窗口；弹层（ModalBottomSheet / Dialog 的独立窗口）
+    // 里沿用页面窗口的 backdrop 会跨窗口采样，直接闪退，因此退回 M3 工具栏。
+    val inActivityWindow = LocalView.current.rootView === LocalActivity.current?.window?.decorView
+    if (LegadoTheme.composeEngine == ComposeEngine.Coui && inActivityWindow) {
         val backdrop = rememberCouiWindowBackdrop()
         if (backdrop != null && ThemeResolver.isCouiSupported()) {
             CouiSelectionBottomBar(

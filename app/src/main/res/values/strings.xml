@@ -2127,7 +2127,7 @@
     <string name="use_underline">Always Use Underline for Emphasized Text</string>
     <string name="adapt_special_style">Adapt Special Styles</string>
     <string name="compose_engine">Theme Style</string>
-    <string name="coui_theme_requires_android_14">COUI (requires Android 14 or later)</string>
+    <string name="coui_theme_requires_android_14">COUI (requires Android 14 and system blur)</string>
     <string name="container_opacity">Container Opacity</string>
     <string name="container_opacity_summary">%d</string>
     <string name="top_bar_opacity">Top Bar Opacity</string>
@@ -4024,5 +4024,5 @@
     <string name="a11y_open_playback_named">Open player for %1$s</string>
     <string name="a11y_reorder_position">Position %1$d of %2$d</string>
     <string name="hyper_os4_components">HyperOS 4 components</string>
-    <string name="hyper_os4_components_summary">Use the new glass top app bar, tabs and dropdowns in the Miuix theme.</string>
+    <string name="hyper_os4_components_summary">Use the glass top app bar, tabs and dropdowns in the Miuix theme. Requires Android 13 and system blur.</string>
 </resources>

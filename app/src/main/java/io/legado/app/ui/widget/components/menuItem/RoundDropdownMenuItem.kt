@@ -70,12 +70,8 @@ fun RoundDropdownMenuItem(
         ComposeEngine.Miuix -> {
             val legadoColorScheme = LegadoTheme.colorScheme
             val textColor = if (isSelected) legadoColorScheme.primary else legadoColorScheme.onSurface
-            // 玻璃面板里行不能自绘不透明底色，否则整块菜单会变成实心色。
-            val backgroundColor = if (LocalGlassPopupContent.current) {
-                Color.Transparent
-            } else {
-                legadoColorScheme.surfaceContainer
-            }
+            // Miuix 菜单只有玻璃面板一种形态，行不能自绘不透明底色。
+            val backgroundColor = Color.Transparent
             val checkColor = if (isSelected) legadoColorScheme.primary else Color.Transparent
 
             Row(

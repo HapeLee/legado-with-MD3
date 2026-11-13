@@ -21,7 +21,8 @@ object GlassDefaults {
         val enableBlur = LocalAppUiConfiguration.current.theme.enableBlur
         val active = when (LegadoTheme.composeEngine) {
             ComposeEngine.Material -> enableBlur
-            ComposeEngine.Miuix -> enableBlur && LocalMiuixBarBackdrop.current != null
+            // Miuix 的顶/底栏模糊常开，enableBlur 不影响它。
+            ComposeEngine.Miuix -> LocalMiuixBarBackdrop.current != null
             ComposeEngine.Mochi -> LocalMochiScrollBlurProgress.current != null
             ComposeEngine.Coui -> false
         }

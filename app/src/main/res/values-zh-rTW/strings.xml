@@ -2111,7 +2111,7 @@
     <string name="use_underline">強調文字始終使用底線</string>
     <string name="adapt_special_style">適配特殊樣式</string>
     <string name="compose_engine">主題樣式</string>
-    <string name="coui_theme_requires_android_14">COUI（需要 Android 14 或更新版本）</string>
+    <string name="coui_theme_requires_android_14">COUI（需要 Android 14 與系統模糊支援）</string>
     <string name="container_opacity">容器不透明度</string>
     <string name="container_opacity_summary">%d</string>
     <string name="web_service_auto_start">開啟應用時啟動 Web 服務</string>
@@ -3120,6 +3120,6 @@
     <string name="a11y_open_playback_named">開啟《%1$s》的播放介面</string>
     <string name="a11y_reorder_position">第 %1$d 項，共 %2$d 項</string>
     <string name="hyper_os4_components">HyperOS 4 風格元件</string>
-    <string name="hyper_os4_components_summary">在 Miuix 主題下使用新的玻璃頂欄、標籤頁與下拉選單。</string>
+    <string name="hyper_os4_components_summary">在 Miuix 主題下使用玻璃頂欄、標籤頁與下拉選單。需要 Android 13 與系統模糊支援。</string>
     <string name="paragraph_comment_height_percent">%1$d%%</string>
 </resources>

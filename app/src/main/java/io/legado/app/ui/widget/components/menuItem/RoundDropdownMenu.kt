@@ -1,6 +1,5 @@
 package io.legado.app.ui.widget.components.menuItem
 
-import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
@@ -24,7 +23,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.currentCompositionLocalContext
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,7 +54,7 @@ import com.itos.coui.menu.CouiMenuDefaults
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalAppUiConfiguration
-import io.legado.app.ui.theme.LocalHasMiuixPopupHost
+import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.LocalMiuixBarBackdrop
 import io.legado.app.ui.theme.ProvideAppContentColor
 import io.legado.app.ui.theme.ProvideAppDensity
@@ -70,9 +68,6 @@ import top.yukonga.miuix.kmp.glass.GlassTransformPopup
 import top.yukonga.miuix.kmp.window.WindowListPopup
 
 internal val LocalUseWindowPopupForMochiMenu = staticCompositionLocalOf { false }
-
-/** True while menu rows sit inside a glass panel, so they must not paint their own fill. */
-internal val LocalGlassPopupContent = compositionLocalOf { false }
 
 /**
  * Anchor for an OS4 glass menu: the popup anchor plus the anchor control's root bounds.
@@ -88,19 +83,15 @@ class GlassMenuAnchor(
 /**
  * 当前是否该用 OS4 玻璃菜单。
  *
- * 判定集中在 `AppScaffold` 建立的玻璃设施上：`LocalAppGlassOverlay` 只在
- * 「Miuix + HyperOS 4 组件开关 + SDK 33+ + 原生采样可用」时才有值，
- * `LocalHasMiuixPopupHost` 保证页面有 popup 宿主。所有自绘锚点菜单
- * （[RoundDropdownMenu]、`MiuixGlassMenuHost` 的调用方）必须共用这一口径，
- * 否则同一页会出现「顶栏玻璃、列表 ⋮ 仍是普通面板」的错位。
+ * 只看「Miuix + HyperOS 4 组件开关 + 模糊能力」：开关打开后不再按宿主/背景源降级，
+ * 缺少玻璃设施属于不支持的运行环境（`AppScaffold` 在开关与 API 33+ 下必定提供）。
+ * 所有自绘锚点菜单（[RoundDropdownMenu]、`MiuixGlassMenuHost` 的调用方）必须共用这一口径。
  */
 @Composable
 internal fun isMiuixGlassMenuAvailable(): Boolean =
     LegadoTheme.composeEngine == ComposeEngine.Miuix &&
-        LocalAppGlassOverlay.current != null &&
-        LocalHasMiuixPopupHost.current &&
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-        LocalAppUiConfiguration.current.theme.useHyperOs4Components
+        LocalAppUiConfiguration.current.theme.useHyperOs4Components &&
+        ThemeResolver.isBlurSupported()
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -136,9 +127,7 @@ fun RoundDropdownMenu(
         }
         val anchorBounds = glassAnchor?.bounds ?: parentBounds
         val rows: @Composable ColumnScope.() -> Unit = {
-            CompositionLocalProvider(LocalGlassPopupContent provides true) {
-                content(onDismissRequest)
-            }
+            content(onDismissRequest)
         }
         val popupContent = remember(glassHost) { mutableStateOf<@Composable BoxScope.() -> Unit>({}) }
         SideEffect {
