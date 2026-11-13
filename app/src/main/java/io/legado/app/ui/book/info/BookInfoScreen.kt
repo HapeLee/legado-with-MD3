@@ -150,8 +150,6 @@ import io.legado.app.ui.widget.components.image.cover.buildCoverImageRequest
 import io.legado.app.ui.widget.components.image.cover.cachedCoverAspectRatio
 import io.legado.app.ui.widget.components.image.cover.usesDefaultBookCover
 import io.legado.app.ui.widget.components.log.AppLogSheet
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.privacy.PrivateLockedCover
 import io.legado.app.ui.widget.components.privacy.PrivateLockedHint
 import io.legado.app.ui.widget.components.privacy.PrivateMaskLine
@@ -177,6 +175,7 @@ import io.legado.app.utils.openUrl
 import kotlinx.collections.immutable.ImmutableList
 import io.legado.app.ui.widget.components.menu.AppAction
 import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.topbar.TopBarActionMenu
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -1202,6 +1201,27 @@ private data class BookInfoBackdropState(
     val style: BookInfoBackdropStyle,
 )
 
+/** 书名长按菜单的稳定 ID；声明与分派共用，避免字面量漂移。 */
+private const val TITLE_MENU_SEARCH = "title_menu_search"
+private const val TITLE_MENU_TOGGLE_EXPAND = "title_menu_toggle_expand"
+
+@Composable
+private fun bookInfoTitleMenuGroups(isTitleExpanded: Boolean): ImmutableList<AppActionGroup> =
+    persistentListOf(
+        AppActionGroup(
+            id = "book_info_title_menu",
+            actions = persistentListOf(
+                AppAction(id = TITLE_MENU_SEARCH, label = stringResource(R.string.search)),
+                AppAction(
+                    id = TITLE_MENU_TOGGLE_EXPAND,
+                    label = stringResource(
+                        if (isTitleExpanded) R.string.collapse else R.string.expand
+                    ),
+                ),
+            ),
+        ),
+    )
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun BookInfoHeader(
@@ -1365,25 +1385,22 @@ private fun BookInfoHeader(
                                     onLongClick = { showTitleMenu = true }
                                 )
                             )
-                            RoundDropdownMenu(
-                                expanded = showTitleMenu,
-                                onDismissRequest = { showTitleMenu = false }
-                            ) {
-                                RoundDropdownMenuItem(
-                                    text = stringResource(R.string.search),
-                                    onClick = {
-                                        showTitleMenu = false
-                                        onBookNameClick(true)
+                            // 长按节点在这层 Box 里由书名自己持有；受控弹层模式让入口只画菜单，
+                            // 不包可点节点，长按 / 单击语义与锚点矩形都保持原样。
+                            AppActionMenu(
+                                groups = bookInfoTitleMenuGroups(isTitleExpanded),
+                                onAction = { id ->
+                                    when (id) {
+                                        TITLE_MENU_SEARCH -> onBookNameClick(true)
+                                        TITLE_MENU_TOGGLE_EXPAND ->
+                                            isTitleExpanded = !isTitleExpanded
                                     }
-                                )
-                                RoundDropdownMenuItem(
-                                    text = stringResource(if (isTitleExpanded) R.string.collapse else R.string.expand),
-                                    onClick = {
-                                        showTitleMenu = false
-                                        isTitleExpanded = !isTitleExpanded
-                                    }
-                                )
-                            }
+                                },
+                                modifier = Modifier.matchParentSize(),
+                                embeddedExpanded = showTitleMenu,
+                                onDismissRequest = { showTitleMenu = false },
+                                trigger = {},
+                            )
                         }
                         val authorLabels = remember(book.realAuthor) {
                             book.realAuthor.split(",", "，")

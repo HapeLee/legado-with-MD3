@@ -42,14 +42,15 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.dialog.TextListInputDialog
-import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.Flow
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -99,8 +100,6 @@ fun RssSourceScreen(
     var showAddToGroupDialog by remember { mutableStateOf(false) }
     var showRemoveFromGroupDialog by remember { mutableStateOf(false) }
     var showGroupManageSheet by remember { mutableStateOf(false) }
-
-    var showImportMenu by remember { mutableStateOf(false) }
 
     val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
         onIntent(RssSourceIntent.MoveItem(from.index, to.index))
@@ -290,78 +289,84 @@ fun RssSourceScreen(
         },
         onAddClick = { onAddSource() },
         snackbarHostState = snackbarHostState,
-        dropDownMenuContent = { dismiss ->
-            RoundDropdownMenuItem(
-                onClick = { showGroupManageSheet = true },
-                text = "分组管理",
-            )
-            Box {
-                RoundDropdownMenuItem(
-                    text = stringResource(R.string.import_rss_source),
-                    onClick = { showImportMenu = true }
-                )
-                RoundDropdownMenu(
-                    expanded = showImportMenu,
-                    onDismissRequest = { showImportMenu = false }
-                ) {
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.import_on_line),
-                        onClick = {
-                            showImportMenu = false
-                            dismiss()
-                            showUrlInput = true
-                        }
-                    )
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.import_local),
-                        onClick = {
-                            showImportMenu = false
-                            dismiss()
-                            importDoc.launch(arrayOf("text/plain", "application/json"))
-                        }
-                    )
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.import_default_rule),
-                        onClick = {
-                            showImportMenu = false
-                            dismiss()
-                            onIntent(RssSourceIntent.ImportDefault)
-                        }
-                    )
-                }
+        // 导入三项与书源页一样平铺在第一层（不再有「点进去换一层」的伪子菜单）；
+        // 过滤与分组项用 selected 标出当前过滤条件，三段之间由 group 自带分段线。
+        menuGroups = persistentListOf(
+            AppActionGroup(
+                id = "rss_source_commands",
+                actions = persistentListOf(
+                    AppAction("group_manage", stringResource(R.string.group_manage)),
+                    AppAction("import_on_line", stringResource(R.string.import_on_line)),
+                    AppAction("import_local", stringResource(R.string.import_local)),
+                    AppAction(
+                        "import_default_rule",
+                        stringResource(R.string.import_default_rule),
+                    ),
+                ),
+            ),
+            AppActionGroup(
+                id = "rss_source_filter",
+                actions = persistentListOf(
+                    AppAction(
+                        "filter_all",
+                        stringResource(R.string.all),
+                        selected = state.groupFilter == null,
+                    ),
+                    AppAction(
+                        "filter_enabled",
+                        stringResource(R.string.enabled),
+                        selected = state.groupFilter == RssSourceViewModel.FILTER_ENABLED,
+                    ),
+                    AppAction(
+                        "filter_disabled",
+                        stringResource(R.string.disabled),
+                        selected = state.groupFilter == RssSourceViewModel.FILTER_DISABLED,
+                    ),
+                    AppAction(
+                        "filter_need_login",
+                        stringResource(R.string.need_login),
+                        selected = state.groupFilter == RssSourceViewModel.FILTER_LOGIN,
+                    ),
+                    AppAction(
+                        "filter_no_group",
+                        stringResource(R.string.no_group),
+                        selected = state.groupFilter == RssSourceViewModel.FILTER_NO_GROUP,
+                    ),
+                ),
+            ),
+            AppActionGroup(
+                id = "rss_source_groups",
+                actions = groups.map { group ->
+                    val id = "${RssSourceViewModel.PREFIX_GROUP}$group"
+                    AppAction(id = id, label = group, selected = state.groupFilter == id)
+                }.toImmutableList(),
+            ),
+        ),
+        onMenuAction = { id ->
+            when {
+                id == "group_manage" -> showGroupManageSheet = true
+                id == "import_on_line" -> showUrlInput = true
+                id == "import_local" ->
+                    importDoc.launch(arrayOf("text/plain", "application/json"))
+
+                id == "import_default_rule" -> onIntent(RssSourceIntent.ImportDefault)
+                id == "filter_all" -> onIntent(RssSourceIntent.SetGroupFilter(null))
+                id == "filter_enabled" ->
+                    onIntent(RssSourceIntent.SetGroupFilter(RssSourceViewModel.FILTER_ENABLED))
+
+                id == "filter_disabled" ->
+                    onIntent(RssSourceIntent.SetGroupFilter(RssSourceViewModel.FILTER_DISABLED))
+
+                id == "filter_need_login" ->
+                    onIntent(RssSourceIntent.SetGroupFilter(RssSourceViewModel.FILTER_LOGIN))
+
+                id == "filter_no_group" ->
+                    onIntent(RssSourceIntent.SetGroupFilter(RssSourceViewModel.FILTER_NO_GROUP))
+
+                id.startsWith(RssSourceViewModel.PREFIX_GROUP) ->
+                    onIntent(RssSourceIntent.SetGroupFilter(id))
             }
-            PillDivider()
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.all),
-                onClick = { dismiss(); onIntent(RssSourceIntent.SetGroupFilter(null)) }
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.enabled),
-                onClick = { dismiss(); onIntent(RssSourceIntent.SetGroupFilter(RssSourceViewModel.FILTER_ENABLED)) }
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.disabled),
-                onClick = { dismiss(); onIntent(RssSourceIntent.SetGroupFilter(RssSourceViewModel.FILTER_DISABLED)) }
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.need_login),
-                onClick = { dismiss(); onIntent(RssSourceIntent.SetGroupFilter(RssSourceViewModel.FILTER_LOGIN)) }
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.no_group),
-                onClick = { dismiss(); onIntent(RssSourceIntent.SetGroupFilter(RssSourceViewModel.FILTER_NO_GROUP)) }
-            )
-            PillDivider()
-            groups.forEach { group ->
-                RoundDropdownMenuItem(
-                    text = group,
-                    onClick = {
-                        dismiss()
-                        onIntent(RssSourceIntent.SetGroupFilter("${RssSourceViewModel.PREFIX_GROUP}$group"))
-                    }
-                )
-            }
-        }
+        },
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
             FastScrollLazyColumn(

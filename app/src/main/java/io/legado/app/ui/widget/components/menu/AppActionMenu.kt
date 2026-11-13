@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -33,18 +32,15 @@ import com.itos.coui.menu.CouiMenuItem
 import com.itos.coui.menu.Menu
 import com.itos.coui.menu.couiMenuAnchor
 import com.itos.coui.menu.rememberCouiMenuAnchor
-import com.itos.coui.topappbar.TopAppBarButton as CouiTopAppBarButton
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalHasMiuixPopupHost
 import io.legado.app.ui.theme.LocalMiuixBarBackdrop
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.AppGlassOverlayState
 import io.legado.app.ui.widget.components.LocalAppGlassOverlay
-import io.legado.app.ui.widget.components.coui.LocalAppCouiNativeToolbar
 import io.legado.app.ui.widget.components.coui.canUseCouiSettingMenu
-import io.legado.app.ui.widget.components.coui.rememberCouiCapsuleRenderer
 import io.legado.app.ui.widget.components.topbar.LocalMiuixGlassTopBar
+import io.legado.app.ui.widget.components.topbar.TopBarActionSurface
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.menuItem.MiuixGlassMenuHost
@@ -69,7 +65,6 @@ import top.yukonga.miuix.kmp.menu.OverlayIconCascadingDropdownMenu
 import top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu
 import top.yukonga.miuix.kmp.menu.WindowIconCascadingDropdownMenu
 import top.yukonga.miuix.kmp.menu.WindowIconDropdownMenu
-import ui.feice.mochi.basic.MochiBarIconButton
 import ui.feice.mochi.basic.MochiDropdownDefaults
 import ui.feice.mochi.basic.MochiDropdownMenu
 import ui.feice.mochi.basic.MochiItem
@@ -95,6 +90,12 @@ import ui.feice.mochi.basic.MochiItem
  * [AppAction.groupTitleBefore] 与 [AppActionGroup.title] 由 [dividerBeforeAt] 统一降级为
  * 纯分段线，四套引擎都不渲染标题文本；多 group 时第 2 组起自动补线。
  * Material 无级联能力，子菜单显式平铺为普通项，不静默丢子项 ID。
+ *
+ * [embeddedExpanded] 非 `null` 时进入受控弹层模式：四引擎都只渲染弹层，不渲染 trigger 包装，
+ * 开合由调用方经 [onDismissRequest] 收口；锚点取调用方放置本组件的容器矩形，因此该容器必须有尺寸，
+ * 且容器上不能再叠加任何可命中节点（COUI 的 `couiMenuAnchor` 就在此列，会挡掉触发按钮的点击）。
+ * 代价是失去 COUI 的触点锚定（菜单从手指/触点长出），改为从容器矩形下拉，与键盘、无障碍
+ * 触发时的既有回退一致。与 [AppChoiceDropdown] 的同名参数同语义，用于「展开态要驱动页面其它行为」的菜单。
  */
 @Composable
 fun AppActionMenu(
@@ -117,30 +118,50 @@ fun AppActionMenu(
      * 所以默认按圆形裁剪；方形卡片触发时传自己的形状。
      */
     triggerShape: Shape = CircleShape,
+    /**
+     * 受控弹层模式：非 `null` 时只渲染弹层、不渲染 trigger 包装，由调用方持有开合状态并
+     * 把本组件放在锚点位置（通常是按钮所在的 Box + `Modifier.matchParentSize()`）。
+     * 用于「展开态还要驱动外部行为」的菜单：播放页自动隐藏控制栏、工具按钮高亮等。
+     * Miuix 的库 `Icon*DropdownMenu` 自持 `expanded`，受控时改走 [MiuixRowActions] 的 popup 形态。
+     */
+    embeddedExpanded: Boolean? = null,
+    /** 受控模式下弹层请求关闭（含选中某项）时回调。 */
+    onDismissRequest: () -> Unit = {},
     trigger: @Composable AppMenuTriggerScope.() -> Unit,
 ) {
     val flat = remember(groups) { groups.flatMap { it.actions } }
     when (LegadoTheme.composeEngine) {
         ComposeEngine.Mochi -> MochiActions(
-            groups, flat, onAction, modifier, enabled, anchor, triggerShape, trigger,
+            groups, flat, onAction, modifier, enabled, anchor, triggerShape,
+            embeddedExpanded, onDismissRequest, trigger,
         )
 
         ComposeEngine.Coui -> if (canUseCouiSettingMenu()) {
-            CouiActions(groups, onAction, modifier, enabled, anchor, title, triggerShape, trigger)
+            CouiActions(
+                groups, onAction, modifier, enabled, anchor, title, triggerShape,
+                embeddedExpanded, onDismissRequest, trigger,
+            )
         } else {
-            LegacyActions(groups, onAction, modifier, enabled, anchor, title, triggerShape, trigger)
+            LegacyActions(
+                groups, onAction, modifier, enabled, anchor, title, triggerShape,
+                embeddedExpanded, onDismissRequest, trigger,
+            )
         }
 
-        ComposeEngine.Miuix -> if (anchor == AppMenuAnchor.Row) {
-            // 库的 `Icon*DropdownMenu` 会把 content 包进它自己的图标按钮，
-            // 列表项里那层壳必须由 trigger 自己画，所以改走 popup 形态。
-            MiuixRowActions(groups, onAction, modifier, enabled, title, triggerShape, trigger)
+        ComposeEngine.Miuix -> if (embeddedExpanded != null || anchor == AppMenuAnchor.Row) {
+            // 受控模式优先：库的 `Icon*DropdownMenu` 自持 expanded，无法从外部开合。
+            // 库的图标弹层也不支持受控，改走 popup 形态（与 AppChoiceDropdown 一致）。
+            MiuixRowActions(
+                groups, onAction, modifier, enabled, title, triggerShape,
+                embeddedExpanded, onDismissRequest, trigger,
+            )
         } else {
             MiuixActions(groups, onAction, modifier, enabled, trigger)
         }
 
         ComposeEngine.Material -> LegacyActions(
-            groups, onAction, modifier, enabled, anchor, title, triggerShape, trigger,
+            groups, onAction, modifier, enabled, anchor, title, triggerShape,
+            embeddedExpanded, onDismissRequest, trigger,
         )
     }
 }
@@ -154,9 +175,12 @@ private fun MochiActions(
     enabled: Boolean,
     anchor: AppMenuAnchor,
     triggerShape: Shape,
+    embeddedExpanded: Boolean?,
+    onDismissRequest: () -> Unit,
     trigger: @Composable AppMenuTriggerScope.() -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val isOpen = embeddedExpanded ?: expanded
     val scope = remember { AppMenuTriggerScopeImpl(Modifier) { expanded = true } }
     // AppAction.selected 在 Mochi 没有单独的单选通道：只要这份菜单里用过 selected，就整列按
     // 独立勾选圈（checked）画，和 COUI / Miuix 的勾、Material 的 isSelected 对齐。
@@ -206,28 +230,44 @@ private fun MochiActions(
     // Icon 锚点（顶栏）穿项目的 Mochi 顶栏图标按钮那层壳——也就是 `TopBarActionButton`
     // 在 Mochi 下的实现，否则 ⋯ 是一颗没有底色的裸图标，和同排搜索按钮不一致。
     // Row 锚点（设置行 / 自绘整行）仍由 trigger 自己画，入口只负责可点与锚点。
-    Box(modifier) {
-        if (anchor == AppMenuAnchor.Icon) {
-            MochiBarIconButton(
-                onClick = scope::open,
-                modifier = Modifier.onGloballyPositioned {
+    // 受控模式没有 trigger 节点，锚点直接取调用方给的外层容器（与 MochiChoice 一致）。
+    Box(
+        modifier.then(
+            if (embeddedExpanded != null) {
+                Modifier.onGloballyPositioned {
                     anchorBounds = it.boundsInWindow().roundToIntRect()
-                },
-                enabled = enabled,
-                contentKey = "app-menu",
-            ) { scope.trigger() }
-        } else {
-            Box(
-                scope.modifier
-                    .onGloballyPositioned { anchorBounds = it.boundsInWindow().roundToIntRect() }
-                    .clipTriggerShape(triggerShape)
-                    .clickable(enabled = enabled) { scope.open() },
-            ) { scope.trigger() }
+                }
+            } else {
+                Modifier
+            }
+        )
+    ) {
+        if (embeddedExpanded == null) {
+            if (anchor == AppMenuAnchor.Icon) {
+                TopBarActionSurface(
+                    onClick = scope::open,
+                    modifier = Modifier.onGloballyPositioned {
+                        anchorBounds = it.boundsInWindow().roundToIntRect()
+                    },
+                    enabled = enabled,
+                    contentKey = "app-menu",
+                ) { scope.trigger() }
+            } else {
+                Box(
+                    scope.modifier
+                        .onGloballyPositioned { anchorBounds = it.boundsInWindow().roundToIntRect() }
+                        .clipTriggerShape(triggerShape)
+                        .clickable(enabled = enabled) { scope.open() },
+                ) { scope.trigger() }
+            }
         }
         MochiDropdownMenu(
             anchorBounds = anchorBounds,
-            expanded = expanded && enabled,
-            onExpandedChange = { expanded = it },
+            expanded = isOpen && enabled,
+            onExpandedChange = { open ->
+                if (embeddedExpanded == null) expanded = open
+                if (!open) onDismissRequest()
+            },
             items = items,
             onItemClick = onItemClick,
             onChildClick = onChildClick,
@@ -250,11 +290,20 @@ private fun CouiActions(
     anchor: AppMenuAnchor,
     title: String?,
     triggerShape: Shape,
+    embeddedExpanded: Boolean?,
+    onDismissRequest: () -> Unit,
     trigger: @Composable AppMenuTriggerScope.() -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val isOpen = embeddedExpanded ?: expanded
+    val dismissMenu = {
+        expanded = false
+        onDismissRequest()
+    }
     val couiAnchor = rememberCouiMenuAnchor()
-    val items = remember(groups) {
+    // COUI 的 CouiMenuItem 没有文字色，destructive 只能落到图标上（文字保持菜单默认色）。
+    val destructiveTint = LegadoTheme.colorScheme.error
+    val items = remember(groups, destructiveTint) {
         buildList {
             groups.forEachIndexed { groupIndex, group ->
                 group.actions.forEachIndexed { actionIndex, action ->
@@ -267,6 +316,7 @@ private fun CouiActions(
                             enabled = action.enabled,
                             checked = action.checked,
                             dividerBefore = group.dividerBeforeAt(actionIndex, groupIndex),
+                            iconTint = if (action.destructive) destructiveTint else null,
                             children = action.children.map { child ->
                                 CouiMenuItem(
                                     value = child.id,
@@ -275,6 +325,7 @@ private fun CouiActions(
                                     selected = child.selected,
                                     enabled = child.enabled,
                                     checked = child.checked,
+                                    iconTint = if (child.destructive) destructiveTint else null,
                                 )
                             },
                         )
@@ -289,8 +340,15 @@ private fun CouiActions(
             onOpen = { couiAnchor.open { expanded = true } },
         )
     }
+    // 受控模式**不能**把 couiMenuAnchor 挂到容器上：该修饰符内含 pointerInput，作为覆盖在
+    // 调用方触发按钮之上的兄弟节点会成为命中的唯一节点，按钮再也收不到点击（菜单永远打不开）。
+    // 定位也不需要它：COUI 的触点锚点只在 open() 记下触点后才产生坐标，受控模式没有触点，
+    // 弹层按 Popup 的父容器矩形定位（COUI `Menu.anchor` 文档写明「不提供时沿用父布局定位」），
+    // 而容器就是调用方放本组件的位置——正是下拉应有的锚点；反过来传 anchor 只会拿到 null 坐标。
     Box(modifier) {
-        if (anchor == AppMenuAnchor.Row) {
+        if (embeddedExpanded != null) {
+            // 受控模式：弹层锚在调用方给定的位置，入口不包可点节点。
+        } else if (anchor == AppMenuAnchor.Row) {
             // 列表项 / 卡片内：壳由 trigger 自己画，入口只包一个可点节点。
             // 必须按 trigger 的形状裁剪：否则按压底色/水波纹是方角，观感上就是「按钮没有圆角」。
             Box(
@@ -300,35 +358,26 @@ private fun CouiActions(
                     .semantics { title?.let { text = AnnotatedString(it) } },
             ) { scope.trigger() }
         } else {
-            // 跟随同排 TopBarActionButton：只有 COUI 原生胶囊按钮才带那层玻璃底，
-            // 普通 IconButton 会让 ⋮ 成为整排里唯一没有玻璃的按钮。
-            val capsule = rememberCouiCapsuleRenderer()
-            if (ThemeResolver.isCouiSupported() && LocalAppCouiNativeToolbar.current &&
-                capsule != null
-            ) {
-                CouiTopAppBarButton(
-                    modifier = scope.modifier.semantics { role = Role.Button },
-                    onClick = { if (enabled) scope.open() },
-                    text = false,
-                    renderer = capsule,
-                ) { scope.trigger() }
-            } else {
-                IconButton(
-                    onClick = scope::open,
-                    enabled = enabled,
-                    modifier = scope.modifier,
-                ) { scope.trigger() }
-            }
+            // 按钮壳归顶栏：与同排 TopBarActionButton 共用尺寸、容器底色、液体玻璃与合并态，
+            // 否则 ⋮ 会是整排里唯一一颗裸 IconButton。
+            TopBarActionSurface(
+                onClick = scope::open,
+                modifier = scope.modifier,
+                enabled = enabled,
+            ) { scope.trigger() }
         }
         Menu(
-            expanded = expanded && enabled,
-            onDismissRequest = { expanded = false },
+            expanded = isOpen && enabled,
+            onDismissRequest = dismissMenu,
             items = items,
             onItemClick = { item ->
-                expanded = false
+                // COUI 的 Menu 不会在选中后自动回调 onDismissRequest；受控模式下只改
+                // 内部 expanded 关不掉，必须显式通知调用方（非受控时 onDismissRequest 为空实现）。
+                dismissMenu()
                 onAction(item.value)
             },
-            anchor = couiAnchor,
+            // 受控模式没有触点锚点；传 anchor 只会得到 null 坐标，见上面对容器修饰符的说明。
+            anchor = if (embeddedExpanded == null) couiAnchor else null,
         )
     }
 }
@@ -349,22 +398,46 @@ private fun MiuixRowActions(
     enabled: Boolean,
     title: String?,
     triggerShape: Shape,
+    embeddedExpanded: Boolean?,
+    onDismissRequest: () -> Unit,
     trigger: @Composable AppMenuTriggerScope.() -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val isOpen = embeddedExpanded ?: expanded
+    val dismissMenu = {
+        expanded = false
+        onDismissRequest()
+    }
     val scope = remember { AppMenuTriggerScopeImpl(Modifier) { expanded = true } }
     val glass = isMiuixGlassMenuAvailable()
     val anchor = rememberGlassPopupAnchor()
-    val entries = remember(groups, onAction) { groups.toMiuixEntries(onAction) }
-    Box(modifier) {
-        Box(
-            scope.modifier
-                // morph 起点圆角对齐 `SmallPlainButton`（32dp 圆形）。
-                .then(if (glass) Modifier.glassPopupAnchor(anchor, cornerRadius = 16.dp) else Modifier)
-                .clipTriggerShape(triggerShape)
-                .clickable(enabled = enabled) { scope.open() }
-                .semantics { title?.let { text = AnnotatedString(it) } },
-        ) { scope.trigger() }
+    // 受控时显式通知调用方收口：常规 popup 有 collapseOnSelection，玻璃弹层不保证。
+    val entries = remember(groups, onAction, embeddedExpanded != null) {
+        groups.toMiuixEntries { id ->
+            if (embeddedExpanded != null) onDismissRequest()
+            onAction(id)
+        }
+    }
+    // `glassPopupAnchor` 同时写入 containerBounds 与 cornerRadius。受控模式没有 trigger 节点，
+    // 不挂在调用方容器上，anchor 就保留 Rect.Zero / 0.dp：玻璃面板从窗口原点 morph（左上角），
+    // 收起插值 `startRadius + (endRadius - startRadius) * fraction` 越过 0 时还会得到负圆角。
+    // 与 AppChoiceDropdown 的受控 containerAnchor 保持同一口径；12dp 对齐方卡 / 尾部区域。
+    val containerAnchor = if (glass && embeddedExpanded != null) {
+        Modifier.glassPopupAnchor(anchor, cornerRadius = 12.dp)
+    } else {
+        Modifier
+    }
+    Box(modifier.then(containerAnchor)) {
+        if (embeddedExpanded == null) {
+            Box(
+                scope.modifier
+                    // morph 起点圆角对齐 `SmallPlainButton`（32dp 圆形）。
+                    .then(if (glass) Modifier.glassPopupAnchor(anchor, cornerRadius = 16.dp) else Modifier)
+                    .clipTriggerShape(triggerShape)
+                    .clickable(enabled = enabled) { scope.open() }
+                    .semantics { title?.let { text = AnnotatedString(it) } },
+            ) { scope.trigger() }
+        }
         if (glass) {
             // HyperOS 4：Row 锚点也走原生玻璃菜单——面板从按钮矩形 morph 出来，
             // 行、级联子菜单、勾选态全部由库画。否则同一页会出现「顶栏 ⋮ 是玻璃、
@@ -374,19 +447,24 @@ private fun MiuixRowActions(
             // 消失再出现」。这里不给 trigger 挂 `glassPopupAnchorContent`——弹层自己
             // 画面板（没有 `anchor.surface`），库需要复制整个控件而不是只复制图标。
             MiuixGlassMenuHost(
-                show = expanded && enabled,
-                onDismissRequest = { expanded = false },
+                show = isOpen && enabled,
+                onDismissRequest = dismissMenu,
                 anchor = anchor,
                 entries = entries,
-                anchorContent = { scope.trigger() },
+                // 受控模式没有 trigger 节点（内容由调用方渲染），玻璃过渡只能靠面板自身 morph。
+                anchorContent = if (embeddedExpanded == null) {
+                    { scope.trigger() }
+                } else {
+                    {}
+                },
             )
         } else {
             val dropdownColors = DropdownDefaults.dropdownColors()
             if (LocalHasMiuixPopupHost.current) {
                 OverlayDropdownPopup(
                     entries = entries,
-                    show = expanded && enabled,
-                    onDismiss = { expanded = false },
+                    show = isOpen && enabled,
+                    onDismiss = dismissMenu,
                     onDismissFinished = {},
                     maxHeight = null,
                     dropdownColors = dropdownColors,
@@ -396,8 +474,8 @@ private fun MiuixRowActions(
             } else {
                 WindowDropdownPopup(
                     entries = entries,
-                    show = expanded && enabled,
-                    onDismiss = { expanded = false },
+                    show = isOpen && enabled,
+                    onDismiss = dismissMenu,
                     onDismissFinished = {},
                     maxHeight = null,
                     dropdownColors = dropdownColors,
@@ -578,12 +656,21 @@ private fun LegacyActions(
     anchor: AppMenuAnchor,
     title: String?,
     triggerShape: Shape,
+    embeddedExpanded: Boolean?,
+    onDismissRequest: () -> Unit,
     trigger: @Composable AppMenuTriggerScope.() -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val isOpen = embeddedExpanded ?: expanded
+    val dismissMenu = {
+        expanded = false
+        onDismissRequest()
+    }
     val scope = remember { AppMenuTriggerScopeImpl(Modifier) { expanded = true } }
     Box(modifier) {
-        if (anchor == AppMenuAnchor.Row) {
+        if (embeddedExpanded != null) {
+            // 受控模式：弹层锚在调用方给定的位置，入口不包可点节点。
+        } else if (anchor == AppMenuAnchor.Row) {
             Box(
                 scope.modifier
                     .clipTriggerShape(triggerShape)
@@ -591,21 +678,26 @@ private fun LegacyActions(
                     .semantics { title?.let { text = AnnotatedString(it) } },
             ) { scope.trigger() }
         } else {
-            IconButton(
+            // 按钮壳归顶栏：与同排 TopBarActionButton 共用尺寸、容器底色、液体玻璃与合并态，
+            // 否则 ⋮ 会是整排里唯一一颗裸 IconButton。
+            TopBarActionSurface(
                 onClick = scope::open,
-                enabled = enabled,
                 modifier = scope.modifier,
+                enabled = enabled,
             ) { scope.trigger() }
         }
         RoundDropdownMenu(
-            expanded = expanded && enabled,
-            onDismissRequest = { expanded = false },
+            expanded = isOpen && enabled,
+            onDismissRequest = dismissMenu,
         ) { dismiss ->
             groups.forEachIndexed { groupIndex, group ->
                 group.actions.forEachIndexed { actionIndex, action ->
                     if (group.dividerBeforeAt(actionIndex, groupIndex)) PillDivider()
                     RoundDropdownMenuItem(
                         text = action.label,
+                        // destructive 必须落成文字色：本分支的 contentColor 同时染文字与 leadingIcon。
+                        color = if (action.destructive) LegadoTheme.colorScheme.error
+                        else Color.Unspecified,
                         enabled = action.enabled,
                         isSelected = action.selected || action.checked == true,
                         modifier = Modifier.semantics {
@@ -623,6 +715,8 @@ private fun LegacyActions(
                     action.children.forEach { child ->
                         RoundDropdownMenuItem(
                             text = child.label,
+                            color = if (child.destructive) LegadoTheme.colorScheme.error
+                            else Color.Unspecified,
                             enabled = child.enabled,
                             isSelected = child.selected || child.checked == true,
                             modifier = Modifier

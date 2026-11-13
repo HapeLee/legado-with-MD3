@@ -36,13 +36,20 @@ import io.legado.app.domain.usecase.ExploreKindUiUseCase
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.icon.AppIcon
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.sendToClip
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+// 分类选择菜单的稳定 ID：选项文本可能重复，用序号定位。
+private const val ExploreKindSelectorMenuGroup = "explore_kind_selector"
+private const val ExploreKindSelectorIdPrefix = "explore_kind:"
 
 @Composable
 fun ExploreKindMultiTypeItem(
@@ -330,24 +337,35 @@ private fun SelectTypeItem(
 
         BaseItem(displayText, internalOnClick)
 
-        RoundDropdownMenu(
-            expanded = showSelector,
-            onDismissRequest = { showSelector = false }
-        ) {
-            chars.forEach { option ->
-                RoundDropdownMenuItem(
-                    text = option,
-                    onClick = {
-                        showSelector = false
+        AppActionMenu(
+            groups = persistentListOf(
+                AppActionGroup(
+                    id = ExploreKindSelectorMenuGroup,
+                    actions = chars.mapIndexed { index, option ->
+                        AppAction(
+                            id = "$ExploreKindSelectorIdPrefix$index",
+                            label = option,
+                        )
+                    }.toImmutableList(),
+                ),
+            ),
+            onAction = { id ->
+                id.removePrefix(ExploreKindSelectorIdPrefix).toIntOrNull()
+                    ?.takeIf { index -> index in chars.indices }
+                    ?.let { index ->
+                        val option = chars[index]
                         if (selected != option) {
                             selected = option
                             state.updateValue(option, onValueChange)
                             if (onRunAction != null) onRunAction() else state.executeAction(kind.action)
                         }
                     }
-                )
-            }
-        }
+            },
+            modifier = Modifier.matchParentSize(),
+            embeddedExpanded = showSelector,
+            onDismissRequest = { showSelector = false },
+            trigger = {},
+        )
     }
 }
 

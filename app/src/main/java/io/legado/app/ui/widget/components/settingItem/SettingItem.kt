@@ -22,7 +22,6 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -170,7 +169,7 @@ fun SettingItem(
         {
             val tint = if (couiColors != null) {
                 if (enabled) couiColors.summary else couiColors.disabled
-            } else MaterialTheme.colorScheme.onSurfaceVariant
+            } else LegadoTheme.colorScheme.onSurfaceVariant
             if (painter != null) {
                 Icon(painter = painter, contentDescription = null, tint = tint)
             } else if (imageVector != null) {
@@ -189,7 +188,7 @@ fun SettingItem(
                         fontFamily = if (isCoui) LegadoTheme.typography.bodySmallEmphasized.fontFamily else null,
                         color = if (couiColors != null) {
                             if (enabled) couiColors.summary else couiColors.disabled
-                        } else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        } else LegadoTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     )
                 }
                 if (option != null && trailingOption == null) {
@@ -197,7 +196,7 @@ fun SettingItem(
                         AppText(
                             option,
                             style = LegadoTheme.typography.labelMediumEmphasized,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = LegadoTheme.colorScheme.primary,
                         )
                         if (useOptionAnchor) menu()
                     }
@@ -251,7 +250,7 @@ fun SettingItem(
             ),
         cornerRadius = cornerRadius,
         colors = CardDefaults.cardColors(
-            containerColor = color ?: if (grouped) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerLow
+            containerColor = color ?: if (grouped) Color.Transparent else LegadoTheme.colorScheme.surfaceContainerLow
         ),
     ) {
         Column {

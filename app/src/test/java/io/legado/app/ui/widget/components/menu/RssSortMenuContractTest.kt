@@ -15,8 +15,9 @@ import java.io.File
  * [AppAction.children]（四个引擎原生支持级联；Material 平铺不丢 ID），
  * 选中态由 `AppAction.checked` 表达，收起交给入口。
  *
- * **刻意保留**：底部分组切换菜单挂在 `SmallToggleButton` 上（库没有非可点的纯展示
- * 变换形态），本轮不动，用棘轮锁住。
+ * 底部分组切换菜单同样挂在 `SmallToggleButton` 上（库没有非可点的纯展示变换形态），
+ * 第三十六轮把它也改成受控 [AppActionMenu]：按钮只负责写 `showGroupMenu`，弹层由
+ * `embeddedExpanded` 驱动，当前分组用 `AppAction.selected` 表达。
  *
  * 静态契约只保证结构 / ID 一致，**不证明真机上二级菜单的展开与选中态**。
  */
@@ -47,18 +48,27 @@ class RssSortMenuContractTest {
         assertTrue("子项未携带选中态", source.contains("checked = policy == redirectPolicy"))
     }
 
+    /** 第三十六轮：分组切换菜单已迁，棘轮归零，但仍保留 `SmallToggleButton` 作为开合入口。 */
     @Test
-    fun groupSwitcherKeepsRatchet() {
+    fun groupSwitcherIsControlledMenu() {
         val source = sourceOf(SCREEN)
         assertEquals(
-            "迁移后应只剩底部分组切换那 1 处手画菜单",
-            1,
+            "页面应已无手画菜单",
+            0,
             Regex("RoundDropdownMenu\\(").findAll(source).count(),
         )
         assertTrue(
             "分组切换的自定义 toggle trigger 被误删",
             source.contains("SmallToggleButton("),
         )
+        assertTrue("分组切换弹层未受控", source.contains("embeddedExpanded = showGroupMenu"))
+        assertTrue(
+            "分组切换缺少稳定 ID 前缀",
+            source.contains("private const val GROUP_SWITCHER_PREFIX = \"rss_sort_group:\""),
+        )
+        assertTrue("分组选中态未用 selected", source.contains("selected = selectedTabIndex == index"))
+        assertTrue("分组切换未按序号回解", source.contains("removePrefix(GROUP_SWITCHER_PREFIX)"))
+        assertFalse("仍手画 Check 选中图标", source.contains("Icons.Default.Check"))
     }
 
     private fun sourceOf(path: String): String {

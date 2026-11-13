@@ -70,8 +70,12 @@ class TopBarMenuIdContractTest {
         )
     }
 
+    /**
+     * 最后一处手画顶栏菜单（RSS 源页的伪子菜单 + 动态分组）在第二十八轮按「导入三项平铺、
+     * 分组项用 selected 标当前过滤」迁走，`dropDownMenuContent` 这条逃生舱在业务代码里归零。
+     */
     @Test
-    fun onlyPseudoSubmenuKeepsTopBarContent() {
+    fun noTopBarContentMenusRemain() {
         val remaining = mainJavaRoot().walkTopDown()
             .filter { it.isFile && it.extension == "kt" }
             .filter { it.readText().contains("dropDownMenuContent = {") }
@@ -79,8 +83,8 @@ class TopBarMenuIdContractTest {
             .sorted()
             .toList()
         assertEquals(
-            "顶栏手画菜单应只剩伪子菜单那一处；新增 content 菜单请优先用 menuGroups",
-            listOf("RssSourceScreen.kt"),
+            "顶栏手画菜单应已归零；新增菜单请用 menuGroups",
+            emptyList<String>(),
             remaining,
         )
     }
@@ -110,6 +114,7 @@ class TopBarMenuIdContractTest {
             "io/legado/app/feature/explore/ExploreMainRoute.kt",
             "io/legado/app/ui/book/import/remote/RemoteBookScreen.kt",
             "io/legado/app/ui/book/import/local/ImportBookScreen.kt",
+            "io/legado/app/ui/rss/source/manage/RssSourceScreen.kt",
         )
 
         /** 只靠动态 `group:` ID 的菜单，没有其它字面量动作 ID。 */

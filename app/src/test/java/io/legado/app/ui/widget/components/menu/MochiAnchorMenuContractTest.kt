@@ -31,15 +31,20 @@ class MochiAnchorMenuContractTest {
     }
 
     @Test
-    fun mochiIconAnchorKeepsProjectTopBarButtonShell() {
-        val source = sourceOf("io/legado/app/ui/widget/components/menu/AppActionMenu.kt")
+    fun mochiIconAnchorGoesThroughSharedTopBarShell() {
+        val entry = sourceOf("io/legado/app/ui/widget/components/menu/AppActionMenu.kt")
         assertTrue(
-            "Mochi 的 Icon 锚点必须穿 MochiBarIconButton，否则顶栏 ⋯ 会退化成裸图标、与同排搜索按钮不一致",
-            source.contains("MochiBarIconButton("),
+            "Mochi 的 Icon 锚点应走统一顶栏按钮壳，否则顶栏 ⋯ 会退化成裸图标、与同排搜索按钮不一致",
+            entry.contains("TopBarActionSurface("),
         )
         assertTrue(
             "Icon / Row 两种锚点应分别渲染：Row 仍由 trigger 自绘",
-            source.contains("AppMenuAnchor.Icon"),
+            entry.contains("AppMenuAnchor.Icon"),
+        )
+        assertTrue(
+            "壳里没有落到 MochiBarIconButton",
+            sourceOf("io/legado/app/ui/widget/components/topbar/TopBarButton.kt")
+                .contains("MochiBarIconButton("),
         )
     }
 

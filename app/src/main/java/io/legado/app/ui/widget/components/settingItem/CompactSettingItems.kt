@@ -11,7 +11,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import io.legado.app.ui.widget.components.AppSlider
 import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
@@ -115,8 +114,8 @@ fun CompactDropdownSettingItem(
                     horizontalPadding = 8.dp,
                     verticalPadding = 4.dp,
                     text = currentEntry,
-                    backgroundColor = MaterialTheme.colorScheme.surfaceContainer,
-                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    backgroundColor = LegadoTheme.colorScheme.surfaceContainer,
+                    contentColor = LegadoTheme.colorScheme.onSurface,
                 )
             }
             // COUI 也走统一路径：`CouiSettingMenu` 的 `Menu` 拿的是整行 bounds，弹层会从
@@ -340,7 +339,7 @@ fun CompactClickableSettingItem(
                     Icon(
                         imageVector = Icons.Default.ChevronRight,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = LegadoTheme.colorScheme.onSurfaceVariant
                     )
                 },
                 onClick = onClick

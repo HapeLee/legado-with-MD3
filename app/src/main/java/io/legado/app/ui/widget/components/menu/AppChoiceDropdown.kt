@@ -72,9 +72,9 @@ import ui.feice.mochi.basic.MochiItem
  * `CouiMenuAnchor`（Android 14+ 且阴影渲染器可用，否则降级 M3）；Material 走 M3 [DropdownMenu]；
  * Miuix 默认复用已原生化的 [DropdownListSettingItem]（设置行形态，由库渲染整行，
  * [trigger] 不生效）。[compact] 用于紧凑/自定义 trigger：四套分支都由入口包装
- * [trigger]，Miuix 弹层走 `WindowDropdownPopup` / `OverlayDropdownPopup`，
- * 保留原生 spinner 动画与选中态，trigger 外观不变；
- * 该形态暂不接 HyperOS 4 玻璃锚点变形。行为基线是既有设置项，不含回退。
+ * [trigger]，Miuix 在 HyperOS 4 玻璃可用时走 `MiuixGlassMenuHost` 的原生玻璃菜单
+ * （从锚点 morph），否则走 `WindowDropdownPopup` / `OverlayDropdownPopup`；两者都保留
+ * 原生动画与选中态，trigger 外观不变。行为基线是既有设置项，不含回退。
  *
  * [anchor] 与 [AppActionMenu] 同口径：`Icon`（顶栏 / 工具条图标）由分支套各自的原生图标按钮壳
  * ——Mochi 穿 `MochiBarIconButton`（= `TopBarActionButton` 的 Mochi 实现）、COUI 穿
@@ -82,7 +82,8 @@ import ui.feice.mochi.basic.MochiItem
  * 由库渲染 Icon 按钮、Material 退 `IconButton`。因此 Icon 形态与同排按钮一致，不需要新外观基线。
  * `Icon` 优先于 [compact]：Miuix 在 `Icon` 下不再渲染设置行。[anchor] 为 `Icon` 时
  * [summary] 无意义（设置行已不是渲染目标）。
- * Miuix 的 `Icon` 与 [compact] 一样暂不接 HyperOS 4 玻璃锚点变形。
+ * Miuix 的 `Icon` 仍走库自持的 `Window/OverlayIconDropdownMenu`，暂不接 HyperOS 4
+ * 玻璃锚点变形；[compact] 已接。
  */
 @Composable
 fun AppChoiceDropdown(
@@ -219,6 +220,12 @@ private fun MiuixCompactChoice(
         expanded = false
         onDismissRequest()
     }
+    // 常规 popup 有 collapseOnSelection，玻璃弹层不保证；受控时统一由选中路径通知调用方。
+    // 非受控模式 onDismissRequest 是空实现，行为不变。
+    val commitSelection: (String) -> Unit = { id ->
+        if (embeddedExpanded != null) onDismissRequest()
+        onSelect(id)
+    }
     // 受控模式没有 trigger 节点，锚点只能挂在调用方给的容器（通常是 `matchParentSize`）；
     // 非受控时锚点挂在真正可点的 trigger 上，morph 才从取值区开始。
     val containerAnchor = if (glass && embeddedExpanded != null) {
@@ -247,7 +254,7 @@ private fun MiuixCompactChoice(
                 onDismissRequest = dismissMenu,
                 anchor = anchor,
                 entries = rememberChoiceEntries(
-                    options, selectedId, unavailableIds, onUnavailableSelected, onSelect,
+                    options, selectedId, unavailableIds, onUnavailableSelected, commitSelection,
                 ),
                 anchorContent = if (embeddedExpanded == null) {
                     { scope.trigger() }
@@ -258,7 +265,7 @@ private fun MiuixCompactChoice(
 
             LocalHasMiuixPopupHost.current -> OverlayDropdownPopup(
                 entries = rememberChoiceEntries(
-                    options, selectedId, unavailableIds, onUnavailableSelected, onSelect,
+                    options, selectedId, unavailableIds, onUnavailableSelected, commitSelection,
                 ),
                 show = isOpen && enabled,
                 onDismiss = dismissMenu,
@@ -271,7 +278,7 @@ private fun MiuixCompactChoice(
 
             else -> WindowDropdownPopup(
                 entries = rememberChoiceEntries(
-                    options, selectedId, unavailableIds, onUnavailableSelected, onSelect,
+                    options, selectedId, unavailableIds, onUnavailableSelected, commitSelection,
                 ),
                 show = isOpen && enabled,
                 onDismiss = dismissMenu,
@@ -288,7 +295,8 @@ private fun MiuixCompactChoice(
  * Miuix 图标单选（顶栏 / 工具条）：库自己渲染图标按钮与开合，[trigger] 只承载纯展示内容，
  * 因此 `expanded` 由库自持、[AppMenuTriggerScope.open] 在此分支是 no-op。
  * 与 [MiuixCompactChoice] 共用同一份 [rememberChoiceEntries]，选中态仍由
- * [DropdownItem.selected] 表达。HyperOS 4 玻璃锚点变形留待后续（与 compact 同一条遗留）。
+ * [DropdownItem.selected] 表达。HyperOS 4 玻璃锚点变形仍未接入：`MiuixCompactChoice`
+ * 已走 `MiuixGlassMenuHost`，这里若要接需库提供受控的 Icon 玻璃弹层。
  */
 @Composable
 private fun MiuixIconChoice(
@@ -494,23 +502,29 @@ private fun CouiChoice(
             onOpen = { couiAnchor.open { expanded = true } },
         )
     }
-    // 受控模式必须把锚点挂在容器上：COUI 的 `Menu` 只在 `couiMenuAnchor` 注册过节点的
-    // 情况下才有锚点矩形，否则退回窗口 (0,0)，弹层会跑到屏幕左上角。
-    val containerModifier = if (embeddedExpanded != null) {
-        modifier.couiMenuAnchor(couiAnchor)
-    } else {
-        modifier
-    }
-    Box(containerModifier) {
+    // 受控模式**不能**把 couiMenuAnchor 挂到容器上：该修饰符内含 pointerInput，会成为覆盖层里
+    // 命中的唯一节点，同层兄弟（调用方的取值区 / 触发内容）收不到触摸。定位也不需要它——
+    // 无触点时 COUI 的 anchor 不产生坐标，弹层按 Popup 的父容器矩形定位（`Menu.anchor`
+    // 文档：不提供时沿用父布局定位），容器本就是调用方放本组件的位置。
+    Box(modifier) {
         if (embeddedExpanded != null) {
             // 受控模式：弹层锚在调用方给定的位置，入口不包可点节点。
         } else if (anchor == AppMenuAnchor.Icon) {
             // 跟随同排 TopBarActionButton：只有 COUI 原生胶囊顶栏才带那层玻璃底，
             // 否则 `⋯` 会成为整排里唯一没有玻璃的按钮。
-            val capsule = rememberCouiCapsuleRenderer()
-            if (ThemeResolver.isCouiSupported() && LocalAppCouiNativeToolbar.current &&
-                capsule != null
+            // `rememberCouiCapsuleRenderer` 与 `CouiTopAppBarButton` 都是 @RequiresApi(34)；
+            // 与 `TopBarButton` 同口径，低版本不构造渲染器、直接落到 IconButton 回退。
+            // 守卫必须出现在各自的 if 条件里，lint 才能经 `@ChecksSdkIntAtLeast` 识别，
+            // 无需 @SuppressLint / lint-baseline。
+            val capsule = if (ThemeResolver.isCouiSupported() &&
+                LocalAppCouiNativeToolbar.current
             ) {
+                rememberCouiCapsuleRenderer()
+            } else {
+                null
+            }
+            // lint 不会把 `capsule != null` 折算成 SDK 检查，库按钮的调用条件要再写一次守卫。
+            if (capsule != null && ThemeResolver.isCouiSupported()) {
                 CouiTopAppBarButton(
                     modifier = scope.modifier.semantics { role = Role.Button },
                     onClick = { if (enabled) scope.open() },
@@ -541,10 +555,13 @@ private fun CouiChoice(
             items = items,
             onItemClick = { item ->
                 expanded = false
+                // COUI 的 Menu 不会在选中后自动回调 onDismissRequest，受控模式下必须显式通知。
+                if (embeddedExpanded != null) onDismissRequest()
                 if (item.value in unavailableIds) onUnavailableSelected?.invoke(item.value)
                 else onSelect(item.value)
             },
-            anchor = couiAnchor,
+            // 受控模式没有触点锚点；传 anchor 只会得到 null 坐标，见上面对容器修饰符的说明。
+            anchor = if (embeddedExpanded == null) couiAnchor else null,
         )
     }
 }
@@ -602,6 +619,9 @@ private fun MaterialChoice(
                     isSelected = option.id == selectedId,
                     onClick = {
                         expanded = false
+                        // M3 的 DropdownMenu 不会在选中后自动回调 onDismissRequest；
+                        // 受控模式下只改内部 expanded 关不掉，必须显式通知调用方。
+                        if (embeddedExpanded != null) onDismissRequest()
                         if (option.id in unavailableIds) {
                             onUnavailableSelected?.invoke(option.id)
                         } else {

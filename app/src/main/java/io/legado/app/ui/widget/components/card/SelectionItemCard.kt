@@ -49,7 +49,7 @@ import io.legado.app.ui.widget.components.reorderAccessibility
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.checkBox.AppCheckbox
 import io.legado.app.ui.widget.components.icon.AppIcons
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.menu.AppAnchoredPanel
 import io.legado.app.ui.widget.components.text.AppText
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.ReorderableLazyListState
@@ -270,19 +270,22 @@ fun SelectionItemCardContent(
             }
 
             if (dropdownContent != null) {
-                Box {
-                    SmallPlainButton(
-                        onClick = { showMenu = true },
-                        icon = AppIcons.MoreVert,
-                        contentDescription = moreContentDescription ?: defaultMoreDescription
-                    )
-                    RoundDropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        dropdownContent { showMenu = false }
-                    }
-                }
+                // 弹层分派收编到 AppAnchoredPanel 的兼容路径：⋮ 按钮仍由卡片渲染
+                // （外观与无障碍名称不变）；content 与公共插槽同构，6 个调用点零改动，
+                // 菜单项仍由各调用点自己决定是否 dismiss()。
+                AppAnchoredPanel(
+                    expanded = showMenu,
+                    onExpandedChange = { showMenu = it },
+                    externalTrigger = true,
+                    trigger = {
+                        SmallPlainButton(
+                            onClick = { open() },
+                            icon = AppIcons.MoreVert,
+                            contentDescription = moreContentDescription ?: defaultMoreDescription
+                        )
+                    },
+                    content = dropdownContent,
+                )
             }
         }
     }

@@ -65,10 +65,13 @@ import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.ConfigListEntry
 import io.legado.app.ui.widget.components.ReorderableConfigList
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.reader.ReaderMenuActionSquare
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 
 private data class MoreActionSpec(
     val id: String,
@@ -222,52 +225,91 @@ private fun ActionSquareHost(
             onMoreClick = { expanded = true },
         )
         when (action.id) {
-            "source_custom_button" -> RoundDropdownMenu(
-                expanded = expanded,
+            "source_custom_button" -> AppActionMenu(
+                groups = persistentListOf(
+                    AppActionGroup(
+                        id = ReaderMoreSourceCustomGroup,
+                        actions = persistentListOf(
+                            AppAction(
+                                id = ReaderMoreSourceCustomLong,
+                                label = stringResource(R.string.source_custom_button_long_action),
+                            ),
+                        ),
+                    ),
+                ),
+                onAction = { dispatch(ReadBookIntent.SourceCustomButton(true)) },
+                modifier = Modifier.matchParentSize(),
+                embeddedExpanded = expanded,
                 onDismissRequest = { expanded = false },
-            ) { dismiss ->
-                RoundDropdownMenuItem(
-                    text = stringResource(R.string.source_custom_button_long_action),
-                    onClick = {
-                        dismiss()
-                        dispatch(ReadBookIntent.SourceCustomButton(true))
-                    },
-                )
-            }
+                trigger = {},
+            )
 
-            "change_source" -> RoundDropdownMenu(
-                expanded = expanded,
+            "change_source" -> AppActionMenu(
+                groups = persistentListOf(
+                    AppActionGroup(
+                        id = ReaderMoreChangeSourceGroup,
+                        actions = persistentListOf(
+                            AppAction(
+                                id = ReaderMoreChangeBookSource,
+                                label = stringResource(R.string.change_origin),
+                            ),
+                            AppAction(
+                                id = ReaderMoreChangeChapterSource,
+                                label = stringResource(R.string.chapter_change_source),
+                            ),
+                        ),
+                    ),
+                ),
+                onAction = { id ->
+                    when (id) {
+                        ReaderMoreChangeBookSource -> dispatch(ReadBookIntent.MenuBookChangeSource)
+                        ReaderMoreChangeChapterSource ->
+                            dispatch(ReadBookIntent.MenuChapterChangeSource)
+                    }
+                },
+                modifier = Modifier.matchParentSize(),
+                embeddedExpanded = expanded,
                 onDismissRequest = { expanded = false },
-            ) { dismiss ->
-                RoundDropdownMenuItem(
-                    text = stringResource(R.string.change_origin),
-                    onClick = { dismiss(); dispatch(ReadBookIntent.MenuBookChangeSource) },
-                )
-                RoundDropdownMenuItem(
-                    text = stringResource(R.string.chapter_change_source),
-                    onClick = { dismiss(); dispatch(ReadBookIntent.MenuChapterChangeSource) },
-                )
-            }
+                trigger = {},
+            )
 
-            "refresh" -> RoundDropdownMenu(
-                expanded = expanded,
+            "refresh" -> AppActionMenu(
+                groups = persistentListOf(
+                    AppActionGroup(
+                        id = ReaderMoreRefreshGroup,
+                        actions = persistentListOf(
+                            AppAction(
+                                id = ReaderMoreRefreshDur,
+                                label = stringResource(R.string.menu_refresh_dur),
+                            ),
+                            AppAction(
+                                id = ReaderMoreRefreshAfter,
+                                label = stringResource(R.string.menu_refresh_after),
+                            ),
+                            AppAction(
+                                id = ReaderMoreRefreshAll,
+                                label = stringResource(R.string.menu_refresh_all),
+                            ),
+                        ),
+                    ),
+                ),
+                onAction = { id ->
+                    when (id) {
+                        ReaderMoreRefreshDur -> dispatch(ReadBookIntent.MenuRefreshDur)
+                        ReaderMoreRefreshAfter -> dispatch(ReadBookIntent.MenuRefreshAfter)
+                        ReaderMoreRefreshAll -> dispatch(ReadBookIntent.MenuRefreshAll)
+                    }
+                },
+                modifier = Modifier.matchParentSize(),
+                embeddedExpanded = expanded,
                 onDismissRequest = { expanded = false },
-            ) { dismiss ->
-                listOf(
-                    R.string.menu_refresh_dur to ReadBookIntent.MenuRefreshDur,
-                    R.string.menu_refresh_after to ReadBookIntent.MenuRefreshAfter,
-                    R.string.menu_refresh_all to ReadBookIntent.MenuRefreshAll,
-                ).forEach { (label, intent) ->
-                    RoundDropdownMenuItem(
-                        text = stringResource(label),
-                        onClick = { dismiss(); dispatch(intent) },
-                    )
-                }
-            }
+                trigger = {},
+            )
 
             "image_style" -> ImageStyleDropdown(
                 expanded = expanded,
                 currentStyle = state.book?.getImageStyle() ?: Book.imgStyleDefault,
+                modifier = Modifier.matchParentSize(),
                 onDismissRequest = { expanded = false },
                 onIntent = onIntent,
             )
@@ -275,6 +317,7 @@ private fun ActionSquareHost(
             "page_anim" -> PageAnimDropdown(
                 expanded = expanded,
                 currentPageAnim = state.book?.getPageAnim() ?: -1,
+                modifier = Modifier.matchParentSize(),
                 onDismissRequest = { expanded = false },
                 onIntent = onIntent,
             )
@@ -431,33 +474,64 @@ private fun moreActionSpecs(
         onClick = { onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.AppLog)) }),
 )
 
+// 动作格菜单的稳定 ID：文案与顺序可变，ID 只由语义决定。
+private const val ReaderMoreSourceCustomGroup = "reader_more_source_custom"
+private const val ReaderMoreSourceCustomLong = "reader_more_source_custom_long"
+private const val ReaderMoreChangeSourceGroup = "reader_more_change_source"
+private const val ReaderMoreChangeBookSource = "reader_more_change_book_source"
+private const val ReaderMoreChangeChapterSource = "reader_more_change_chapter_source"
+private const val ReaderMoreRefreshGroup = "reader_more_refresh"
+private const val ReaderMoreRefreshDur = "reader_more_refresh_dur"
+private const val ReaderMoreRefreshAfter = "reader_more_refresh_after"
+private const val ReaderMoreRefreshAll = "reader_more_refresh_all"
+private const val ReaderMoreImageStyleGroup = "reader_more_image_style"
+private const val ReaderMoreImageStyleIdPrefix = "reader_more_image_style:"
+private const val ReaderMorePageAnimGroup = "reader_more_page_anim"
+private const val ReaderMorePageAnimIdPrefix = "reader_more_page_anim:"
+
 @Composable
 private fun ImageStyleDropdown(
     expanded: Boolean,
     currentStyle: String,
+    modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
-    RoundDropdownMenu(expanded = expanded, onDismissRequest = onDismissRequest) { dismiss ->
-        listOf(
-            R.string.btn_default_s to Book.imgStyleDefault,
-            R.string.image_style_full to Book.imgStyleFull,
-            R.string.image_style_text to Book.imgStyleText,
-            R.string.image_style_single to Book.imgStyleSingle,
-        ).forEach { (label, style) ->
-            RoundDropdownMenuItem(
-                text = stringResource(label),
-                isSelected = currentStyle == style,
-                onClick = { dismiss(); onIntent(ReadBookIntent.MenuImageStyle(style)) },
-            )
-        }
-    }
+    val options = listOf(
+        R.string.btn_default_s to Book.imgStyleDefault,
+        R.string.image_style_full to Book.imgStyleFull,
+        R.string.image_style_text to Book.imgStyleText,
+        R.string.image_style_single to Book.imgStyleSingle,
+    )
+    AppActionMenu(
+        groups = persistentListOf(
+            AppActionGroup(
+                id = ReaderMoreImageStyleGroup,
+                actions = options.map { (label, style) ->
+                    AppAction(
+                        id = "$ReaderMoreImageStyleIdPrefix$style",
+                        label = stringResource(label),
+                        selected = currentStyle == style,
+                    )
+                }.toImmutableList(),
+            ),
+        ),
+        onAction = { id ->
+            options.firstOrNull { (_, style) -> style == id.removePrefix(ReaderMoreImageStyleIdPrefix) }
+                ?.let { (_, style) -> onIntent(ReadBookIntent.MenuImageStyle(style)) }
+        },
+        modifier = modifier,
+        embeddedExpanded = expanded,
+        onDismissRequest = onDismissRequest,
+        trigger = {},
+    )
 }
 
 @Composable
 private fun PageAnimDropdown(
     expanded: Boolean,
     currentPageAnim: Int,
+    modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
@@ -473,17 +547,31 @@ private fun PageAnimDropdown(
         R.string.page_anim_fade to PageAnim.fadePageAnim,
         R.string.page_anim_none to PageAnim.noAnim,
     )
-    RoundDropdownMenu(expanded = expanded, onDismissRequest = onDismissRequest) { dismiss ->
-        pageAnimOptions.forEach { (label, value) ->
-            RoundDropdownMenuItem(
-                text = stringResource(label),
-                isSelected = currentPageAnim == value,
-                onClick = {
+    AppActionMenu(
+        groups = persistentListOf(
+            AppActionGroup(
+                id = ReaderMorePageAnimGroup,
+                actions = pageAnimOptions.map { (label, value) ->
+                    AppAction(
+                        id = "$ReaderMorePageAnimIdPrefix$value",
+                        label = stringResource(label),
+                        selected = currentPageAnim == value,
+                    )
+                }.toImmutableList(),
+            ),
+        ),
+        onAction = { id ->
+            id.removePrefix(ReaderMorePageAnimIdPrefix).toIntOrNull()
+                ?.takeIf { value -> pageAnimOptions.any { (_, option) -> option == value } }
+                ?.let { value ->
+                    // 先写回书籍再通知页面：顺序与旧菜单一致，页面据此重建渲染器。
                     ReadBook.book?.setPageAnim(value)
-                    dismiss()
                     onIntent(ReadBookIntent.PageAnimChanged)
-                },
-            )
-        }
-    }
+                }
+        },
+        modifier = modifier,
+        embeddedExpanded = expanded,
+        onDismissRequest = onDismissRequest,
+        trigger = {},
+    )
 }

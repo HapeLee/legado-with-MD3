@@ -75,9 +75,9 @@ import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.log.AppLogSheet
-import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.topbar.GlassSmallTopAppBar
@@ -91,9 +91,22 @@ import io.legado.app.utils.openUrl
 import io.legado.app.utils.share
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.toggleSystemBar
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import org.apache.commons.text.StringEscapeUtils
 import org.jsoup.Jsoup
 import org.koin.androidx.compose.koinViewModel
+
+// 顶栏「更多」菜单的稳定 ID：文案随朗读状态变化，ID 只由语义决定。
+private const val RssReadMenuGroup = "rss_read_menu"
+private const val RssReadMenuShare = "rss_read_menu_share"
+private const val RssReadMenuPlayVideo = "rss_read_menu_play_video"
+private const val RssReadMenuReadAloud = "rss_read_menu_read_aloud"
+private const val RssReadMenuLogin = "rss_read_menu_login"
+private const val RssReadMenuRedirectPolicy = "rss_read_menu_redirect_policy"
+private const val RssReadMenuRedirectPrefix = "rss_read_menu_redirect:"
+private const val RssReadMenuLog = "rss_read_menu_log"
+private const val RssReadMenuOpenInBrowser = "rss_read_menu_open_in_browser"
 
 @SuppressLint("SetJavaScriptEnabled")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -119,7 +132,6 @@ fun RssReadRouteScreen(
     }
     var webProgress by remember { mutableIntStateOf(100) }
     var showMenu by remember { mutableStateOf(false) }
-    var showRedirectMenu by remember { mutableStateOf(false) }
     var webView by remember { mutableStateOf<WebView?>(null) }
     var customView by remember { mutableStateOf<View?>(null) }
     var customViewCallback by remember {
@@ -383,119 +395,156 @@ fun RssReadRouteScreen(
                             contentDescription = stringResource(R.string.more_menu),
                             onClick = { showMenu = true }
                         )
-                            RoundDropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false }
-                            ) { dismiss ->
-                                RoundDropdownMenuItem(
-                                    text = stringResource(R.string.share),
-                                    leadingIcon = { MenuItemIcon(Icons.Default.Share) },
-                                    onClick = {
-                                        dismiss()
+                            // 条目动作集中在局部函数里：`buildList` / `map` 的 lambda 不是
+                            // @Composable，不能在里面求值文案，也不能在其中分派。
+                            fun onMenuAction(id: String) {
+                                when {
+                                    id == RssReadMenuShare -> {
                                         webView?.url?.let {
                                             context.share(it)
                                         } ?: viewModel.rssArticle?.let {
                                             context.share(it.link)
                                         } ?: context.toastOnUi(R.string.null_url)
                                     }
-                            )
-                                if (viewModel.rssArticle?.type == 2) {
-                                    RoundDropdownMenuItem(
-                                        text = stringResource(R.string.play_video),
-                                        leadingIcon = { MenuItemIcon(Icons.Default.PlayArrow) },
-                                        onClick = {
-                                            dismiss()
-                                            viewModel.rssArticle?.let(onOpenVideoPlayer)
-                                        }
-                                    )
-                                }
-                                RoundDropdownMenuItem(
-                                    text = if (isSpeaking) stringResource(R.string.aloud_stop) else stringResource(
-                                        R.string.read_aloud
-                                    ),
-                                    leadingIcon = {
-                                        MenuItemIcon(if (isSpeaking) Icons.Default.Stop else Icons.AutoMirrored.Filled.VolumeUp)
-                                    },
-                                    onClick = {
-                                        dismiss()
+
+                                    id == RssReadMenuPlayVideo ->
+                                        viewModel.rssArticle?.let(onOpenVideoPlayer)
+
+                                    id == RssReadMenuReadAloud -> {
                                         if (isSpeaking) {
                                             viewModel.stopReadAloud()
                                         } else {
-                                            webView?.evaluateJavascript("document.documentElement.outerHTML") {
+                                            webView?.evaluateJavascript(
+                                                "document.documentElement.outerHTML"
+                                            ) {
                                                 val html = StringEscapeUtils.unescapeJson(it)
                                                     .replace("^\"|\"$".toRegex(), "")
-                                                viewModel.readAloud(
-                                                    Jsoup.parse(html).text()
+                                                viewModel.readAloud(Jsoup.parse(html).text())
+                                            }
+                                        }
+                                    }
+
+                                    id == RssReadMenuLogin -> context.startActivity(
+                                        MainActivity.createSourceLoginIntent(
+                                            context,
+                                            SourceLoginType.RssSource,
+                                            viewModel.rssSource?.sourceUrl,
+                                        )
+                                    )
+
+                                    id.startsWith(RssReadMenuRedirectPrefix) -> {
+                                        val policy = RedirectPolicy.entries.firstOrNull {
+                                            "$RssReadMenuRedirectPrefix${it.name}" == id
+                                        }
+                                        if (policy != null) {
+                                            viewModel.rssSource?.let { source ->
+                                                viewModel.updateRssSourceRedirectPolicy(
+                                                    source.sourceUrl,
+                                                    policy.name
                                                 )
                                             }
+                                            redirectPolicy = policy
+                                            context.toastOnUi("重定向策略已更新")
+                                        }
                                     }
-                                    }
-                                )
-                                if (!viewModel.rssSource?.loginUrl.isNullOrBlank()) {
-                                RoundDropdownMenuItem(
-                                    text = stringResource(R.string.login),
-                                    leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
-                                    onClick = {
-                                        dismiss()
-                                        context.startActivity(
-                                            MainActivity.createSourceLoginIntent(
-                                                context,
-                                                SourceLoginType.RssSource,
-                                                viewModel.rssSource?.sourceUrl,
-                                            )
-                                        )
-                                    }
-                                )
-                                }
-                                RoundDropdownMenuItem(
-                                    text = stringResource(R.string.redirect_policy),
-                                    onClick = { showRedirectMenu = true }
-                                )
-                                RoundDropdownMenuItem(
-                                    text = stringResource(R.string.log),
-                                    onClick = {
-                                        dismiss()
-                                        showLogSheet = true
-                                    }
-                                )
-                                RoundDropdownMenuItem(
-                                    text = stringResource(R.string.open_in_browser),
-                                    leadingIcon = { MenuItemIcon(Icons.Default.OpenInBrowser) },
-                                    onClick = {
-                                        dismiss()
+
+                                    id == RssReadMenuLog -> showLogSheet = true
+
+                                    id == RssReadMenuOpenInBrowser ->
                                         webView?.url?.let { context.openUrl(it) }
                                             ?: context.toastOnUi("url null")
                                 }
-                                )
                             }
-                            RoundDropdownMenu(
-                                expanded = showRedirectMenu,
-                                onDismissRequest = { showRedirectMenu = false }
-                            ) { dismiss ->
-                                RedirectPolicy.entries.forEach { policy ->
-                                RoundDropdownMenuItem(
-                                    text = policy.title(),
-                                    onClick = {
-                                        dismiss()
-                                        showMenu = false
-                                        viewModel.rssSource?.let { source ->
-                                            viewModel.updateRssSourceRedirectPolicy(
-                                                source.sourceUrl,
-                                                policy.name
+
+                            val shareLabel = stringResource(R.string.share)
+                            val playVideoLabel = stringResource(R.string.play_video)
+                            val readAloudLabel = if (isSpeaking) {
+                                stringResource(R.string.aloud_stop)
+                            } else {
+                                stringResource(R.string.read_aloud)
+                            }
+                            val loginLabel = stringResource(R.string.login)
+                            val redirectPolicyLabel = stringResource(R.string.redirect_policy)
+                            val logLabel = stringResource(R.string.log)
+                            val openInBrowserLabel = stringResource(R.string.open_in_browser)
+                            val redirectActions = RedirectPolicy.entries.map { policy ->
+                                AppAction(
+                                    id = "$RssReadMenuRedirectPrefix${policy.name}",
+                                    label = policy.title(),
+                                    selected = policy == redirectPolicy,
+                                )
+                            }.toImmutableList()
+                            AppActionMenu(
+                                groups = persistentListOf(
+                                    AppActionGroup(
+                                        id = RssReadMenuGroup,
+                                        actions = buildList {
+                                            add(
+                                                AppAction(
+                                                    id = RssReadMenuShare,
+                                                    label = shareLabel,
+                                                    icon = Icons.Default.Share,
+                                                )
                                             )
-                                            redirectPolicy = policy
-                                        }
-                                        context.toastOnUi("重定向策略已更新")
-                                    },
-                                    trailingIcon = {
-                                        if (policy == redirectPolicy) {
-                                            Icon(Icons.Default.Check, null)
-                                        }
-                                    }
-                                )
-                            }
+                                            if (viewModel.rssArticle?.type == 2) {
+                                                add(
+                                                    AppAction(
+                                                        id = RssReadMenuPlayVideo,
+                                                        label = playVideoLabel,
+                                                        icon = Icons.Default.PlayArrow,
+                                                    )
+                                                )
+                                            }
+                                            add(
+                                                AppAction(
+                                                    id = RssReadMenuReadAloud,
+                                                    label = readAloudLabel,
+                                                    icon = if (isSpeaking) {
+                                                        Icons.Default.Stop
+                                                    } else {
+                                                        Icons.AutoMirrored.Filled.VolumeUp
+                                                    },
+                                                )
+                                            )
+                                            if (!viewModel.rssSource?.loginUrl.isNullOrBlank()) {
+                                                add(
+                                                    AppAction(
+                                                        id = RssReadMenuLogin,
+                                                        label = loginLabel,
+                                                        icon = Icons.AutoMirrored.Filled.Login,
+                                                    )
+                                                )
+                                            }
+                                            add(
+                                                AppAction(
+                                                    id = RssReadMenuRedirectPolicy,
+                                                    label = redirectPolicyLabel,
+                                                    children = redirectActions,
+                                                )
+                                            )
+                                            add(
+                                                AppAction(
+                                                    id = RssReadMenuLog,
+                                                    label = logLabel,
+                                                )
+                                            )
+                                            add(
+                                                AppAction(
+                                                    id = RssReadMenuOpenInBrowser,
+                                                    label = openInBrowserLabel,
+                                                    icon = Icons.Default.OpenInBrowser,
+                                                )
+                                            )
+                                        }.toImmutableList(),
+                                    ),
+                                ),
+                                onAction = { id -> onMenuAction(id) },
+                                modifier = Modifier.matchParentSize(),
+                                embeddedExpanded = showMenu,
+                                onDismissRequest = { showMenu = false },
+                                trigger = {},
+                            )
                         }
-                    }
                     }
                 )
             }

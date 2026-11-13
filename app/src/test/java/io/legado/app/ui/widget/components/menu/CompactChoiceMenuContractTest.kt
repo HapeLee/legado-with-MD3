@@ -17,7 +17,8 @@ import java.io.File
  * `modifier = this.modifier` 承接锚点与外层尺寸（weight / fillMaxSize）。
  *
  * `MangaReaderSheets` 同文件 :183 的 `MangaSourceActionSquare` 菜单共用
- * `ReaderMenuActionSquare` 的 expanded、形态不同，**本轮刻意不动**，用棘轮锁住。
+ * `ReaderMenuActionSquare` 的 expanded、形态不同，第九轮刻意没动；第三十二轮已迁为受控
+ * `AppActionMenu`，对应棘轮归零。
  *
  * 静态契约只保证结构与 ID 一致性，**不证明弹层定位、真机外观或 TalkBack 行为**。
  */
@@ -49,20 +50,21 @@ class CompactChoiceMenuContractTest {
         assertEquals(1, Regex("selectedId =").findAll(manga).count())
     }
 
-    /** :183 共用 expanded 的方块菜单是不同形态，后续迁移时下调此棘轮。 */
+    /** 第三十二轮：`MangaSourceActionSquare` 的长按菜单已改为受控 `AppActionMenu`，棘轮归零。 */
     @Test
-    fun mangaSourceActionSquareKeepsItsOwnMenu() {
+    fun mangaSourceActionSquareUsesControlledMenu() {
         val manga = sourceOf(MANGA)
         assertEquals(
-            "MangaReaderSheets 本轮只迁移 MangaClickAreaCell 那处菜单",
-            1,
+            "MangaReaderSheets 应已无手画菜单",
+            0,
             Regex("RoundDropdownMenu\\(").findAll(manga).count(),
         )
         val square = manga
             .substringAfter("private fun MangaSourceActionSquare(")
             .substringBefore("\n@Composable")
-        assertTrue("MangaSourceActionSquare 的菜单被误删", square.contains("RoundDropdownMenu("))
-        assertTrue("MangaSourceActionSquare 的菜单项被误删", square.contains("RoundDropdownMenuItem("))
+        assertTrue("MangaSourceActionSquare 的菜单被误删", square.contains("AppActionMenu("))
+        assertTrue("MangaSourceActionSquare 未受控", square.contains("embeddedExpanded = expanded"))
+        assertTrue("MangaSourceActionSquare 锚点丢失", square.contains("Modifier.matchParentSize()"))
     }
 
     @Test

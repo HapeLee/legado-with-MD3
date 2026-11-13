@@ -37,7 +37,7 @@ class SettingItemAnchorContractTest {
             "菜单未交给取值 Chip 承载",
             beforeRowClick.isNotEmpty() && beforeRowClick.contains("menu()"),
         )
-        // 弹层要撑满 Chip：0 尺寸容器量不到锚点（Miuix 不弹、COUI/Mochi 退回窗口原点）。
+        // 弹层要撑满 Chip：0 尺寸容器量不到锚点（Miuix 不弹、COUI/Mochi 只能落到窗口原点附近）。
         assertTrue("弹层未撑满取值 Chip", source.contains("Modifier.matchParentSize()"))
     }
 
@@ -69,18 +69,24 @@ class SettingItemAnchorContractTest {
     }
 
     /**
-     * COUI 的 `Menu` 只在 `couiMenuAnchor` 注册过节点时才有锚点矩形，否则退回窗口
-     * (0,0)——真机表现就是弹层跑到屏幕左上角。受控模式没有 trigger 节点，必须把锚点
-     * 挂到调用方给的容器上。
+     * 受控模式**不能**把 `couiMenuAnchor` 挂到调用方容器上。
+     *
+     * 该修饰符内含 `pointerInput`：作为覆盖在触发内容之上的兄弟节点，它自己会进入命中路径，
+     * 同层兄弟（取值区、触发按钮）就再也收不到触摸。定位也不靠它——COUI 的触点锚点只在
+     * `open()` 记下触点后才产生坐标，受控模式没有触点，`Menu` 按 `Popup` 的父容器矩形定位
+     * （`ControlledMenuAnchorContractTest` 锁定这条 Compose 语义），容器就是调用方给的位置。
      */
     @Test
-    fun couiEmbeddedModeRegistersAnchorOnContainer() {
+    fun couiEmbeddedModeDoesNotOverlayAnchorOnContainer() {
         val source = sourceOf(APP_CHOICE)
-        assertTrue(
-            "受控模式未把 couiMenuAnchor 挂到容器上",
+        assertFalse(
+            "受控模式把 couiMenuAnchor 挂到了容器上，会挡掉同层触发内容的点击",
             source.contains("modifier.couiMenuAnchor(couiAnchor)"),
         )
-        assertTrue("受控弹层未使用该容器", source.contains("Box(containerModifier)"))
+        assertTrue(
+            "受控弹层仍应把 null 触点锚点传给 Menu",
+            source.contains("anchor = if (embeddedExpanded == null) couiAnchor else null"),
+        )
     }
 
     /**

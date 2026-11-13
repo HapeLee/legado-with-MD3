@@ -13,26 +13,6 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Toc
-import androidx.compose.material.icons.filled.Animation
-import androidx.compose.material.icons.filled.AutoStories
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.CleanHands
-import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Extension
-import androidx.compose.material.icons.filled.FindReplace
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Replay
-import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.filled.SwapVert
-import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.filled.Translate
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -45,18 +25,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.kyant.backdrop.Backdrop
-import io.legado.app.R
-import io.legado.app.data.entities.Book
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.icon.AppIcon
-import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.reader.readerMenuLiquidGlassAvailable
 
 @Composable
@@ -155,231 +128,13 @@ internal fun FloatingIconRow(
                     ReadMenuLongPressDropdown(
                         menu = iconDef.longPressMenu,
                         expanded = expandedMenu,
+                        modifier = Modifier.matchParentSize(),
                         onDismissRequest = { expandedMenu = false },
                         onIntent = onIntent,
                     )
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun OverflowDropdownMenu(
-    state: ReadBookUiState,
-    onIntent: (ReadBookIntent) -> Unit,
-    expanded: Boolean,
-    onDismiss: () -> Unit,
-) {
-    val showIcon = state.menuConfig.showMenuIcon
-    val menuIcon: (ImageVector) -> (@Composable () -> Unit)? = { imageVector ->
-        if (showIcon) {
-            { MenuItemIcon(imageVector = imageVector) }
-        } else {
-            null
-        }
-    }
-
-    RoundDropdownMenu(
-        expanded = expanded,
-        onDismissRequest = onDismiss,
-    ) { dismiss ->
-        var imageStyleExpanded by remember { mutableStateOf(false) }
-
-        // Compact mode: moved from top bar buttons
-        if (state.menuConfig.titleBarCompact) {
-            if (!state.isLocalBook) {
-                RoundDropdownMenuItem(
-                    text = stringResource(R.string.change_origin),
-                    leadingIcon = menuIcon(Icons.Default.SwapHoriz),
-                    onClick = { dismiss(); onIntent(ReadBookIntent.MenuChangeSource) },
-                )
-                RoundDropdownMenuItem(
-                    text = stringResource(R.string.read_aloud_audio_download_entry),
-                    leadingIcon = menuIcon(Icons.Default.Download),
-                    onClick = {
-                        dismiss()
-                        onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.AudioDownload))
-                    },
-                )
-                RoundDropdownMenuItem(
-                    text = stringResource(R.string.menu_refresh_dur),
-                    leadingIcon = menuIcon(Icons.Default.Refresh),
-                    onClick = { dismiss(); onIntent(ReadBookIntent.MenuRefreshDur) },
-                )
-                RoundDropdownMenuItem(
-                    text = stringResource(R.string.menu_refresh_after),
-                    leadingIcon = menuIcon(Icons.Default.Refresh),
-                    onClick = { dismiss(); onIntent(ReadBookIntent.MenuRefreshAfter) },
-                )
-                RoundDropdownMenuItem(
-                    text = stringResource(R.string.offline_cache),
-                    leadingIcon = menuIcon(Icons.Default.CloudDownload),
-                    onClick = { dismiss(); onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Download)) },
-                )
-            } else {
-                if (state.isLocalTxt) {
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.txt_toc_rule),
-                        leadingIcon = menuIcon(Icons.AutoMirrored.Filled.Toc),
-                        onClick = { dismiss(); onIntent(ReadBookIntent.MenuTocRegex) },
-                    )
-                }
-                RoundDropdownMenuItem(
-                    text = stringResource(R.string.set_charset),
-                    leadingIcon = menuIcon(Icons.Default.Translate),
-                    onClick = { dismiss(); onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Charset)) },
-                )
-            }
-            PillDivider()
-        }
-
-        // 内容处理
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.edit_content),
-            leadingIcon = menuIcon(Icons.Default.Edit),
-            onClick = {
-                dismiss()
-                onIntent(ReadBookIntent.OpenContentEdit)
-            },
-        )
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.bookmark_add),
-            leadingIcon = menuIcon(Icons.Default.Bookmark),
-            onClick = { dismiss(); onIntent(ReadBookIntent.AddBookmark) },
-        )
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.highlight_rule_config),
-            leadingIcon = menuIcon(Icons.Default.Tune),
-            onClick = {
-                dismiss()
-                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.HighlightRuleConfig))
-            },
-        )
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.text_processing),
-            leadingIcon = menuIcon(Icons.Default.FindReplace),
-            onClick = {
-                dismiss()
-                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.TextProcessing))
-            },
-        )
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.reverse_content),
-            leadingIcon = menuIcon(Icons.Default.SwapVert),
-            onClick = { dismiss(); onIntent(ReadBookIntent.MenuReverseContent) },
-        )
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.re_segment),
-            leadingIcon = menuIcon(Icons.AutoMirrored.Filled.Toc),
-            isSelected = state.reSegment,
-            onClick = { onIntent(ReadBookIntent.MenuReSegment) },
-        )
-        if (state.isEpub) {
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.del_ruby_tag),
-                leadingIcon = menuIcon(Icons.Default.CleanHands),
-                isSelected = state.delRubyTag,
-                onClick = { onIntent(ReadBookIntent.MenuDelRubyTag) },
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.del_h_tag),
-                leadingIcon = menuIcon(Icons.Default.CleanHands),
-                isSelected = state.delHTag,
-                onClick = { onIntent(ReadBookIntent.MenuDelHTag) },
-            )
-        }
-
-        PillDivider()
-
-        // 阅读设置
-        Box {
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.image_style),
-                leadingIcon = menuIcon(Icons.Default.Image),
-                onClick = { imageStyleExpanded = true },
-            )
-            RoundDropdownMenu(
-                expanded = imageStyleExpanded,
-                onDismissRequest = { imageStyleExpanded = false },
-            ) { subDismiss ->
-                listOf(
-                    R.string.btn_default_s to Book.imgStyleDefault,
-                    R.string.image_style_full to Book.imgStyleFull,
-                    R.string.image_style_text to Book.imgStyleText,
-                    R.string.image_style_single to Book.imgStyleSingle,
-                ).forEach { (label, style) ->
-                    RoundDropdownMenuItem(
-                        text = stringResource(label),
-                        onClick = {
-                            subDismiss()
-                            onIntent(ReadBookIntent.MenuImageStyle(style))
-                        },
-                    )
-                }
-            }
-        }
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.book_page_anim),
-            leadingIcon = menuIcon(Icons.Default.Animation),
-            onClick = {
-                dismiss()
-                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.PageAnim))
-            },
-        )
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.simulated_reading),
-            leadingIcon = menuIcon(Icons.Default.AutoStories),
-            onClick = {
-                dismiss()
-                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.SimulatedReading))
-            },
-        )
-
-        PillDivider()
-
-        // 书源
-        if (!state.isLocalBook) {
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.menu_refresh_all),
-                leadingIcon = menuIcon(Icons.Default.Replay),
-                onClick = { dismiss(); onIntent(ReadBookIntent.MenuRefreshAll) },
-            )
-            PillDivider()
-        }
-
-        // 进度同步（与上游一致：在书架 + 已配云端才显示）
-        if (state.inBookshelf && state.isReadingProgressSyncConfigured) {
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.get_book_progress),
-                leadingIcon = menuIcon(Icons.Default.Sync),
-                onClick = { dismiss(); onIntent(ReadBookIntent.MenuGetProgress) },
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.cover_book_progress),
-                leadingIcon = menuIcon(Icons.Default.Sync),
-                onClick = { dismiss(); onIntent(ReadBookIntent.MenuCoverProgress) },
-            )
-            PillDivider()
-        }
-
-        // 其他
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.config_btn),
-            leadingIcon = menuIcon(Icons.Default.Extension),
-            onClick = {
-                dismiss()
-                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ToolButtonConfig))
-            },
-        )
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.log),
-            leadingIcon = menuIcon(Icons.Default.BugReport),
-            onClick = {
-                dismiss()
-                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.AppLog))
-            },
-        )
     }
 }
 

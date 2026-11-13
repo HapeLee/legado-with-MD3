@@ -34,7 +34,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuOpen
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -104,6 +103,7 @@ import io.legado.app.ui.theme.LocalBottomOverlayPadding
 import io.legado.app.ui.theme.LocalMiuixBarBackdrop
 import io.legado.app.ui.theme.ProvideAppContentColor
 import io.legado.app.ui.widget.components.mochi.AppMochiNavigationBar
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import ui.feice.mochi.basic.MochiTabItem
 import ui.feice.mochi.effect.glass.LocalMochiBackdrop
@@ -127,14 +127,16 @@ import io.legado.app.ui.widget.components.coui.LocalCouiFloatingNavigation
 import io.legado.app.ui.widget.components.coui.rememberCouiCapsuleRenderer
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.navigation.AppNavigationBar
 import io.legado.app.ui.widget.components.navigation.AppNavigationBarItem
 import io.legado.app.ui.widget.components.pager.rememberPagerFlingPassThroughConnection
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.startActivityForBook
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -428,7 +430,8 @@ fun MainScreen(
                             )
                             if (destination == MainDestination.Bookshelf && showGroupMenu) {
                                 BookshelfRailGroupMenuRoute(
-                                    expanded = showGroupMenu,
+                                    scope = coroutineScope,
+                                    modifier = Modifier.matchParentSize(),
                                     onDismissRequest = { showGroupMenu = false },
                                     onBeforeSelectGroup = {
                                         if (pagerState.currentPage != index) {
@@ -519,7 +522,8 @@ fun MainScreen(
 
                                 if (destination == MainDestination.Bookshelf && showGroupMenu) {
                                     BookshelfRailGroupMenuRoute(
-                                        expanded = showGroupMenu,
+                                        scope = coroutineScope,
+                                        modifier = Modifier.matchParentSize(),
                                         onDismissRequest = { showGroupMenu = false },
                                         onBeforeSelectGroup = {
                                             if (pagerState.currentPage != index) {
@@ -988,15 +992,17 @@ private class MainPageLifecycleOwner : LifecycleOwner {
 
 @Composable
 private fun BookshelfRailGroupMenuRoute(
-    expanded: Boolean,
+    scope: CoroutineScope,
+    modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit,
     onBeforeSelectGroup: suspend () -> Unit,
     viewModel: BookshelfViewModel = koinViewModel()
 ) {
     val groupState by viewModel.groupSelectorState.collectAsStateWithLifecycle()
     BookshelfRailGroupMenu(
-        expanded = expanded,
         state = groupState,
+        scope = scope,
+        modifier = modifier,
         onDismissRequest = onDismissRequest,
         onSelectGroup = { groupId ->
             onBeforeSelectGroup()
@@ -1007,40 +1013,57 @@ private fun BookshelfRailGroupMenuRoute(
     )
 }
 
+private const val BookshelfRailGroupMenuIdPrefix = "group:"
+
+/**
+ * 书架图标长按弹出的分组菜单（窄底栏与宽导轨两处共用）。
+ *
+ * 受控模式：开合完全由调用方那次长按写入的 `showGroupMenu` 持有——两处入口都用
+ * `if (… && showGroupMenu)` 决定是否组合本组件，所以这里不再接收 `expanded`，
+ * 恒以 `embeddedExpanded = true` 渲染弹层；关闭经 `onDismissRequest` 回到调用方。
+ * 锚点取两处各自给定的 `Modifier.matchParentSize()` 容器（导航项）；当前分组用
+ * `AppAction.selected` 表达，替代原来的 `trailingIcon = Check`。
+ *
+ * 两处 `showGroupMenu` 是互斥布局分支（Miuix 底栏 / 宽导轨）内的局部状态，
+ * 与 `BookshelfScreen` 的 `BookshelfOverlay.GroupMenu` 无关，不合并到 ViewModel。
+ *
+ * 选中项的 `ChangeGroup` 必须跑在调用方 [scope] 上：各引擎受控弹层都先 `onDismissRequest`
+ * 再 `onAction`，页面随即把本组件移出组合，若用 `rememberCoroutineScope()` 自己的 scope，
+ * 那个协程会在 `onBeforeSelectGroup()` 挂起（`scrollToPage`）时被一起取消，分组就白点了。
+ */
 @Composable
 private fun BookshelfRailGroupMenu(
-    expanded: Boolean,
     state: io.legado.app.ui.main.bookshelf.BookshelfGroupSelectorState,
+    scope: CoroutineScope,
+    modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit,
     onSelectGroup: suspend (Long) -> Unit,
 ) {
-    val coroutineScope = rememberCoroutineScope()
-
-    RoundDropdownMenu(
-        expanded = expanded,
-        onDismissRequest = onDismissRequest
-    ) { dismiss ->
-        state.groups.forEachIndexed { groupIndex, group ->
-            RoundDropdownMenuItem(
-                text = group.groupName,
-                onClick = {
-                    coroutineScope.launch {
-                        onSelectGroup(group.groupId)
-                        dismiss()
-                    }
-                },
-                trailingIcon = {
-                    if (state.selectedGroupIndex == groupIndex) {
-                        AppIcon(
-                            Icons.Default.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-            )
-        }
-    }
+    val groups = state.groups
+    AppActionMenu(
+        groups = persistentListOf(
+            AppActionGroup(
+                id = "bookshelf_rail_groups",
+                actions = groups.map { group ->
+                    AppAction(
+                        id = "$BookshelfRailGroupMenuIdPrefix${group.groupId}",
+                        label = group.groupName,
+                        selected = state.selectedGroupId == group.groupId,
+                    )
+                }.toImmutableList(),
+            ),
+        ),
+        onAction = { id ->
+            val groupId = id.removePrefix(BookshelfRailGroupMenuIdPrefix).toLongOrNull()
+            if (groupId != null) {
+                scope.launch { onSelectGroup(groupId) }
+            }
+        },
+        modifier = modifier,
+        embeddedExpanded = true,
+        onDismissRequest = onDismissRequest,
+        trigger = {},
+    )
 }
 
 @Composable

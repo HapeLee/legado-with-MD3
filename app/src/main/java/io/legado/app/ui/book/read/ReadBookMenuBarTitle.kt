@@ -64,9 +64,9 @@ import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.data.entities.BookSource
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.icon.AppIcon
-import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.reader.ReaderMenuEffect
 import io.legado.app.ui.widget.components.reader.ReaderMenuPlacement
 import io.legado.app.ui.widget.components.reader.ReaderMenuTintStyle
@@ -76,6 +76,8 @@ import io.legado.app.ui.widget.components.reader.readerMenuLiquidGlassAvailable
 import io.legado.app.ui.widget.components.reader.readerMenuSurfaceBrush
 import io.legado.app.ui.widget.components.settingItem.LocalSliderDragState
 import io.legado.app.ui.widget.components.text.AppText
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlin.math.roundToInt
 
 @Composable
@@ -299,6 +301,7 @@ internal fun MenuTitleBar(
                         )
                         ReadMenuSourceDropdown(
                             expanded = sourceMenuExpanded,
+                            modifier = Modifier.matchParentSize(),
                             onDismissRequest = { sourceMenuExpanded = false },
                             bookSource = state.bookSource,
                             payVisible = state.chapterPayable,
@@ -616,6 +619,7 @@ private fun RowScope.TitleCapsuleGlassLayout(
                 )
                 ReadMenuSourceDropdown(
                     expanded = sourceMenuExpanded,
+                    modifier = Modifier.matchParentSize(),
                     onDismissRequest = { sourceMenuExpanded = false },
                     bookSource = state.bookSource,
                     payVisible = state.chapterPayable,
@@ -629,15 +633,25 @@ private fun RowScope.TitleCapsuleGlassLayout(
     }
 }
 
+private const val ReadMenuSourceActionGroup = "read_menu_source_actions"
+private const val ReadMenuSourceLoginAction = "read_menu_source_login"
+private const val ReadMenuSourcePayAction = "read_menu_source_pay"
+private const val ReadMenuSourceEditAction = "read_menu_source_edit"
+private const val ReadMenuSourceDisableAction = "read_menu_source_disable"
+
 /**
  * 书源操作菜单：登录 / 章节付费 / 编辑书源 / 禁用书源。
  *
  * 顶栏胶囊尾部、顶栏「章名 + 书源」行、书籍抽屉三处共用这一份，
  * 保证条目与显隐判定不会各写一遍后分叉。
+ *
+ * 受控弹层：三处调用点各自用 `Modifier.matchParentSize()` 把所在 `Box` 交给它做锚点；
+ * 登录 / 付费这两个条件项在构造 actions 时就过滤掉，不在菜单里留空位。
  */
 @Composable
 internal fun ReadMenuSourceDropdown(
     expanded: Boolean,
+    modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit,
     bookSource: BookSource?,
     payVisible: Boolean,
@@ -646,47 +660,64 @@ internal fun ReadMenuSourceDropdown(
     onEdit: () -> Unit,
     onDisable: () -> Unit,
 ) {
-    RoundDropdownMenu(
-        expanded = expanded,
-        onDismissRequest = onDismissRequest,
-    ) {
+    val loginLabel = stringResource(R.string.login)
+    val payLabel = stringResource(R.string.chapter_pay)
+    val editLabel = stringResource(R.string.edit_source)
+    val disableLabel = stringResource(R.string.disable_source)
+    val actions = buildList {
         if (!bookSource?.loginUrl.isNullOrBlank()) {
-            RoundDropdownMenuItem(
-                leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
-                text = stringResource(R.string.login),
-                onClick = {
-                    onDismissRequest()
-                    onLogin()
-                },
+            add(
+                AppAction(
+                    id = ReadMenuSourceLoginAction,
+                    label = loginLabel,
+                    icon = Icons.AutoMirrored.Filled.Login,
+                )
             )
         }
         if (payVisible) {
-            RoundDropdownMenuItem(
-                leadingIcon = { MenuItemIcon(Icons.Default.Payment) },
-                text = stringResource(R.string.chapter_pay),
-                onClick = {
-                    onDismissRequest()
-                    onPay()
-                },
+            add(
+                AppAction(
+                    id = ReadMenuSourcePayAction,
+                    label = payLabel,
+                    icon = Icons.Default.Payment,
+                )
             )
         }
-        RoundDropdownMenuItem(
-            leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
-            text = stringResource(R.string.edit_source),
-            onClick = {
-                onDismissRequest()
-                onEdit()
-            },
+        add(
+            AppAction(
+                id = ReadMenuSourceEditAction,
+                label = editLabel,
+                icon = Icons.Default.Edit,
+            )
         )
-        RoundDropdownMenuItem(
-            leadingIcon = { MenuItemIcon(Icons.Default.Block) },
-            text = stringResource(R.string.disable_source),
-            onClick = {
-                onDismissRequest()
-                onDisable()
-            },
+        add(
+            AppAction(
+                id = ReadMenuSourceDisableAction,
+                label = disableLabel,
+                icon = Icons.Default.Block,
+            )
         )
     }
+    AppActionMenu(
+        groups = persistentListOf(
+            AppActionGroup(
+                id = ReadMenuSourceActionGroup,
+                actions = actions.toImmutableList(),
+            ),
+        ),
+        onAction = { id ->
+            when (id) {
+                ReadMenuSourceLoginAction -> onLogin()
+                ReadMenuSourcePayAction -> onPay()
+                ReadMenuSourceEditAction -> onEdit()
+                ReadMenuSourceDisableAction -> onDisable()
+            }
+        },
+        modifier = modifier,
+        embeddedExpanded = expanded,
+        onDismissRequest = onDismissRequest,
+        trigger = {},
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -756,68 +787,60 @@ private fun MergedGlassDivider(tint: Color) {
     )
 }
 
-@Composable
-private fun ChangeSourceMenuItems(
-    dismiss: () -> Unit,
-    onBookChange: () -> Unit,
-    onChapterChange: () -> Unit,
-) {
-    RoundDropdownMenuItem(
-        text = stringResource(R.string.change_origin),
-        onClick = { dismiss(); onBookChange() },
-    )
-    RoundDropdownMenuItem(
-        text = stringResource(R.string.chapter_change_source),
-        onClick = { dismiss(); onChapterChange() },
-    )
-}
-
-@Composable
-private fun RefreshMenuItems(
-    dismiss: () -> Unit,
-    onRefreshDur: () -> Unit,
-    onRefreshAfter: () -> Unit,
-) {
-    RoundDropdownMenuItem(
-        text = stringResource(R.string.menu_refresh_dur),
-        onClick = { dismiss(); onRefreshDur() },
-    )
-    RoundDropdownMenuItem(
-        text = stringResource(R.string.menu_refresh_after),
-        onClick = { dismiss(); onRefreshAfter() },
-    )
-}
+private const val ReadMenuLongPressGroup = "read_menu_long_press"
+private const val ReadMenuLongPressChangeBook = "read_menu_long_press_change_book"
+private const val ReadMenuLongPressChangeChapter = "read_menu_long_press_change_chapter"
+private const val ReadMenuLongPressRefreshDur = "read_menu_long_press_refresh_dur"
+private const val ReadMenuLongPressRefreshAfter = "read_menu_long_press_refresh_after"
 
 /**
  * 「刷新章节」「换源」这类按钮的长按二级菜单。
  * 顶栏、底栏、浮动图标三处共用，保证同一个按钮在哪个位置长按行为都一致。
+ *
+ * 受控弹层：三处调用点各自传 `Modifier.matchParentSize()` 把按钮所在 `Box` 当锚点；
+ * `menu == null` 时连弹层都不组合（旧实现在这种情况下会开出一个空菜单）。
  */
 @Composable
 internal fun ReadMenuLongPressDropdown(
     menu: ReadMenuLongPressMenu?,
     expanded: Boolean,
+    modifier: Modifier = Modifier,
     onDismissRequest: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
     if (menu == null) return
-    RoundDropdownMenu(
-        expanded = expanded,
-        onDismissRequest = onDismissRequest,
-    ) { dismiss ->
-        when (menu) {
-            ReadMenuLongPressMenu.ChangeSource -> ChangeSourceMenuItems(
-                dismiss = dismiss,
-                onBookChange = { onIntent(ReadBookIntent.MenuBookChangeSource) },
-                onChapterChange = { onIntent(ReadBookIntent.MenuChapterChangeSource) },
-            )
+    val changeBookLabel = stringResource(R.string.change_origin)
+    val changeChapterLabel = stringResource(R.string.chapter_change_source)
+    val refreshDurLabel = stringResource(R.string.menu_refresh_dur)
+    val refreshAfterLabel = stringResource(R.string.menu_refresh_after)
+    val actions = when (menu) {
+        ReadMenuLongPressMenu.ChangeSource -> persistentListOf(
+            AppAction(id = ReadMenuLongPressChangeBook, label = changeBookLabel),
+            AppAction(id = ReadMenuLongPressChangeChapter, label = changeChapterLabel),
+        )
 
-            ReadMenuLongPressMenu.Refresh -> RefreshMenuItems(
-                dismiss = dismiss,
-                onRefreshDur = { onIntent(ReadBookIntent.MenuRefreshDur) },
-                onRefreshAfter = { onIntent(ReadBookIntent.MenuRefreshAfter) },
-            )
-        }
+        ReadMenuLongPressMenu.Refresh -> persistentListOf(
+            AppAction(id = ReadMenuLongPressRefreshDur, label = refreshDurLabel),
+            AppAction(id = ReadMenuLongPressRefreshAfter, label = refreshAfterLabel),
+        )
     }
+    AppActionMenu(
+        groups = persistentListOf(
+            AppActionGroup(id = ReadMenuLongPressGroup, actions = actions),
+        ),
+        onAction = { id ->
+            when (id) {
+                ReadMenuLongPressChangeBook -> onIntent(ReadBookIntent.MenuBookChangeSource)
+                ReadMenuLongPressChangeChapter -> onIntent(ReadBookIntent.MenuChapterChangeSource)
+                ReadMenuLongPressRefreshDur -> onIntent(ReadBookIntent.MenuRefreshDur)
+                ReadMenuLongPressRefreshAfter -> onIntent(ReadBookIntent.MenuRefreshAfter)
+            }
+        },
+        modifier = modifier,
+        embeddedExpanded = expanded,
+        onDismissRequest = onDismissRequest,
+        trigger = {},
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -964,6 +987,7 @@ private fun RowScope.TitleBarActionButtons(
             ReadMenuLongPressDropdown(
                 menu = longPressMenu,
                 expanded = expandedMenuId == def.id,
+                modifier = Modifier.matchParentSize(),
                 onDismissRequest = { expandedMenuId = null },
                 onIntent = onIntent,
             )

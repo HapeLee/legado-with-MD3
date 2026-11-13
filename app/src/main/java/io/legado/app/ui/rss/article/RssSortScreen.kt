@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
@@ -16,7 +15,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.filled.Login
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.Dataset
 import androidx.compose.material.icons.filled.Edit
@@ -24,7 +22,6 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Style
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,8 +50,6 @@ import io.legado.app.ui.widget.components.button.series.SmallToggleButton
 import io.legado.app.ui.widget.components.button.series.ToggleStyle
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.icon.AppIcons
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.text.AppText
@@ -67,6 +62,7 @@ import io.legado.app.ui.widget.components.variable.VariableEditorSheet
 import io.legado.app.ui.widget.components.variable.VariableEditorUiState
 import io.legado.app.ui.widget.components.menu.AppAction
 import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.topbar.TopBarActionMenu
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -74,6 +70,10 @@ import kotlinx.coroutines.launch
 
 /** 重定向策略子项的稳定 ID 前缀：`redirect_` + `RedirectPolicy.name`。 */
 private const val REDIRECT_PREFIX = "redirect_"
+
+/** 底部分组切换菜单的稳定 ID：分组标题可能重名，用序号定位。 */
+private const val GROUP_SWITCHER_MENU = "rss_sort_group_switcher"
+private const val GROUP_SWITCHER_PREFIX = "rss_sort_group:"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -285,29 +285,34 @@ fun RssSortScreen(
                                         icon = Icons.AutoMirrored.Filled.FormatListBulleted,
                                         contentDescription = stringResource(R.string.group_manage)
                                     )
-                                    RoundDropdownMenu(
-                                        expanded = showGroupMenu,
-                                        onDismissRequest = { showGroupMenu = false }
-                                    ) { dismiss ->
-                                        sortList.forEachIndexed { index, group ->
-                                            RoundDropdownMenuItem(
-                                                text = group.first,
-                                                onClick = {
-                                                    scope.launch { pagerState.animateScrollToPage(index) }
-                                                    dismiss()
-                                                },
-                                                trailingIcon = {
-                                                    if (selectedTabIndex == index) {
-                                                        Icon(
-                                                            Icons.Default.Check,
-                                                            null,
-                                                            modifier = Modifier.size(18.dp)
-                                                        )
+                                    AppActionMenu(
+                                        groups = persistentListOf(
+                                            AppActionGroup(
+                                                id = GROUP_SWITCHER_MENU,
+                                                actions = sortList.mapIndexed { index, group ->
+                                                    AppAction(
+                                                        id = "$GROUP_SWITCHER_PREFIX$index",
+                                                        label = group.first,
+                                                        selected = selectedTabIndex == index,
+                                                    )
+                                                }.toImmutableList(),
+                                            ),
+                                        ),
+                                        onAction = { id ->
+                                            id.removePrefix(GROUP_SWITCHER_PREFIX)
+                                                .toIntOrNull()
+                                                ?.takeIf { index -> index in sortList.indices }
+                                                ?.let { index ->
+                                                    scope.launch {
+                                                        pagerState.animateScrollToPage(index)
                                                     }
                                                 }
-                                            )
-                                        }
-                                    }
+                                        },
+                                        modifier = Modifier.matchParentSize(),
+                                        embeddedExpanded = showGroupMenu,
+                                        onDismissRequest = { showGroupMenu = false },
+                                        trigger = {},
+                                    )
                                 }
                             }
                         }

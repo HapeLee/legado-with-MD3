@@ -3,7 +3,6 @@ package io.legado.app.ui.widget.components.settingItem
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -47,7 +46,7 @@ fun ClickableSettingItem(
                     Icon(
                         imageVector = Icons.Default.ChevronRight,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = LegadoTheme.colorScheme.onSurfaceVariant
                     )
                 },
                 onClick = onClick,

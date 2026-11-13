@@ -10,10 +10,16 @@
 > 知识 / 角色详情纯单选 3 处、翻页动画 / 九宫格点击区域 compact 单选 2 处、
 > 导入面板「配置页 / 列表页」切换 2 处、替换规则顶栏 + 直链上传规则菜单 2 处、
 > CloudTts 引擎页顶栏命令菜单 1 处、RSS 排序页主菜单 2 处、详情页顶栏「更多」1 处，
-> 累计 50 处。
+> 累计 50 处（第三十轮口径；第三十一～五十轮另见 §9，业务调用点已由 20 降至 0）。
 > 2026-11-11 用户确认「分段线可以不保留文字」，四引擎分段线语义已统一。
-> 其余 **51 处**业务调用点仍是委托态（源码实测：`RoundDropdownMenu(` 55 处 − 组件定义 1
-> − 三入口内部 3），覆盖率低是当前最大未完成项。
+> **截至 2026-11-13 第五十轮，阶段 C 收尾：源码实测 `RoundDropdownMenu(` 4 处 =
+> 组件定义 1 + 三入口内部 3，业务调用点 0 处**（第四十五～五十轮只做回归修复、
+> 设置项组件配色统一、编辑页布局调整、撤销库侧兜底与文档清理，计数不变）。
+> 2026-11-13 用户真机复核：受控玻璃锚点回归（弹层落点 / 关闭崩溃）已通过；
+> 同日双变体 lint 回到 0 error（第五十轮修 COUI 胶囊 `NewApi`）。
+> 业务侧迁移已完成，剩余是迁移后四引擎外观 / TalkBack / lint 复核与 §9 下一阶段的其余项。
+> 历史计数（55 / 51 / 38 / 36 / 34 / 33 / 31 / 28 / 27 / 26 处）见 §9 各轮记录，
+> 以本节当前值 + 源码为准。
 > 用户另实测发现部分按钮（搜索按钮、主题风格设置项）与同页其它按钮样式不一致。
 > **第四轮（用户侧）已交付 `0.2.1-menu3`**：Mochi 走 anchor-only「点击松手才弹」，
 > 大圆库按钮消失，顶栏 MoreVert 穿上项目 `MochiBarIconButton`，真机效果已调整完成；
@@ -863,21 +869,634 @@ enum class AppMenuAnchor { Row, Icon }   // 决定 Miuix 用 Preference 还是 I
    `ReaderMoreActionsSheet` 的 `ImageStyleDropdown` / `PageAnimDropdown`
    留作纯单选簇收尾，其 `ActionSquareHost` 共享 `expanded`、方块按钮形态复杂，
    先单独建外观与行为基线。
+   **第二十三轮**：`AppActionMenu` 补齐与 `AppChoiceDropdown` 同语义的**受控弹层模式**
+   （`embeddedExpanded` + `onDismissRequest`）。四分支都只读外部状态、跳过 trigger 节点；
+   Mochi / COUI 分别把 `onGloballyPositioned` / `couiMenuAnchor` 从 trigger 挪到调用方容器，
+   Miuix 受控优先走 `MiuixRowActions` 的 popup 形态（库 `Icon*DropdownMenu` 自持 `expanded`）。
+   `VideoPlayerScreen` 顶栏菜单（`menuExpanded` 还驱动自动隐藏控制栏）与
+   `ReaderBookSheet` 目录页菜单（`CompactToolIconBox(selected = menuExpanded)`）迁到受控模式，
+   触发按钮与展开态高亮都由页面保留，条目改为「枚举稳定 ID + 纯映射」，**36 → 34 处文本命中
+   / 32 → 30 处业务调用点**（`ReaderBookSheet` 仍有书签页 1 处旧菜单）。
+   新增 `ActionMenuControlledContractTest`（9 例：三引擎行为 + 四分支结构 + 受控选择收口）
+   与 `ControlledMenuMigrationContractTest`（3 例：受控参数、ID 声明/分派、棘轮）。
+   行为测试暴露并顺手修掉既有 `AppChoiceDropdown` 受控模式的收口缺口：M3 `DropdownMenu` 与
+   COUI `Menu` 都不会在选中后自动回调 `onDismissRequest`，此前设置行下拉在受控模式下选完不关；
+   现由选中路径显式通知（非受控模式为空实现，行为不变），Miuix compact 三条 popup 路径同样显式收口。
+   未验证：COUI 在 Robolectric 下退回 Material 分支，COUI 原生 `Menu` 的受控触点、
+   Miuix HyperOS 4 玻璃弹层在受控模式（`anchorContent = {}`）的 morph、真机外观与 TalkBack。
+   下一轮候选：入口支持长按触发（解锁 4 处长按需先建交互基线），或先补四引擎 × 5 类 trigger
+   的外观基线再动「按钮所有权」迁移（余下 30 处多数属于该簇）。
+   **第二十四轮**：结论修正——4 处长按需先建交互基线**不需要给入口新增能力**。盘点确认它们
+   都是 `combinedClickable(onLongClick = { showMenu = true })`、锚点固定取容器矩形，
+   没有一处依赖触点 `Offset` / `popupPositionProvider` / `offset{}`；第二十三轮的受控弹层模式
+   本就不渲染 trigger、不包可点节点，长按节点留在调用方即可等价表达，且**不改变按钮渲染所有权**。
+   因此本轮先迁零外观损失的一处：`BookInfoScreen` 书名长按菜单（2 项纯命令、单一 `Box` 锚点、
+   展开/折叠动态文案），改为「常量稳定 ID + `bookInfoTitleMenuGroups()` + 受控 `AppActionMenu`」，
+   `Modifier.matchParentSize()` 保持原锚点矩形，**34 → 33 处文本命中 / 30 → 29 处业务调用点**。
+   新增 `LongPressMenuContractTest`（9 例）：Material / Miuix / Mochi 三引擎的
+   「单击不误开、长按才开、选中经 `onDismissRequest` 收口」，以及受控入口不抢占长按手势、
+   书名菜单结构与 ID 分派、剩余 3 处待迁移边界的棘轮。这条 JVM 交互基线取代了此前
+   「4 处长按需先建交互基线」里可自动验证的部分。
+   顺手修掉 `BatchImportConfigPageContractTest` 的过期棘轮：`f648f9302` 已把
+   `BookSourceScreen` 最后一处旧菜单迁走，断言仍期望 1，现下调为 0 并注明轮次。
+   另外 3 处**刻意暂缓**，因为迁移会带来外观损失、必须先有四引擎外观基线：
+   - `RssScreen` / `ExploreScreen`：`PillHeaderDivider(title = 源名)` 的标题文字会丢
+     （`AppActionGroup.title` 按已定案只触发分段线、四引擎都不渲染文本）；删除项的
+     `destructive` 在 Material `LegacyActions` 是否落色未复核；`ExploreScreen` 还要在
+     `trailingContent` 补一层 `Box` 才有 BoxScope 锚点。
+   - `MainScreen` 的 `BookshelfRailGroupMenu`：`expanded` 跨 Route/Menu 两层透传、两处独立
+     state 与 `if (destination == Bookshelf && showGroupMenu)` 门控都要拆；纯单选的 Check 图标
+     在 Material 会降级为 `isSelected` 高亮。
+   下一轮候选：补四引擎 × 5 类 trigger 的真机外观基线（含上述标题文字 / destructive 落色结论），
+   再动「按钮所有权」迁移；或单独处理 `MainScreen` 的结构改造。COUI 在 Robolectric 下退回
+   Material 分支，原生 `Menu` 的受控触点、四引擎长按后弹层锚点矩形与 TalkBack 仍未真机复核。
+    **第二十五轮（真机回归修复）**：第二十三/二十四轮的受控模式在 COUI 上**菜单打不开**
+    （播放页顶栏、目录页工具条、书名长按三处全中）。根因不是定位而是**命中测试**：
+   `CouiMenuAnchor.kt` 的 `couiMenuAnchor` 内含 `pointerInput`，把它挂在
+   `Modifier.matchParentSize()` 的覆盖容器上，该容器就成为命中路径里唯一的兄弟节点，
+   下面那颗调用方触发按钮**再也收不到 DOWN/UP**（JVM 探针实测：同层覆盖层带 `pointerInput`
+   时下层 `Button.onClick` 为 0 次）。上一轮「锚点必须挂容器否则弹层跑到窗口 (0,0)」的结论也错：
+   `CouiMenuAnchor.positionInWindow` 只在 `open()` 记下触点后才有坐标，受控模式永无触点；
+   而 `Popup` 的 `anchorBounds` 实测就是**父容器矩形**（`ControlledMenuAnchorContractTest`
+   锁定，398×800 窗口下 `IntRect(100,200,148,248)` 与容器 bounds 一致），所以传 `anchor`
+   只会得到 null、定位其实一直走的父容器矩形。
+    修复：受控分支不再给容器挂 `couiMenuAnchor`，`Menu` 传 `anchor = null`
+   （COUI KDoc 原文「不提供时沿用父布局定位」），`AppActionMenu` / `AppChoiceDropdown` 同改；
+   定位行为不变，按钮点击恢复。代价是受控菜单失去 COUI 的触点锚定（不再从手指长出），
+   与键盘 / 无障碍触发时的既有回退一致，已写进入口 KDoc。
+    `ActionMenuControlledContractTest` 增 `controlledEntriesNeverPutTouchAnchorOnCallerContainer`
+    （两入口源码结构棘轮，Robolectric 测不到 COUI 行为）；`SettingItemAnchorContractTest`
+    的反向断言同步翻转。仍未真机复核：受控菜单在 COUI 的实际落点（容器左下 vs 触点）、
+    Miuix HyperOS 4 玻璃受控 morph、TalkBack。
+    **第二十六轮**：受控路径修好后继续迁移「零外观损失」的一簇——**两项纯命令 + 调用方自持
+    外观/点击语义**的两处 ⋮ 菜单：
+    - `ReaderBookSheet` 书签页导出（JSON / Markdown），工具按钮 `CompactToolIconBox(selected)` 的
+      展开态高亮留在页面；
+    - `NavIconManageSheet` 导航图标卡（替换 / 删除），卡片**未设图标时点击是直接选图**，
+      这条分支不能并进开菜单。
+    两处都是「常量稳定 ID + `xxxMenuGroups()` + 受控 `AppActionMenu`」，导出后缀仍按所选命令区分。
+    `ReaderBookSheet` 因此归零（目录页 + 书签页都迁完），棘轮从 1 下调到 0。
+    新增 `TwoItemCommandMenuContractTest`（4 例）：结构 / `trigger = {}` / 高亮与点击语义保留 /
+    ID 声明与分派 / 棘轮。**29 → 27 处业务调用点**（文本命中 33 → 31）。
+    其余 27 处各自带至少一项外观风险，迁移前必须先有基线：分组标题文字（`RssScreen` /
+    `ExploreScreen` / `RssSourceScreen` / `TocScreen` 卷管理）、`destructive` 红字
+    （`BubbleConfigScreen` 删除气泡、`LegacyActions` 目前不透传 `RoundDropdownMenuItem` 的
+    `color`）、二级菜单「原地换菜单」语义（`RssReadRouteScreen` 重定向策略）、动态文案与勾选
+    （`BookshelfScreen` 两处分组菜单、`RssReadRouteScreen` 朗读/停止）、锁定宽度的原地翻页
+    （`ThemeListContent`）、外部注入 slot（`SelectionItemCard`、`ExploreKindMultiTypeItem`）、
+    阅读器「更多」动作格（`MangaReaderSheets`、`ReadBookMenuBar*`、`ReaderMoreActionsSheet`）。
+    下一轮候选：先补 `LegacyActions` 的 `destructive` 落色（解锁气泡删除等 3 处），或先建
+   `PillHeaderDivider(title)` 的口径结论（解锁 RSS/发现 4 处）。
+   **第二十七轮**：`PillHeaderDivider(title)` 的口径定案 + `destructive` 落地。
+   口径（产品确认）：**菜单内当标题 → 直接去掉文字**（原生菜单本就不渲染分组标题，页面上另有
+   常驻信息）；**纯分割 → 换成组间原生分段线**（`AppActionGroup` 自带）；**页面级分节标题**
+   （书架外观设置 5 处、「添加自定义模块」对话框 1 处）标题文字是唯一分节标识，保留不动。
+   按此迁 3 处：
+   - `RssScreen` 源长按菜单：去掉 `PillHeaderDivider(source.sourceName)`，5 项命令；
+   - `ExploreScreen` 源长按菜单：去掉 `PillHeaderDivider(item.bookSourceName)`，6 项命令，
+     `trailingContent` 补 `Box` 才有 `matchParentSize` 锚点；
+   - `TocScreen` 卷管理：去掉 `PillHeaderDivider(quick_jump)`，卷跳转项独立成第二组
+     （组间自动补线），ID 用 `jump_volume_<state.items 下标>` 往返，跳转仍走
+     `listState.animateScrollToItem`。
+   两处长按菜单的删除项从「调用点写死 `color = error`」改成 `AppAction.destructive`：
+   `LegacyActions`（Material）现在把 `destructive` 落成 `RoundDropdownMenuItem(color = error)`，
+   经 contentColor 同时染文字与 leadingIcon；`CouiActions` 落到 `CouiMenuItem(iconTint = error)`；
+   Mochi 走原生 `MochiItem(destructive)`；**Miuix 的 `DropdownItem` 没有危险色通道**（旧菜单里
+   `color` 也被忽略，非新增回退）。
+   已知差异：① COUI 原生菜单项只有图标能变红，文字保持菜单默认色（旧菜单在 COUI 下是 M3
+   容器 + 红字）；② 菜单项图标沿用入口默认 24dp，旧菜单 `MenuItemIcon` 是 18dp（与第二十三/二十四轮
+   已迁菜单一致）；③ 「快速跳转」标题文字消失（按口径）。**28 处文本命中 / 24 处业务调用点**。
+   新增 `MenuHeadingDividerContractTest`（5 例）：三处结构与 `trigger = {}`、页面上仍保留源名与
+   卷跳转、删除项走 `destructive`、ID 声明与分派、页面级分节标题未被误删。
+   `LongPressMenuContractTest` 冻结边界从「已迁 1 / 待 3」改成「长按簇只剩 `MainScreen`」。
+   下一轮候选：`BubbleConfigScreen` 气泡删除（`destructive` 已可用，仅差菜单项图标与四项命令），
+   然后是 `RssSourceScreen` 导入子菜单（原地换菜单语义）与 `BookshelfScreen` 两处分组菜单
+   （勾选态 + 动态分组前缀已有所需 API）。
+   **第二十八轮**：最后一处手画顶栏菜单（`RssSourceScreen`）迁完，顺带把顶栏按钮壳收到一处。
+   口径（产品确认）：**导入三项平铺到第一层**（和书源页 `BookSourceScreen` 一致，不再保留「点进去
+   换一层」的伪子菜单）；**过滤项与分组项显示当前选中**。因此：
+   - 菜单改 `menuGroups` 三段（命令 / 过滤 / 动态分组），`onMenuAction` 用 `when` 分派；
+     导入项 = `import_on_line` / `import_local` / `import_default_rule`，分组项 ID 为
+     `group:<名>`，「全部」用 `selected = state.groupFilter == null`；
+   - 状态要能标选中：基类只存过滤**展示名**，新增 `RssSourceUiState.groupFilter` +
+     `RssSourceViewModel.groupFilterKey`（`_groupFilter` 的只读流）并入 `combine`；
+   - 「分组管理」原来是硬编码中文 `"分组管理"`，改 `R.string.group_manage`。
+   **按钮壳统一**：`AppActionMenu` 的 `Icon` 锚点不再自绘裸 `IconButton`，新增
+   `TopBarActionSurface`（`TopBarButton.kt`）—— 与 `TopBarActionButton` 共用
+   `currentTopBarButtonStyle` / `SeriesButton` / 液体玻璃 / `mergedDivider` 合并态 / COUI 胶囊渲染器 /
+   Mochi `MochiBarIconButton`；Mochi、COUI、Material 三个分支都改用它，Miuix 仍由
+   `Icon*DropdownMenu` 自己渲染按钮（非玻璃即 `MiuixIconButton`，玻璃走 `MiuixGlassActions`）。
+   副作用：已迁顶栏菜单（书源、书架、两个编辑页、RSS 排序）在 Material 下的 ⋮ 从裸 `IconButton`
+   变回 `SeriesButton` 外观并重新参与合并态——这是「四引擎顶栏按钮外观统一」那条待办的收口方向。
+   **27 处文本命中 / 23 处业务调用点**；`TopBarMenuIdContractTest` 的
+   `onlyPseudoSubmenuKeepsTopBarContent` 改为 `noTopBarContentMenusRemain`（业务代码里
+   `dropDownMenuContent = {` 归零），`MIGRATED` 加入本页。
+   新增 `RssSourceMenuContractTest`（5 例）：声明式结构 / 导入平铺（每 ID 恰好声明+分派各一次）/
+   过滤与分组标选中 / 状态透出过滤键 / 三引擎共用按钮壳且 Miuix 库分支未被误改；
+   `MenuTriggerGlassContractTest`、`MochiAnchorMenuContractTest` 的旧断言改为「入口调壳、壳里有实现」。
+   仍未真机复核：Material 下 ⋮ 的新外观与合并态、COUI 胶囊、Miuix 玻璃 morph、导入三项平铺后的
+   菜单高度与滚动。
+   **第二十九轮**：气泡包列表项（`BubbleConfigScreen.BubbleEntryRow`）的 ⋮ 菜单迁移。
+   这处第二十七轮之前迁不了，卡的就是 `destructive` 没有落色通道——硬迁会让「删除」丢红字。
+   现在调用点的 `color = LegadoTheme.colorScheme.error` 换成 `AppAction.destructive`，四项命令
+   改稳定 ID（`bubble_apply` / `bubble_edit` / `bubble_export_zip` / `bubble_delete`），
+   内置包只显示「应用」的门控留在 `bubbleEntryMenuGroups(isBuiltin)` 里；⋮ 换成 **SmallButton 系列**
+   的 `SmallPlainButton`（→ `SeriesButton`，32dp 容器 / 18dp 图标，与列表项 trailing 图标按钮同几何；
+   原来的 `AppIconButton` 是 M3/Miuix `IconButton` 直通、不属 series，在这类列表里偏大），
+   开合受控（`embeddedExpanded = menuExpanded`），锚点取那层 `Box`。
+   已知差异：删除项没有图标，COUI 的 `iconTint` 无对象可染 → **COUI 上删除项不再有红字**；
+   Material 经 `RoundDropdownMenuItem(color = error)` 保住红字，Mochi 走原生 `destructive`，
+   Miuix 一直无机型通道。**26 处文本命中 / 22 处业务调用点**。
+   新增 `BubbleEntryMenuContractTest`（4 例）：受控结构与 ID、内置包门控、删除项走
+   `destructive` 且调用点不再写死 error 色、入口的 destructive 落色能力不退化。
+   下一轮候选：`BookshelfScreen` 两处分组菜单（勾选态 + 动态 `group:` 前缀都已具备，卡的是
+   `expanded` 跨 Route/Menu 两层透传）与 `MainScreen` 书架分组菜单（同一形态）。
+   **第三十轮**：书架分组菜单两处入口收敛。原先以为要拆 `expanded` 跨 Route/Menu 两层透传，
+   实测它已经统一在 `BookshelfOverlay.GroupMenu` 上（`showGroupMenu = activeOverlay == ...`），
+   真正的活只是把两处各自手画的菜单合并：
+   - 新增 `BookshelfGroupMenu`（受控 `AppActionMenu`，`embeddedExpanded = expanded`、
+     `trigger = {}`），两处各留一个 `Box(Modifier.matchParentSize())` 做锚点；顶栏那处原来就在
+     `AppTabRowIconButton` 旁边，编辑态那处原来挂在摘要卡外层 `Box`，落点不变；
+   - 当前分组用 `AppAction.selected` 表达（替代 `trailingIcon = Check`），ID 用
+     `group:<groupId>` 往返；
+   - 搜索态第二组 = `全部` + 已隐藏分组，原「全部 / 隐藏」标题按口径降级为组间线
+     （`R.string.hide` 与 `PillHeaderDivider` 在本文件归零）；
+   - 两处点击语义不同（编辑态还要 `SetInFolderRoot(false)`、非搜索态也要 `ChangeGroup`），
+     继续放在各自的 `onSelect` 里，组件只负责 ID → `BookGroupUi` 还原。
+   **24 处文本命中 / 20 处业务调用点**；`MenuHeadingDividerContractTest` 里「菜单内标题只剩
+   书架 1 处」改为 0。新增 `BookshelfGroupMenuContractTest`（6 例）：单受控组件 + 两处调用、
+   两个锚点容器、`selected` 与稳定 ID、标题降级、搜索态第二组、两处点击语义保留。
+   下一轮候选：`MainScreen` 书架 Rail 分组菜单（结构近似，注释里提到它有 `expanded` 跨层与门控
+   两处 state），然后是阅读器「更多」动作格（`MangaReaderSheets` / `ReadBookMenuBar*` /
+   `ReaderMoreActionsSheet`，5+2+2 处，属高行为风险区）。
+   **第三十一轮**：`MainScreen` 书架 Rail 分组菜单收尾。核查结论与上一轮预判相反：两处
+   `showGroupMenu` 分属互斥布局分支（Miuix 底栏 / 宽 `WideNavigationRail`）内的局部 `remember`，
+   不应合并进 `BookshelfOverlay.GroupMenu`；真正的冗余只有那层恒真的 `expanded` —— 两处调用点
+   都已用 `if (destination == Bookshelf && showGroupMenu)` 门控组合。
+   - `BookshelfRailGroupMenuRoute` / `BookshelfRailGroupMenu` 不再接收 `expanded`，弹层恒以
+     `embeddedExpanded = true` 渲染，开合仍由页面状态 + `onDismissRequest` 收口；
+   - 顺带修掉一个取消风险：四引擎受控弹层都是先 `onDismissRequest` 再 `onAction`，组件随即被
+     移出组合，原先 `rememberCoroutineScope()` 里挂起的 `onBeforeSelectGroup()`（`scrollToPage`）
+     会被连同协程取消，`ChangeGroup` 白点；改用导航栏宿主传入的 `CoroutineScope`。
+   **23 处文本命中 / 19 处业务调用点**（上一轮此处的 24 / 20 漏记了 `MainScreen` 那 1 处）。
+   `LongPressMenuContractTest` 里
+   「`MainScreen` 仍留 1 处旧菜单」的棘轮下调为 0；新增 `MainScreenRailGroupMenuContractTest`
+   （7 例）：单受控组件 + 两处调用、`expanded` 不再下行且门控保留、两个锚点容器、`selected`
+   与稳定 ID、关闭回到调用方、点击语义留在调用点、选中跑在外部 scope 上。
+   下一轮候选：阅读器「更多」动作格（`ReaderMoreActionsSheet` 5 处 / `ReadBookMenuBar*` 4 处 /
+   `MangaReaderSheets` 1 处），迁前需先建行为基线。
+   **第三十二轮**：阅读器动作格菜单（`ReaderMoreActionsSheet` 5 处 + `MangaReaderSheets` 1 处）
+   按「先基线、再迁移」处理。先新增 `ReaderActionMenuContractTest`（当时 5 例）把现状钉住：
+   三个命令分支的 intent、图片样式四项 + 选中态、翻页动画十项 + `ReadBook.book?.setPageAnim()`
+   副作用、动作格「更多」通道与漫画长按 intent；确认基线跑绿后才动组件。
+   - 六处全部改为受控 `AppActionMenu`（`embeddedExpanded = expanded`、`trigger = {}`、
+     `Modifier.matchParentSize()` 锚在动作格矩形上），条目改用稳定 ID：
+     `reader_more_change_book_source` / `reader_more_refresh_dur` 这类命令项直连一个 intent，
+     `reader_more_image_style:<style>` 与 `reader_more_page_anim:<value>` 由 ID 回解成选项值；
+   - 图片样式、翻页动画的选中态从 `isSelected` 改为 `AppAction.selected`；
+   - 翻页动画的副作用顺序保持「先写回书籍、再通知页面」；
+   - 漫画方块的长按动作只有一条，`longClickIntent == null` 时连弹层都不组合。
+   **17 处文本命中 / 13 处业务调用点**（−6）。`CompactChoiceMenuContractTest` 里
+   「`MangaSourceActionSquare` 仍用旧菜单」的棘轮下调为 0；`ReaderActionMenuContractTest`
+   补了结构契约（共 6 例）。
+   下一处：`ReadBookMenuBarFloating` / `ReadBookMenuBarTitle` 共 4 处 overflow 菜单——条目多、
+   含 `titleBarCompact` 等条件项、`PillDivider` 分组与嵌套「图片样式」子菜单，需要先补四引擎
+   真机外观基线，再按顶栏 overflow 形态单独设计 ID 表。
+   **第三十三轮**：只做 `ReadBookMenuBarTitle` 的两处共用菜单（都满足「点完就关」的入口语义）：
+   - `ReadMenuSourceDropdown`（登录 / 章节付费 / 编辑书源 / 禁用书源，三处入口共用）改为受控
+     `AppActionMenu`；登录与付费是条件项，在构造 `actions` 时就过滤，不渲染空位；
+   - `ReadMenuLongPressDropdown`（换源 2 项 / 刷新 2 项，顶栏 + 底栏 + 浮动图标三处共用）同样
+     改为受控；`menu == null` 时不再组合弹层——旧实现这种情况下会开出一个空菜单；
+   - 顺手删掉只服务旧菜单的 `ChangeSourceMenuItems` / `RefreshMenuItems` 与 `MenuItemIcon` 依赖；
+   - 6 个调用点各自补 `modifier = Modifier.matchParentSize()`，锚点仍是按钮所在的 `Box`。
+   **15 处文本命中 / 11 处业务调用点**（−2）。新增 `ReadMenuDropdownContractTest`（4 例）：
+   书源菜单的条件项与四条分派、长按菜单的两个变体与四个 intent、两处受控结构 + 旧子组件归零、
+   六处调用点的锚点实参。
+   同轮核查 `ReadBookMenuBarFloating` 的 overflow 菜单（巨型菜单 35 项 + 内嵌图片样式子菜单）
+   时发现它**没有调用方**：`private fun OverflowDropdownMenu` 自 2026-07-31（`7e435c1ea`）
+   引入起就没被任何地方调用，`git log -S` 也只有这一个提交。既然不可达，直接删除而不迁移，
+   顺带清掉它独占的 `MenuItemIcon` / `RoundDropdownMenu` / `PillDivider` 与 20 条图标 import。
+   原先担心的阻塞（`reSegment` / `delRubyTag` / `delHTag` 三项「点击不关菜单」，与入口
+   「先 dismiss 再 onAction」冲突）随之消失——`AppActionMenu` 仍然不需要「动作后保持展开」的
+   能力，第七轮 `ToggleActionMenuContractTest` 的结论继续成立。
+   **13 处文本命中 / 9 处业务调用点**（−2）；`ReadMenuDropdownContractTest` 增加第 5 例
+   `deadFloatingOverflowMenuStaysDeleted`，防止这段无调用方代码被重新长出来。
+   剩余 9 处：`BookInfoEditScreen` / `ReplaceEditScreen`（`ExposedDropdownMenuBox` 内的纯单选，
+   应走 `AppChoiceDropdown` 而不是 `AppActionMenu`，换 trigger 会改观感，需真机基线）、
+   `ThemeListContent`（原地翻页换菜单，属「不关菜单」形态）、`RssSortScreen`、
+   `RssReadRouteScreen` 2 处、`FontSelectSheet`、`SelectionItemCard`、`ExploreKindMultiTypeItem`。
+   **第三十四轮**：`RssReadRouteScreen` 顶栏「更多」菜单。这处是「主菜单 + 独立子菜单」形态：
+   重定向策略由一个主菜单项打开 `showRedirectMenu`，选中后要同时关两层菜单，并用
+   `trailingIcon = Check` 画当前值。
+   - 合成一个受控 `AppActionMenu`（`embeddedExpanded = showMenu`、`trigger = {}`、锚在「更多」
+     按钮的 `Box` 上），`showRedirectMenu` 删除；
+   - 重定向策略改为 `AppAction.children`，当前值走 `AppAction.selected`，ID 用
+     `rss_read_menu_redirect:<policy.name>` 回解；Material 无级联会平铺成同级项，属已知降级；
+   - 「朗读 / 停止朗读」的文案与图标仍随 `isSpeaking` 变化，ID 固定为
+     `rss_read_menu_read_aloud`；
+   - 踩到一个坑值得记：`buildList` / `map` 的 lambda 不是 `@Composable`，`stringResource`
+     必须在外面先求值；否则编译器报的是 `Expecting ')'` 这类语法错误，看起来像括号不配对。
+   **11 处文本命中 / 7 处业务调用点**（−2）。新增 `RssReadMenuContractTest`（4 例）：单受控
+   弹层 + 锚点、六个命令项回调与两个条件项、策略子项与 selected、不再手画 Check。
+   剩余 7 处：`BookInfoEditScreen` / `ReplaceEditScreen`（`ExposedDropdownMenuBox` 纯单选，应走
+   `AppChoiceDropdown`，需真机基线）、`ThemeListContent`（原地翻页换菜单）、`RssSortScreen`
+   （`TopBarActionMenu` 形态，已有 `RssSortMenuContractTest` 守着）、`FontSelectSheet`、
+   `SelectionItemCard`、`ExploreKindMultiTypeItem`。
+   **第三十五轮**：`FontSelectSheet` 的系统字体菜单（`startAction` 槽里的按钮 + 菜单）。
+   - 改为受控 `AppActionMenu`，用 `Box` 包住 `MediumTonalButton` 做锚点；条目由传入的
+     `Array<String>` 生成，ID 用序号（字体名会重名），回解后按 `typefaces.indices` 校验；
+   - 选中后仍是「先 `onSelectSystemTypeface(index)`，再 `onDismissRequest()` 关整个 sheet」；
+   - **已知差异**：旧实现用 `ProvideAppDensity` 包住菜单项，避免系统大字号/高密度把菜单项撑大；
+     受控弹层的内容由组件内部渲染，这层包裹用不上了。真机若出现字号异常，应在 `AppActionMenu`
+     侧补密度钩子，而不是在调用点另开菜单。
+   **9 处文本命中 / 5 处业务调用点**（−1）。新增 `FontTypefaceMenuContractTest`（3 例）。
+
+   **第三十六轮**：`RssSortScreen` 底部的分组切换菜单——`RssSortMenuContractTest` 里长期保留的
+   那处棘轮（`SmallToggleButton(checked = showGroupMenu)` 既是开关又是入口）。
+   - 按钮仍只负责写 `showGroupMenu`，弹层改由 `embeddedExpanded` 驱动，`trigger = {}`；
+   - 分组项 ID 用序号（分组标题会重名），当前分组由 `AppAction.selected` 表达，不再手画
+     `Icon(Icons.Default.Check)`，顺带清掉 `size` / `Icon` / `Check` 三个导入；
+   - 选中后 `scope.launch { pagerState.animateScrollToPage(index) }` 不变。
+   `groupSwitcherKeepsRatchet` 下调为 0 并改名 `groupSwitcherIsControlledMenu`。
+   **9 处文本命中 / 5 处业务调用点**（−1）。
+   剩余 5 处：`BookInfoEditScreen` / `ReplaceEditScreen`（`ExposedDropdownMenuBox` 纯单选，应走
+   `AppChoiceDropdown`）、`ThemeListContent`（原地翻页换菜单）、`SelectionItemCard`
+   （`dropdownContent` 插槽，属组件 API，改动会影响所有用到它的卡片）、
+   `ExploreKindMultiTypeItem`。
+   **第三十七轮**：`ExploreKindMultiTypeItem` 的分类选择菜单（`showSelector` + `chars` 动态列表）。
+   - 改为受控 `AppActionMenu`，锚点是已有的 `Box(modifier)`；ID 用序号（选项文本可能重复），
+     回解后按 `chars.indices` 校验；
+   - 选中后的 `state.updateValue(...)` + `onRunAction()` / `state.executeAction(kind.action)`
+     与 `if (selected != option)` 去重逐条保留；
+   - 旧实现**没有**选中态标记，迁移时也不额外加 `selected`，避免顺手改观感。
+   **8 处文本命中 / 4 处业务调用点**（−1）。新增 `ExploreKindSelectorMenuContractTest`（2 例）。
+   剩余 4 处业务调用点：`BookInfoEditScreen` / `ReplaceEditScreen`（`ExposedDropdownMenuBox`
+   可编辑组合框，`AppChoiceDropdown` 只能选不能输入，硬迁会丢自由填写能力）、
+   `ThemeListContent`（点「网格列数」原地翻页换菜单，属「不关菜单」形态）、
+   `SelectionItemCard`（`dropdownContent` 插槽是组件 API，改动会波及所有用到该卡片的列表）。
+   ⚠️ 这 4 处**都不是套模板能收的**：前两处要改交互或补能力，第四处改的是公共组件契约。
+   下一轮建议先挑一类建行为基线 + 四引擎真机外观基线，而不是继续减计数。
+   **第三十八轮**：`ThemeListContent` 顶行 ⋮ 的「原地翻页」菜单（三选一取 B 类）。迁前先建
+   行为基线：`ThemeListMenuContractTest` 5 例钉住三条命令项的 dismiss→intent、「网格列数」
+   只翻页不 dismiss、2..6 列数项的选中与写回、关闭时翻页位与冻结宽度归零；既有
+   `ThemeListSelectionTest`（⋮ → 管理主题 → 勾选 → 分享）作 Compose 交互基线，跑绿后才动组件。
+   - 收编为 `AppAnchoredPanel(externalTrigger = true)` + 自定义 content：入口只接管弹层分派，
+     content 自己决定是否 `dismiss()`，因此保留「不关菜单」的翻页语义，**不需要**给
+     `AppActionMenu` 补 keepOpen（第十轮 / 第三十三轮结论继续成立）；
+   - ⋮ 按钮仍由本页用 `SmallTonalButton` 渲染，点击先回到一级菜单再 `open()`；
+     `externalTrigger` 路径的 `modifier` 仍传宽度锁定 + `onSizeChanged`，一二级菜单共用
+     冻结宽度、关闭即作废的行为不变；
+   - `onExpandedChange(false)` 一处收口 `menuExpanded` / 翻页位 / 冻结宽度三个重置，
+     等价于旧 `onDismissRequest`；三个命令项与五个列数项的回调逐条保留。
+   **7 处文本命中 / 3 处业务调用点**（−1）。`ThemeListMenuContractTest` 补结构契约共 6 例
+   （手画容器归零、单入口、既有 trigger、无 keepOpen），`menu.*` 定向全绿，
+   `ThemeListSelectionTest` 1 例通过。
+   取舍：选 `AppAnchoredPanel` 自定义 content 而不是受控 `AppActionMenu` 或第十轮式
+   「拆独立面板」，是为了零交互变化、零按钮外观变化，且不动阅读器面板布局；代价是
+   content 里仍是 `RoundDropdownMenuItem` 自绘行，四引擎原生条目效果不因此提升。
+   剩余 3 处：`BookInfoEditScreen` / `ReplaceEditScreen`（`ExposedDropdownMenuBox` 可编辑
+   组合框，需真机外观基线 + 保留自由输入）、`SelectionItemCard`（`dropdownContent` 公共
+   契约，6 个调用点）。四引擎真机外观、TalkBack、lint 仍未复核。
+   **第三十九轮**：`SelectionItemCard` 的 `dropdownContent` 公共插槽（三选一取 C 类）。先盘点
+   6 个调用点（`ChangeSourceSheet` / `RuleSubScreen` / `RssFavoritesScreen` /
+   `ReplaceRuleScreen` / `AiAutoGroupSheet` / `ChangeChapterSourceSheet`），结论是插槽签名
+   `@Composable (ColumnScope.(onDismiss) -> Unit)?` 与 `AppAnchoredPanel.content` 同构，
+   **不需要改公共 API**。新增 `SelectionItemCardMenuContractTest` 4 例先钉住插槽、两处转发、
+   6 个调用点与 dismiss 语义；既有
+   `MochiOverlaysAndBarsTest.hyperOs4RuleItemMenuUsesButtonParentAsGlassAnchor`
+   作 Miuix 玻璃锚点交互基线，跑绿后才动组件。
+   - 卡片内部改为 `AppAnchoredPanel(externalTrigger = true)`，`content = dropdownContent`
+     直接复用插槽，`onExpandedChange = { showMenu = it }` 一处收口开合；`dismiss()` 仍由
+     调用点触发，等价于旧 `dropdownContent { showMenu = false }`；
+   - ⋮ 仍由卡片用 `SmallPlainButton` 渲染（外观与 `moreContentDescription` 不变），点击改为
+     `open()`；`SelectionItemCard` / `SelectionItemCardContent` / `ReorderableSelectionItem`
+     三个对外签名与两处转发逐字不动，6 个调用点零改动。
+   **6 处文本命中 / 2 处业务调用点**（−1）。双变体编译 `BUILD SUCCESSFUL`，
+   `menu.*` 定向全绿、玻璃锚点 1 例通过，`git diff --check` 干净。
+   取舍：不套 `AppActionMenu`（插槽里的菜单项形态各异、由调用点自绘），也不改公共 API，
+   只把弹层容器分派收编；代价与第三十八轮相同，四引擎原生条目效果不因此提升。
+   剩余 2 处：`BookInfoEditScreen.BookTypeDropdown` / `ReplaceEditScreen.GroupSelector`
+   （`ExposedDropdownMenuBox`，需四引擎真机外观基线且 `GroupSelector` 自由输入必须保留）。
+   四引擎真机外观、TalkBack、lint 仍未复核。
+   **第四十轮**：最后两处 `ExposedDropdownMenuBox` **只建行为基线、不动组件**。新增
+   `ExposedDropdownMenuBaselineContractTest` 5 例，钉住：两处各 1 处手画弹层、
+   `PrimaryEditable` 锚点 + `TrailingIcon`、书类型只读文本框与 `TextFieldState` 标签同步、
+   `GroupSelector` 的 `value/onValueChange` 自由输入、两处选中即回填并收起；反向棘轮断言
+   两处都**没有**被换成 `AppChoiceDropdown`（只能选不能输入），与第十一轮起
+   `ReplaceDirectLinkMenuContractTest.groupSelectorKeepsEditableComboBox` 同口径。
+   `menu.*` 定向全绿，**6 处文本命中 / 2 处业务调用点不变**。
+   暂不迁移的原因：换 `AppChoiceDropdown(compact = true)` 会改 trigger 外观且丢自由输入；
+   沿用第三十八/三十九轮的 `AppAnchoredPanel(externalTrigger = true)` 会让
+   `ExposedDropdownMenuBox` 的 `menuAnchor` 与入口的 `expanded` 变成双层状态，弹层落点
+   不再由 Material 的 exposed 定位决定。两种改法都需先有四引擎真机外观基线。
+   **待用户提供的真机基线**：Material / COUI / Miuix / Mochi 四引擎下分别打开
+   「书籍信息编辑 → 书类型」与「替换规则编辑 → 分组」，各取收起态 + 展开态截图；
+   观察 trigger（输入框底色/圆角/标签、下拉箭头、只读 vs 光标）、弹层（是否贴输入框
+   下沿、宽度是否等于输入框、背景/圆角/行高/选中态）、交互（点输入框/箭头展开、
+   点条目收起、`GroupSelector` 输入不在 `allGroups` 里的新分组名后保存并重开是否保留、
+   软键盘）。待用户决策：① 是否允许 `BookTypeDropdown` 改 trigger 形态；
+   ② 是否接受「trigger 逐字不动、只收编弹层分派」但弹层落点未真机验证的风险；
+   ③ `GroupSelector` 自由输入的验收口径。真机外观、TalkBack、lint 仍未复核。
+   **第四十一轮**：用户确认四引擎**现状**外观全部正常，并指出下拉行不是各引擎原生 item；
+   `GroupSelector` 的验收口径收窄为**页面内自由输入**，不需要「退出后重进仍保留分组」
+   （那是 ViewModel / 持久化职责）。第四十轮里第 ③ 项待办以此为准，基线测试无需改
+   （未断言跨页面持久化）。本轮只研究 `BookTypeDropdown` 的处理办法、不动组件，
+   计数仍 **6 处文本命中 / 2 处业务调用点**。
+   - 现状核实：`RoundDropdownMenu` 容器按引擎分派（Miuix `WindowListPopup`、Mochi
+     `AppMochiPopover`、COUI/Material `DropdownMenu`），但行统一是 `RoundDropdownMenuItem`
+     的四套**自绘**实现（Miuix `MiuixText`+Row，Mochi / COUI / Material 各自 `Text`/`Surface`），
+     所以「不是原生 item」成立；要拿原生行必须走声明式三入口。
+   - 方案 1（保真收编，第三十八/三十九轮同构）：`AppAnchoredPanel(externalTrigger = true)`
+     只换容器，行仍自绘 → **不解决原生 item**，且 `menuAnchor` 与入口 `expanded` 双层状态。
+   - 方案 2（`AppChoiceDropdown` 默认 / `Icon` 形态）：四引擎原生行（COUI `CouiMenuItem`、
+     Miuix `DropdownItem` / HyperOS4 玻璃行、Mochi `MochiItem`），但 trigger 变成设置行 /
+     图标按钮，输入框、标签同步与展开箭头全部消失，外观改动最大。
+   - 方案 3（`AppChoiceDropdown` 受控 `embeddedExpanded` + `trigger = {}` + 调用方
+     `matchParentSize()` 锚点）：**推荐**。保留 `ExposedDropdownMenuBox` + `AppTextField`
+     作为 trigger 逐字不动，弹层换四引擎原生行；ID 用 `BookInfoEditType.name`，回解后按
+     枚举校验。代价：受控模式失去 COUI 触点锚定，弹层宽度/落点改由各库决定；
+     `ExposedDropdownMenuBoxScope` 不提供 `BoxScope`，需在 content 内再嵌一层 `Box`
+     才能用 `matchParentSize()`，`menuAnchor` 是否仍被 Material 正确测量需编译 + 真机确认。
+   - 方案 4（改用 Material3 原生 `ExposedDropdownMenu`）：四引擎统一退成 M3 风格，
+     违反「完整保留四套原生效果」，排除。
+   - 方案 5（改公共 `RoundDropdownMenuItem`，按引擎委托库原生行）：波及全仓 320+ 处
+     调用点，属根因级重构、不是本切片，排除。
+   - 共同边界：Material 分支无论走哪个入口都是 `RoundDropdownMenuItem` 自绘行
+     （`MaterialChoice` / `LegacyActions` 现状如此），M3 引擎没有「库原生 item」可拿。
+   下一步需用户从方案 2/3 里定一个，再按「先补结构契约 → 迁移 → 复核迁移后四引擎外观」
+   收掉 `BookTypeDropdown`（6/2 → 5/1）；`GroupSelector` 仍不能换纯选择器（页面内自由
+   输入必须保留），留到再下一轮。TalkBack、lint 仍未复核。
+   **第四十二轮**：用户追问「把按钮移出输入框、放在旁边能否规避方案 ③ 的代价」。结论：
+   **能规避大部分技术代价，但把风险换成外观/交互改动**；本轮仍不动组件，计数 6/2。
+   - 形态：`Row { AppTextField(state, readOnly, label, weight(1f)); AppChoiceDropdown(
+     options, selectedId, onSelect, title, compact = true / anchor = Icon, trigger = { 纯展示按钮 }) }`，
+     去掉 `ExposedDropdownMenuBox` 与 `menuAnchor`。
+   - 可规避：不再有 `menuAnchor` + 入口 `expanded` 双层状态；不必把 `AppTextField` 塞进
+     `trigger` 槽（语义树仍是单可点节点，`AppChoiceIconAnchorContractTest` 已覆盖）；
+     可用**非受控**入口 ⇒ COUI `couiAnchor.open` 触点锚定恢复、Miuix 玻璃 morph 从按钮
+     长出、Mochi 锚点面板；不再需要 `embeddedExpanded` / `matchParentSize()` / 嵌套 `Box`
+     （`ExposedDropdownMenuBoxScope` 不提供 `BoxScope` 的问题消失）。
+   - 仍拿到 COUI `CouiMenuItem` / Miuix `DropdownItem` / Mochi `MochiItem` 原生行；
+     Material 分支依旧 `RoundDropdownMenuItem` 自绘（M3 没有库原生 item）。
+   - 新增代价：输入框变窄、箭头从框内移出、**点输入框不再能展开**（原来点框内任意处
+     都开菜单）、只读框与按钮的无障碍名称/当前值要重新组织；弹层落点从「框下方」变成
+     「按钮下方」，宽度由各库定（`RoundDropdownMenu` 现状本就是内容自适应，并不贴输入框宽）；
+     迁移后四引擎外观仍需复核。
+   - 锚点取舍：`anchor = Icon` 由各库渲染按钮壳（Mochi `MochiBarIconButton`、COUI
+     `CouiTopAppBarButton`、Miuix `Window/OverlayIconDropdownMenu`、Material `IconButton`），
+     四引擎按钮外观不同；`compact = true`（Row）由入口包同一个项目自绘
+     `SmallTonalButton(onClick = null)`，外观统一且 `MiuixCompactChoice` 已走
+     `MiuixGlassMenuHost`。推荐后者。
+   - ⚠️ 文档差异：`AppChoiceDropdown` KDoc 与本文「下一阶段」第 4 条仍写「`Icon` 与
+     `compact` 同属暂不接玻璃」，但源码 `MiuixCompactChoice` 已有玻璃分支；以源码为准，
+     该文案待单独更正，本轮不改。
+   需用户确认：是否接受「点输入框不再展开 + 旁边多一个按钮」这一观感/交互改动。确认后
+   按「先补结构契约 → 迁移 → 迁移后四引擎复核」收掉 `BookTypeDropdown`（6/2 → 5/1）。
+   **第四十三轮**：用户定案「`BookTypeDropdown` 直接用 `SettingItem`，替换净化的分组框
+   在输入框旁放 Medium 系列按钮」。本轮先落第一处，计数 **6/2 → 5/1**。
+   - `BookTypeDropdown` 改为 `SettingItem(choiceOptions = bookTypes.map { (type, label) ->
+     AppChoiceOption(id = type.name, label = label) }.toImmutableList(),
+     choiceSelectedId = selectedType.name, onChoiceSelect = { id -> ... })`；标题沿用
+     `R.string.book_type_label`，`option` 显示当前类型名，保留原 8.dp 外边距，函数签名
+     与调用点不变。
+   - 删掉 `ExposedDropdownMenuBox` / `menuAnchor` / `TrailingIcon` /
+     `rememberTextFieldState` + `LaunchedEffect` 标签同步 / 手画 `RoundDropdownMenu`；
+     `SettingItem` 内部用受控 `AppChoiceDropdown(embeddedExpanded = showMenu)` +
+     `matchParentSize()` 锚点，四引擎原生单选行（Material 分支仍项目自绘）。
+   - ID 用枚举名、回解按 `bookTypes` 值校验，不依赖列表下标；`map` lambda 非
+     @Composable，标签由调用点现成 String 提供，坑①不会发生。
+   - 下调第四十轮棘轮：`ExposedDropdownMenuBaselineContractTest` 改 5 例（只管
+     `GroupSelector`，并断言编辑页已无手画容器）；新增 `BookTypeSettingItemContractTest`
+     4 例（声明式形态、稳定 ID、非 Composable 构造、组件级原生行来源）。
+   验证：双变体编译 `BUILD SUCCESSFUL`；`menu.*` 定向全绿（新契约 4 例、基线 5 例
+   0 失败）；`git diff --check` 干净；3 个改动文件 0 诊断。
+   下一片按用户定案：`GroupSelector` 保留 `AppTextField` 自由输入，去掉 exposed 锚点，
+   在输入框旁放一个 **Medium 系列纯展示按钮**（`MediumPlainButton(onClick = null,
+   modifier = this.modifier, ...)`，由入口包唯一可点节点）作为 `AppChoiceDropdown` 的
+   trigger；自由输入值不在 `allGroups` 时 `selectedId` 落空，已核实 Mochi `MochiList`
+   用 `selectedIndex in items.indices`、库多处用 -1 表示无选中，不会崩。现有「管理分组」
+   `MediumPlainButton` 保留。迁移后四引擎外观、TalkBack、lint 仍未复核。
+   **第四十四轮（阶段 C 收尾）**：`GroupSelector` 按用户定案改造，计数 **5/1 → 4/0**。
+   - 去掉 `ExposedDropdownMenuBox` / `menuAnchor` / `TrailingIcon` / 手画
+     `RoundDropdownMenu`；`AppTextField(value = currentGroup,
+     onValueChange = onGroupChange)` 连同 label / placeholder("默认") /
+     backgroundColor / `weight(1f)` 逐条保留，页面内自由输入能力不变。
+   - 输入框旁新增 `AppChoiceDropdown(compact = true, title = R.string.group)`，
+     trigger 用 `MediumPlainButton(onClick = null, modifier = this.modifier,
+     icon = AppIcons.ExpandMore, contentDescription = R.string.expand)` 纯展示，
+     由入口包唯一可点节点；透传 `this.modifier` 是 COUI 触点锚点的必要条件
+     （`SettingItemAnchorContractTest.pureDisplayTriggersForwardScopeModifier`）。
+   - ID 用带前缀的序号（`GROUP_OPTION_ID_PREFIX` + index），回解 `removePrefix` →
+     `toIntOrNull` → `getOrNull` → `onGroupChange`；`selectedId` 用
+     `indexOfFirst(...).takeIf { it >= 0 }`，用户自由输入的新分组不在 `allGroups`
+     时落空（第四十三轮已核实 Mochi 以 `selectedIndex = -1` 表示无选中，不崩不误高亮）。
+   - 现有「管理分组」`MediumPlainButton(onClick = onManageClick)` 保留在右侧。
+   - 下调两处棘轮：`ReplaceDirectLinkMenuContractTest.groupSelectorKeepsEditableComboBox`
+     改为 `groupSelectorKeepsFreeTextInputWithChoiceTrigger`（手画容器 0 处、无
+     `PrimaryEditable`、自由输入仍在）；`ExposedDropdownMenuBaselineContractTest` 改为
+     5 例阶段 C 收尾契约（两文件 0 处手画、自由输入、Medium 纯展示 trigger、
+     稳定 ID + 边界校验、管理按钮）。
+   验证：双变体编译 `BUILD SUCCESSFUL`；`menu.*` 定向全绿（收尾契约 5 例、
+   下调后的 `ReplaceDirectLinkMenuContractTest` 3 例、`BookTypeSettingItemContractTest` 4 例
+   均 0 失败）；`git diff --check` 干净；3 个改动文件 0 诊断。全仓
+   `RoundDropdownMenu(` = 4 处（组件定义 1 + 三入口内部 3），**业务调用点归零**。
+   一处测试小坑：Kotlin 原始字符串仍会插值 `$`，断言字面量 ID 模板需用 `${'$'}` 转义。
+   未验证：迁移后四引擎展开态外观（输入框变窄、点输入框不再展开、弹层改锚到按钮）、
+   TalkBack、lint；`GroupSelector` 按用户口径不验「退出后重进仍保留分组」。
+   **第四十五轮（第四十三轮回归修复，计数仍 4/0）**：用户真机反馈「书籍信息编辑的书类型
+   下拉没跟随主题、弹窗飘到左上角」。先补 `choiceAnchorAndSurfaceFollowEditPage` 契约、
+   跑出 2 例红建立证据，再修，跑回 5 例全绿。
+   - 根因 1：`SettingItem` 的 `trailing` 槽是 `Box(contentAlignment = Center)`，里面只有
+     `trailingContent?.invoke()` 与 `menu()`；编辑页用法没传 `trailingContent`，非 COUI 下
+     `trailingOption` 为 null、无 `expandContent`，Box 没有撑尺寸的可见子节点。
+     `menu()` 里的 `AppChoiceDropdown(modifier = Modifier.matchParentSize())` 因此是 0 尺寸，
+     受控弹层（M3 `DropdownMenu` / COUI `Menu(anchor = null)` / Mochi
+     `onGloballyPositioned` / Miuix popup）拿到窗口原点 → 左上角。
+   - 根因 2：`SettingCard` 默认 `color ?: MaterialTheme.colorScheme.surfaceContainerLow`，
+     `option` 取值文本写死 `MaterialTheme.colorScheme.primary`；`SettingItem` 是设置页组件，
+     单独塞进 `BookInfoEditContent` 的 `Column`，与 `AppTextField` 的
+     `LegadoTheme.colorScheme.surfaceInput` 不一致 → 「没跟随主题」。
+   - 修复**只改调用点、不动公共组件**：`color = LegadoTheme.colorScheme.surfaceInput`；
+     去掉 `option`，改由 `trailingContent` 用 `AppText`（`LegadoTheme.colorScheme.onSurface`）
+     + `AppIcon(AppIcons.ExpandMore)` 显示当前值与箭头。trailing Box 因此有确定尺寸，且
+     `option = null` ⇒ `useOptionAnchor = false`、`trailingOption = null`，四引擎锚点统一
+     落在右侧取值区。
+   - 契约：`BookTypeSettingItemContractTest` 新增回归用例共 5 例（trailingContent、页面
+     底色、箭头、不再用 option 渲染取值），并更新「显示值跟随 selectedType」断言。
+   验证：修复前 2 例红；修复后双变体编译 + `menu.*` 定向 `BUILD SUCCESSFUL`（5 例
+   0 失败），`git diff --check` 干净、2 个改动文件 0 诊断，计数仍 4/0。
+   ⚠️ 长期陷阱：`SettingItem(choiceOptions = ...)` 依赖调用点给 `trailing` / `option`
+   一个可见节点；设置页里另两处（`ListSettingItem` / `CompactSettingItems`）有分组上下文
+   所以正常。非设置页复用该组件时必须补 `trailingContent`，否则受控弹层锚点退化。
+   仍需用户真机复核：`SettingCard` 的 4.dp 圆角、`titleMedium` 字号与编辑页其它字段
+   是否协调；若仍不搭，再考虑换成 `AppChoiceDropdown(compact)` + 编辑页风格 trigger。
+   TalkBack、lint 未复核。
+   **第四十六轮（设置项组件配色统一，计数仍 4/0）**：用户追问「为什么设置页的这些没有
+   问题」，并要求改用 `LegadoTheme.colorScheme` 系列色。
+   - 更精确的解答（更正第四十五轮「有分组上下文所以正常」的笼统说法）：
+     · `CompactSettingItems` 的 `SettingItem` 传了 `trailingContent = valueChip`（TextCard），
+       `trailing` Box 天然有尺寸 ⇒ 受控弹层锚点正常；
+     · `ListSettingItem` 传了非空 `option = currentEntry`：COUI 下 `trailingOption` 渲染
+       取值文本、Mochi 下 `useOptionAnchor = true` 把 `menu()` 挂到 supporting 的取值文本
+       Box，两处都有可见节点；Miuix 走库原生 spinner 分支（`when` 里只有
+       Material / Mochi / Coui 才用 `SettingItem`），根本不经过这条路径；
+     · 设置页整页是 `SettingCard` + 分组上下文（`LocalMochiSettingsGroup` /
+       `LocalCouiSettingsGroup` / `SplicedColumnDivider`），所有行同一套底色，视觉自洽；
+       编辑页只有一行 `SettingItem` 夹在 `AppTextField`(`surfaceInput`) / `NormalCard`
+       之间，两套取色并排才显眼。编辑页的 `Column` 还带
+       `verticalScroll + imePadding + consumeWindowInsets`，0 尺寸锚点更易退化到窗口原点。
+     · ⚠️ 但 `ListSettingItem` 在 **Material 分支**下同样是「`option` 在 supporting、
+       `trailing` 空 Box」，理论上也有锚点退化隐患，只是没被观察到；本轮未改它
+       （会影响全仓设置页），列为后续项。
+   - 改动：`SettingItem` 4 处、`CompactSettingItems` 3 处、`ClickableSettingItem` 1 处
+     `MaterialTheme.colorScheme.*` → `LegadoTheme.colorScheme.*` 同名系列色
+     （`onSurfaceVariant` / `onSurface` / `primary` / `surfaceContainerLow` /
+     `surfaceContainer`），删掉 3 个不再使用的 `MaterialTheme` import。
+     `LegadoColorScheme` 已提供全部同名色，不需要新增色值。
+   - 契约：新增 `SettingItemColorContractTest` 2 例（组件族不再混用 M3 取色、替换落到
+     同名系列色），先跑出 2 例红再修。
+   验证：双变体编译 + `menu.*` 定向 `BUILD SUCCESSFUL`（新契约 2 例 0 失败），
+   `git diff --check` 干净、4 个改动文件 0 诊断，settingItem 包残留 0 处，计数仍 4/0。
+   ⚠️ 影响面：这是**全仓设置页配色变化**（M3 默认取色 → 项目主题色），需真机复核四
+   引擎下设置页与编辑页观感；TalkBack、lint 未复核。
+   **第四十七轮（编辑页布局调整，计数仍 4/0）**：用户要求书类型下拉不再与封面同一行，
+   改放到「固定书籍类型」上方。
+   - `BookTypeDropdown` 调用点从封面 `Row` 右侧的 `Column`（原为两个按钮 +
+     `Spacer(4.dp)` + 下拉）移到 `BookKnowledgeEditCard` 之后的整行，紧跟
+     `SwitchSettingItem(R.string.fixed_book_type)` 上方，两者之间 `Spacer(8.dp)`；
+     封面行内那个 `Spacer(4.dp)` 一并删掉。
+   - `SettingItem` 的 `modifier = Modifier.padding(horizontal = 8.dp)` 去掉：那是为封面
+     右侧窄列留的缩进，独立整行后会比下方设置项左右各内缩 8dp；现在由
+     `SettingCard.fillMaxWidth()` 撑满，与 `SwitchSettingItem` 左边缘对齐。
+   - 契约：`BookTypeSettingItemContractTest` 加 `bookTypeDropdownSitsAboveFixedTypeSwitch`
+     共 6 例（封面 `CoilBookCover` 与知识卡片之间不再有书类型、调用点位于知识卡片之后
+     且早于 `R.string.fixed_book_type`、两者间 8.dp 间距），并把「保留原有外边距」断言
+     反向改为「不得保留」。先跑出 2 例红再改。
+   验证：双变体编译 + `menu.*` 定向 `BUILD SUCCESSFUL`（6 例 0 失败），
+   `git diff --check` 干净、2 个改动文件 0 诊断，计数仍 4/0。
+   ⚠️ `SettingItem` 现在是整行宽度，四引擎下需真机复核卡片宽度 / 与固定书籍类型开关的
+   间距；TalkBack、lint 未复核。
+   **第四十八轮（受控玻璃锚点回归定位与修复，计数仍 4/0）**：用户实测 OnePlus /
+   Android 17 / SDK 37 下，在「发现 / 订阅」打开源长按菜单后关闭会抛
+   `IllegalArgumentException: Corner size in Px can't be negative(-0.33347267…)`，
+   且弹窗一直在窗口左上角；要求定位是哪次修改引入的。
+   - 根因（两个现象同源）：`MiuixGlassMenuHost` → `GlassIconDropdownMenu` →
+     `GlassTransformPopup` 取 `startRect = anchor.containerBounds`、
+     `startRadius = anchor.cornerRadius`；两者都由 `Modifier.glassPopupAnchor` 的
+     `onGloballyPositioned` 写入，默认是 `Rect.Zero` / `0.dp`。
+     `AppActionMenu.MiuixRowActions` 支持 `embeddedExpanded` 后，把带锚点的 trigger Box
+     收进 `if (embeddedExpanded == null)`，受控分支仍注册 host，面板于是从 (0,0) morph；
+     收起时 `transformFrame` 的 `startRadius + (endRadius - startRadius) * sizeFraction`
+     在 startRadius=0、spring 回弹让 sizeFraction 略小于 0 时得到负圆角，
+     `MeasuredCorner.toPx()` 未钳制，`RoundedCornerShape` 直接抛异常。
+   - 引入点：`2c4d0856b`（2026-11-12 01:29）新增 host 与玻璃 morph 路径，同时给
+     `AppChoiceDropdown` 受控分支加了 `containerAnchor`，但当时 `MiuixRowActions`
+     只支持非受控（`show = expanded && enabled`），缺陷潜伏；工作区未提交的
+     「`AppActionMenu` 受控模式」改造让 `MiuixRowActions` 读 `isOpen`、跳过 trigger Box
+     却没补容器锚点，叠加第二十七轮把 `RssScreen` / `ExploreScreen` 长按菜单迁成
+     `AppActionMenu(embeddedExpanded = …)`，首次命中「受控 + 玻璃 + Row」。
+     迁移前这两页走 `RoundDropdownMenu` 的 `GlassDropdownPopup` +
+     `anchorBounds.translate(-origin)`，有真实父矩形，所以「之前不会这样」。
+   - 修复（两处，不改任何业务调用点）：`MiuixRowActions` 增加
+     `containerAnchor = if (glass && embeddedExpanded != null)
+     Modifier.glassPopupAnchor(anchor, cornerRadius = 12.dp)`，容器改
+     `Box(modifier.then(containerAnchor))`，与 `AppChoiceDropdown` 同口径；vendored
+     `GlassPopupSurface.MeasuredCorner.toPx()` 加 `coerceAtLeast(0f)` 作形状边界兜底，
+     动画插值本身不改（以后再有入口漏挂锚点只会位置错，不会再崩）。
+   - 契约：新增 `ControlledGlassAnchorContractTest` 3 例（受控容器发布 bounds + 起点
+     圆角、两入口同口径、库侧钳制且插值仍在）。先定位到崩溃数值与插值公式吻合，
+     再改源码，用例锁住修复后形态。
+   验证：`:app:compileAppCoreDebugKotlin` / `:app:compileAppComicDebugKotlin` /
+   `:app:testAppCoreDebugUnitTest --tests '…menu.*'` 同批 `BUILD SUCCESSFUL`（新增 3 例
+   0 失败，含 vendored `miuix-glass:compileAndroidMain`），`git diff --check` 干净、
+   3 个改动文件 0 诊断，计数仍 4/0。
+   ⚠️ 未复核：真机上「发现 / 订阅」弹层位置与收起动画、其余受控 `AppActionMenu`
+   （阅读器 Sheet / 字体 / 目录 / 视频页等）的玻璃锚点尺寸；`MiuixGlassMenuHost`
+   仍不减 `origin`，当前 `AppGlassOverlayLayer` 位于 root 原点（与 `RoundDropdownMenu`
+   的 `origin == Offset.Zero` 条件一致），若以后 overlay 带偏移需统一处理。
+   `testAppComicDebugUnitTest` / lint / assemble / TalkBack 未跑（第四十九轮已补跑，见下）。
+   **第四十九轮（撤销库侧兜底 + 主验证集 + 文档清理，计数仍 4/0）**：用户真机复核
+   「发现 / 订阅」弹层落点与关闭崩溃均通过，决定撤掉库侧兜底，并授权补跑主验证集、
+   清理过时文档。
+   - 撤销：`modules/miuix` 是 gitlink submodule（`160000 ea1b935d`），第四十八轮加在
+     `GlassPopupSurface.MeasuredCorner.toPx()` 的 `coerceAtLeast(0f)` 只落在子仓工作树，
+     主仓 `git diff --stat` 仅显示 `modules/miuix | 0`，提交后 CI / 他人 clone 拿不到。
+     已恢复 vendored 原版、子仓工作树干净；唯一防线是 `AppActionMenu` 受控容器
+     `containerAnchor` 写入的正起点圆角（12.dp），插值不再越过 0。
+   - 契约：`ControlledGlassAnchorContractTest` 第三例改为
+     `glassPanelKeepsVendoredRadiusUnpatched`，反向断言 `MeasuredCorner` 内不含
+     `coerceAtLeast`、正断言仍用上游原式与插值公式。第一版按整文件断言会误报
+     （同文件阴影 outset 本就有 4 处 `coerceAtLeast(0f)`），已收紧到该类。
+   - 文档清理：`AppChoiceDropdown.kt` 三处 KDoc 的「compact 暂不接玻璃」改成
+     「compact 已走 `MiuixGlassMenuHost`、只剩 Icon 未接」；本文下一阶段第 4 条同步更正；
+     `native-menu-engines-handoff.md` / `-next.md` 两份快照标为已归档（51 处、8/4
+     口径与「下一轮三选一」全部作废，指向本文顶部与 §9）。
+   验证（主验证集，双变体）：
+   - 全量单测：首次 core `3261 tests / 10 failed / 4 skipped`、comic
+     `3294 / 10 failed / 1 skipped`；修掉本轮契约误报后 core 复跑
+     `3261 / 9 failed / 4 skipped`，两变体 `ControlledGlassAnchorContractTest` 3 例全绿。
+     剩余 9 个失败集中在 `MangaExportWriterTest` / `MangaExportRepositoryTest` /
+     `LocalMangaLoaderTest` / `MochiOverlaysAndBarsTest`，均为文档已登记的
+     漫画 / insets 既有失败（`URISyntaxException`、overflow-tabs `ScrollToIndex`），
+     与菜单锚点无代码交集，未在本轮处理。
+   - `verifyConfigArchitecture` 通过。
+   - `assembleAppCoreDebug` / `assembleAppComicDebug` 成功，两变体 debug APK 均产出
+     （2026-11-13）；`lintAppCoreDebug` / `lintAppComicDebug` 各 1 error 失败：唯一
+     未过滤错误是 `NewApi`（`AppChoiceDropdown.kt:515` `rememberCouiCapsuleRenderer()`
+     要求 API 34、min 26），见下一阶段第 7 条。
+   - `git diff --check` 干净；改动文件 0 诊断；子仓工作树干净。
+   ⚠️ 仍待：其余受控 `AppActionMenu` 的玻璃锚点尺寸、四引擎外观 / 设置页配色真机基线、
+   TalkBack；阶段 D 清理；上述 9 个既有单测失败与 1 个 lint 错误需单独开片
+   （lint 错误已于第五十轮修掉，见下）。
+   **第五十轮（修 COUI 胶囊 `NewApi`，计数仍 4/0）**：接第四十九轮全量 lint 的唯一
+   未过滤错误，单独开片处理；不加 `@SuppressLint`、不放宽 `lint-baseline.xml`。
+   - 根因：`rememberCouiCapsuleRenderer()` 与 `CouiTopAppBarButton()` 都标
+     `@RequiresApi(UPSIDE_DOWN_CAKE)`（34），minSdk 26。`CouiChoice` 的 Icon 分支
+     把渲染器构造写在 `ThemeResolver.isCouiSupported()` 守卫之外（无条件调用），
+     且库按钮的调用条件只有 `capsule != null` —— lint 不把后者折算成 SDK 检查。
+     第一次只把构造移进守卫分支后，`remember...` 的报错消失，但
+     `CouiTopAppBarButton` 在 527 行继续报 `NewApi`，说明**两个 API 34 点都要各自
+     落在可见守卫里**。
+   - 修复（只改 `AppChoiceDropdown.kt` 的 Icon 分支，行为不变）：构造改成
+     `val capsule = if (isCouiSupported() && LocalAppCouiNativeToolbar.current)
+     rememberCouiCapsuleRenderer() else null`；库按钮条件补成
+     `if (capsule != null && ThemeResolver.isCouiSupported())`。
+     `ThemeResolver.isCouiSupported()` 带 `@ChecksSdkIntAtLeast(api = 34)`，
+     与 `TopBarButton` 的既有形态同口径；低版本与 renderer 为空时仍回退 `IconButton`。
+     守卫重复求值只为让 lint 直接看见，不引入新状态。
+   - 契约：新增 `CouiCapsuleApiGuardContractTest` 2 例（两个 API 34 点都在守卫内、
+     守卫是 lint 可识别的 SDK 检查且没有 `@SuppressLint`）。
+   验证：双变体编译 + `menu.*` 定向单测 `BUILD SUCCESSFUL`（3m17s，新契约 2 例
+   0 失败）；`lintAppCoreDebug` / `lintAppComicDebug` 分别单变体跑（避开并行时的
+   `lintAnalyze` OOM），均 `BUILD SUCCESSFUL`：core `0 error / 32 warnings`、
+   comic `0 error / 46 warnings`，baseline 过滤项不变；`git diff --check` 干净、
+   改动文件 0 诊断、子仓工作树干净。
+   ⚠️ 未验证：API 26~33 设备上 COUI 主题的实际回退外观（应落到 `IconButton`）、
+   API 34+ 胶囊按钮真机观感；第四十九轮的 9 个既有单测失败、TalkBack、
+   四引擎外观基线、阶段 D 清理仍未处理。
+   ⚠️ 环境：双变体 lint 并行跑时 `lintAnalyzeAppComicDebug` 出现过一次
+   `OutOfMemoryError`（Kotlin UAST 分析），改成分变体单独跑即通过；属构建内存问题，
+   不是代码问题，CI 若并行需留足内存。
 3. ~~逐个把 18 个 `TopBarOverflowMenu` 页面从 `externalTrigger = true` 切到主入口~~
    **（2026-11-11 第十五轮实测：这条已基本完成）** 16 个列表页已改传 `menuGroups`
    走 `TopBarActionMenu`；`dropDownMenuContent` 只剩 `RssSourceScreen` 1 处（刻意保留，
    见第 2 条）。`TopBarOverflowMenu.kt:55` 的 `externalTrigger = true` 现在只服务那 1 页，
    不必再单独排期；剩余工作只是「四引擎顶栏按钮外观统一」，随第 1 条的基线一起收。
-4. 给 `compact` 与 `Icon` 的 Miuix 分支补 HyperOS 4 玻璃锚点变形（复用 `MiuixGlassActions` 的
-   `AppGlassOverlayState` 注册路径），并把 `AppChoiceDropdown` 默认行形态的
-   「trigger 槽不生效」例外写进契约。`Icon` 与 `compact` 同属「暂不接玻璃」，
-   在 HyperOS 4 玻璃顶栏上会出现「整排玻璃、只有筛选按钮没有玻璃」的错位，
-   这条已是该形态唯一已知的外观缺口。
+4. Miuix `Icon` 形态的 HyperOS 4 玻璃锚点变形（第四十九轮更正）：`compact` **早已接入**
+   （`MiuixCompactChoice` 的 `MiuixGlassMenuHost` 分支），本条原先把两者并列写成
+   「暂不接玻璃」，与源码不符；`AppChoiceDropdown.kt` 的 KDoc 已同步更正。剩余只有
+   `Icon`（`MiuixIconChoice` 仍走库自持 `Window/OverlayIconDropdownMenu`，要接玻璃需库
+   提供受控 Icon 弹层），先真机确认「整排玻璃、只有筛选按钮没有玻璃」的错位是否仍可见
+   再决定做不做。另需把 `AppChoiceDropdown` 默认行形态的「trigger 槽不生效」例外写进契约。
 5. 三入口 × 四引擎契约测试剩余项（COUI / Miuix 玻璃路径的 ID 回调、菜单项语义树名称；
    子项回调与关闭所有权已在第十二轮收口）；在用户允许时补跑 `testAppComicDebugUnitTest` / `lint` / `assemble`，
    复核 9 个漫画 / insets 既有失败；真机验 COUI 触点、Miuix 玻璃变形、Mochi 融球滑选、
    TalkBack、根主题切换。
 6. 阶段 D 清理 `glassAnchor` / `mochiAnchorMaxWidth` / `LocalGlassPopupContent` /
    `LocalUseWindowPopupForMochiMenu`。
-7. 独立处理既有 lint 失败：`ui/widget/dialog/PhotoDialog.kt:86` 的 `ThreadConstraint`；
-   与菜单迁移无代码交集，单独修复或更新 `lint-baseline.xml`，不要借菜单 PR 改无关代码。
+7. 独立处理剩余 lint 失败：`ui/widget/dialog/PhotoDialog.kt:86` 的 `ThreadConstraint`
+   已被 `lint-baseline.xml` 过滤，与菜单迁移无代码交集，单独修复或更新 baseline。
+   ~~`AppChoiceDropdown.kt` 的 COUI 胶囊 `NewApi`~~ **（第五十轮已修）**：两个
+   `@RequiresApi(34)` 调用点各自补上 `ThemeResolver.isCouiSupported()` 可见守卫，
+   双变体 lint 已回到 0 error，详见 §9 第五十轮。另注意 lint 提示 baseline 里有
+   19 条「列了但已找不到」的旧条目，后续可单独清理，不要借菜单 PR 改。

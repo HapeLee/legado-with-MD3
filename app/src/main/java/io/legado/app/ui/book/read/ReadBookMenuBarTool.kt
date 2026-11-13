@@ -366,6 +366,7 @@ internal fun ToolButtonItem(
             ReadMenuLongPressDropdown(
                 menu = button.longPressMenu,
                 expanded = expandedMenu,
+                modifier = Modifier.matchParentSize(),
                 onDismissRequest = { expandedMenu = false },
                 onIntent = onIntent,
             )

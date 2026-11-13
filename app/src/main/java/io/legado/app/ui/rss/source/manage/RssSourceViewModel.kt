@@ -59,6 +59,8 @@ data class RssSourceUiState(
     override val selectedIds: ImmutableSet<String> = persistentSetOf(),
     override val searchKey: String = "",
     val groupFilterName: String? = null,
+    /** 当前过滤键（null = 全部，`@enabled` 等为内置过滤，`group:<名>` 为分组过滤）：菜单用它标出选中项。 */
+    val groupFilter: String? = null,
     val interaction: InteractionState = InteractionState(),
     val groups: ImmutableList<String> = persistentListOf(),
     val importState: BaseImportUiState<RssSource> = BaseImportUiState.Idle,
@@ -129,6 +131,9 @@ class RssSourceViewModel(
 
     private val _groupFilterName = MutableStateFlow<String?>(null)
     val groupFilterName = _groupFilterName.asStateFlow()
+
+    /** 过滤键本身（基类只存了展示名，菜单要标选中项）。 */
+    private val groupFilterKey = _groupFilter.asStateFlow()
     private val _effects = MutableSharedFlow<RssSourceEffect>(extraBufferCapacity = 16)
     val effects = _effects.asSharedFlow()
 
@@ -149,10 +154,12 @@ class RssSourceViewModel(
             super.uiState,
             _groupFilterName,
             groupsFlow,
-        ) { baseState, filterName, groups ->
+            groupFilterKey,
+        ) { baseState, filterName, groups, filterKey ->
             baseState.copy(
                 groupFilterName = filterName,
                 groups = groups.toImmutableList(),
+                groupFilter = filterKey.ifEmpty { null },
             )
         }.stateIn(
             scope = viewModelScope,

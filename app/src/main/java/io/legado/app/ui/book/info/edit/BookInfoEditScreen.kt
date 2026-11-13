@@ -17,9 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.input.TextFieldLineLimits
-import androidx.compose.foundation.text.input.rememberTextFieldState
-import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
@@ -33,11 +30,7 @@ import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,10 +56,12 @@ import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumOutlinedButton
 import io.legado.app.ui.widget.components.card.NormalCard
+import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppChoiceOption
 import io.legado.app.ui.widget.components.reorderAccessibility
+import io.legado.app.ui.widget.components.settingItem.SettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.text.AnimatedTextLine
 import io.legado.app.ui.widget.components.text.AppText
@@ -76,6 +71,7 @@ import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.SelectImageContract
 import io.legado.app.utils.launch
+import kotlinx.collections.immutable.toImmutableList
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -207,17 +203,6 @@ fun BookInfoEditContent(
                         contentDescription = stringResource(R.string.cover_reset)
                     )
                 }
-                Spacer(modifier = Modifier.height(4.dp))
-                BookTypeDropdown(
-                    bookTypes = listOf(
-                        BookInfoEditType.TEXT to stringResource(R.string.book_type_text),
-                        BookInfoEditType.AUDIO to stringResource(R.string.book_type_audio),
-                        BookInfoEditType.VIDEO to stringResource(R.string.video),
-                        BookInfoEditType.IMAGE to stringResource(R.string.book_type_image)
-                    ),
-                    selectedType = uiState.selectedType,
-                    onTypeSelected = { viewModel.onBookTypeChange(it) }
-                )
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
@@ -229,6 +214,17 @@ fun BookInfoEditContent(
             onOpenEventList = onOpenEventList,
         )
         Spacer(modifier = Modifier.height(16.dp))
+        BookTypeDropdown(
+            bookTypes = listOf(
+                BookInfoEditType.TEXT to stringResource(R.string.book_type_text),
+                BookInfoEditType.AUDIO to stringResource(R.string.book_type_audio),
+                BookInfoEditType.VIDEO to stringResource(R.string.video),
+                BookInfoEditType.IMAGE to stringResource(R.string.book_type_image)
+            ),
+            selectedType = uiState.selectedType,
+            onTypeSelected = { viewModel.onBookTypeChange(it) }
+        )
+        Spacer(modifier = Modifier.height(8.dp))
         SwitchSettingItem(
             title = stringResource(R.string.fixed_book_type),
             description = stringResource(R.string.fixed_book_type_summary),
@@ -349,61 +345,44 @@ private fun BookKnowledgeEditCard(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookTypeDropdown(
     bookTypes: List<Pair<BookInfoEditType, String>>,
     selectedType: BookInfoEditType,
     onTypeSelected: (BookInfoEditType) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val selectedTypeLabel = bookTypes.firstOrNull { it.first == selectedType }?.second.orEmpty()
-
-    val textFieldState = rememberTextFieldState(
-        initialText = selectedTypeLabel
-    )
-
-    LaunchedEffect(selectedTypeLabel) {
-        textFieldState.setTextAndPlaceCursorAtEnd(selectedTypeLabel)
-    }
-
-    ExposedDropdownMenuBox(
-        modifier = Modifier.padding(horizontal = 8.dp),
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded }
-    ) {
-        AppTextField(
-            state = textFieldState,
-            readOnly = true,
-            lineLimits = TextFieldLineLimits.SingleLine,
-            label = stringResource(R.string.book_type_label),
-            backgroundColor = LegadoTheme.colorScheme.surfaceInput,
-            trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor(
-                    ExposedDropdownMenuAnchorType.PrimaryEditable,
-                    enabled = true
-                ),
-        )
-
-        RoundDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            bookTypes.forEach { (type, label) ->
-                RoundDropdownMenuItem(
-                    text = label,
-                    onClick = {
-                        onTypeSelected(type)
-                        expanded = false
-                    }
+    // SettingItem 内置受控 AppChoiceDropdown：四引擎原生单选行，锚点在右侧取值区。
+    // ID 用枚举名（唯一且稳定），回解时按 bookTypes 校验，不依赖列表下标。
+    // trailingContent 必须给可见内容：SettingItem 的 trailing Box 只靠它撑尺寸，
+    // 否则 matchParentSize() 的弹层锚点退化成 0 尺寸，弹层会飘到窗口左上角。
+    // 底色与取值文本都走 LegadoTheme，避免编辑页里混进设置页的 MaterialTheme 配色。
+    SettingItem(
+        color = LegadoTheme.colorScheme.surfaceInput,
+        title = stringResource(R.string.book_type_label),
+        trailingContent = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                AppText(
+                    text = bookTypes.firstOrNull { it.first == selectedType }?.second.orEmpty(),
+                    style = LegadoTheme.typography.labelMediumEmphasized,
+                    color = LegadoTheme.colorScheme.onSurface,
+                )
+                AppIcon(
+                    imageVector = AppIcons.ExpandMore,
+                    contentDescription = null,
                 )
             }
-        }
-    }
+        },
+        choiceOptions = bookTypes.map { (type, label) ->
+            AppChoiceOption(id = type.name, label = label)
+        }.toImmutableList(),
+        choiceSelectedId = selectedType.name,
+        onChoiceSelect = { id ->
+            bookTypes.firstOrNull { it.first.name == id }?.first?.let(onTypeSelected)
+        },
+    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)

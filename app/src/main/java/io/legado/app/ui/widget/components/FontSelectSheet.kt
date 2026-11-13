@@ -3,6 +3,7 @@ package io.legado.app.ui.widget.components
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FileOpen
@@ -25,14 +26,16 @@ import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import io.legado.app.R
 import io.legado.app.help.importFontFiles
-import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.toastOnUi
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -44,6 +47,10 @@ import java.io.File
  * 导入时再按扩展名过滤。
  */
 private val fontPickMimeTypes = arrayOf("*/*")
+
+// 系统字体菜单的稳定 ID：字体名可能重复（同名不同文件），用序号定位。
+private const val FontTypefaceMenuGroup = "font_typeface_menu"
+private const val FontTypefaceIdPrefix = "font_typeface:"
 
 @Composable
 fun FontSelectSheet(
@@ -98,29 +105,41 @@ fun FontSelectSheet(
         title = title,
         startAction = {
             startAction?.invoke()
-            if (systemTypefaces != null && onSelectSystemTypeface != null) {
-                RoundDropdownMenu(
-                    expanded = showTypefaceMenu,
-                    onDismissRequest = { showTypefaceMenu = false },
-                ) {
-                    ProvideAppDensity {
-                        systemTypefaces.forEachIndexed { index, name ->
-                            RoundDropdownMenuItem(
-                                text = name,
-                                onClick = {
-                                    onSelectSystemTypeface(index)
-                                    showTypefaceMenu = false
+            val typefaces = systemTypefaces
+            val selectTypeface = onSelectSystemTypeface
+            if (typefaces != null && selectTypeface != null) {
+                Box {
+                    AppActionMenu(
+                        groups = persistentListOf(
+                            AppActionGroup(
+                                id = FontTypefaceMenuGroup,
+                                actions = typefaces.mapIndexed { index, name ->
+                                    AppAction(
+                                        id = "$FontTypefaceIdPrefix$index",
+                                        label = name,
+                                    )
+                                }.toImmutableList(),
+                            ),
+                        ),
+                        onAction = { id ->
+                            id.removePrefix(FontTypefaceIdPrefix).toIntOrNull()
+                                ?.takeIf { index -> index in typefaces.indices }
+                                ?.let { index ->
+                                    selectTypeface(index)
                                     onDismissRequest()
-                                },
-                            )
-                        }
-                    }
+                                }
+                        },
+                        modifier = Modifier.matchParentSize(),
+                        embeddedExpanded = showTypefaceMenu,
+                        onDismissRequest = { showTypefaceMenu = false },
+                        trigger = {},
+                    )
+                    MediumTonalButton(
+                        onClick = { showTypefaceMenu = true },
+                        icon = Icons.Default.TextFields,
+                        contentDescription = stringResource(R.string.select_font),
+                    )
                 }
-                MediumTonalButton(
-                    onClick = { showTypefaceMenu = true },
-                    icon = Icons.Default.TextFields,
-                    contentDescription = stringResource(R.string.select_font),
-                )
             }
         },
         endAction = {

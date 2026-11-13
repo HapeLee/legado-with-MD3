@@ -20,17 +20,23 @@ import java.io.File
  */
 class MenuTriggerGlassContractTest {
 
+    /**
+     * 第二十八轮起按钮壳收到 `TopBarActionSurface` 一处：入口只负责「壳 + 它自己的菜单」，
+     * 玻璃底、胶囊渲染器、原生工具条判定全部由壳决定，四引擎不再各画一套。
+     */
     @Test
-    fun couiTriggerUsesNativeCapsuleButton() {
-        val source = sourceOf(APP_ACTION_MENU)
-        val coui = source
+    fun couiTriggerUsesSharedTopBarShell() {
+        val coui = sourceOf(APP_ACTION_MENU)
             .substringAfter("private fun CouiActions(")
             .substringBefore("private fun MiuixActions(")
-        assertTrue("COUI 分支未复用胶囊渲染器", coui.contains("rememberCouiCapsuleRenderer()"))
-        assertTrue("COUI 分支未渲染原生顶栏按钮", coui.contains("CouiTopAppBarButton("))
-        assertTrue("缺少原生工具条判定", coui.contains("LocalAppCouiNativeToolbar.current"))
-        assertTrue("缺少 COUI 能力判定", coui.contains("ThemeResolver.isCouiSupported()"))
-        assertTrue("非原生环境下丢弃了普通按钮兜底", coui.contains("IconButton("))
+        assertTrue("COUI 分支未复用统一顶栏按钮壳", coui.contains("TopBarActionSurface("))
+        val shell = sourceOf(TOP_BAR_BUTTON)
+            .substringAfter("fun TopBarActionSurface(")
+            .substringBefore("private fun MiuixTopBarActionSurface(")
+        assertTrue("壳未复用胶囊渲染器", shell.contains("rememberCouiCapsuleRenderer()"))
+        assertTrue("壳未渲染原生顶栏按钮", shell.contains("CouiTopAppBarButton("))
+        assertTrue("壳缺少原生工具条判定", shell.contains("LocalAppCouiNativeToolbar.current"))
+        assertTrue("壳缺少 COUI 能力判定", shell.contains("ThemeResolver.isCouiSupported()"))
     }
 
     @Test
@@ -61,5 +67,6 @@ class MenuTriggerGlassContractTest {
 
     private companion object {
         const val APP_ACTION_MENU = "io/legado/app/ui/widget/components/menu/AppActionMenu.kt"
+        const val TOP_BAR_BUTTON = "io/legado/app/ui/widget/components/topbar/TopBarButton.kt"
     }
 }

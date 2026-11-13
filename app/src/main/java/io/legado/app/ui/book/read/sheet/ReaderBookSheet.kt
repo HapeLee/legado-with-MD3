@@ -5,6 +5,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -98,13 +99,17 @@ import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
 import io.legado.app.ui.widget.components.tabRow.CardTabRow
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.HtmlFormatter
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -453,6 +458,7 @@ internal fun ReaderBookHeader(
                     )
                     ReadMenuSourceDropdown(
                         expanded = sourceMenuExpanded,
+                        modifier = Modifier.matchParentSize(),
                         onDismissRequest = { sourceMenuExpanded = false },
                         bookSource = bookSource,
                         payVisible = chapterPayable,
@@ -762,17 +768,17 @@ private fun ReaderBookTocPage(
                     contentDescription = stringResource(R.string.more_menu),
                     onClick = { menuExpanded = !menuExpanded },
                 )
-                RoundDropdownMenu(
-                    expanded = menuExpanded,
+                // 展开态还要给工具按钮做高亮，开合留给页面；入口只渲染弹层。
+                AppActionMenu(
+                    groups = readerBookTocMenuGroups(state),
+                    onAction = { id ->
+                        readerBookTocActionFor(id, state, onIntent, onEditLocalTocRule)
+                    },
+                    modifier = Modifier.matchParentSize(),
+                    embeddedExpanded = menuExpanded,
                     onDismissRequest = { menuExpanded = false },
-                ) {
-                    ReaderBookTocMenu(
-                        state = state,
-                        onIntent = onIntent,
-                        onDismiss = { menuExpanded = false },
-                        onEditLocalTocRule = onEditLocalTocRule,
-                    )
-                }
+                    trigger = {},
+                )
             }
         }
         Box(modifier = Modifier.weight(1f)) {
@@ -1064,52 +1070,91 @@ private fun ReaderSheetStatusIcon(
     )
 }
 
+/** 目录页顶栏菜单的稳定 ID：声明与分派共用，避免字面量漂移。 */
+private enum class ReaderBookTocMenuAction(val id: String, @StringRes val labelRes: Int) {
+    DownloadAll("download_all", R.string.download_all),
+    ExpandAllVolumes("expand_all_volumes", R.string.expand_volume),
+    CollapseAllVolumes("collapse_all_volumes", R.string.coll_volume),
+    UpdateToc("update_toc", R.string.update_toc),
+    TxtTocRule("txt_toc_rule", R.string.txt_toc_rule),
+    ToggleSplitLongChapter("toggle_split_long_chapter", R.string.split_long_chapters),
+}
+
 @Composable
-private fun ReaderBookTocMenu(
+private fun readerBookTocMenuGroups(state: TocUiState): ImmutableList<AppActionGroup> {
+    val book = state.book
+    val hasVolume = state.action.items.any { it.isVolume }
+    val actions = ReaderBookTocMenuAction.entries.mapNotNull { action ->
+        when (action) {
+            ReaderBookTocMenuAction.ExpandAllVolumes,
+            ReaderBookTocMenuAction.CollapseAllVolumes,
+            -> if (!hasVolume) return@mapNotNull null
+            ReaderBookTocMenuAction.TxtTocRule ->
+                if (book?.isLocal != true || !book.isLocalTxt) return@mapNotNull null
+            ReaderBookTocMenuAction.ToggleSplitLongChapter ->
+                if (book?.isLocal != true) return@mapNotNull null
+            else -> Unit
+        }
+        AppAction(
+            id = action.id,
+            label = stringResource(action.labelRes),
+            // 独立开关，不是互斥模式：用 checked 而不是 selected。
+            checked = if (action == ReaderBookTocMenuAction.ToggleSplitLongChapter) {
+                state.isSplitLongChapter
+            } else {
+                null
+            },
+        )
+    }
+    return persistentListOf(
+        AppActionGroup(id = "reader_book_toc", actions = actions.toImmutableList()),
+    )
+}
+
+private fun readerBookTocActionFor(
+    id: String,
     state: TocUiState,
     onIntent: (TocIntent) -> Unit,
-    onDismiss: () -> Unit,
     onEditLocalTocRule: (String?) -> Unit,
 ) {
-    val book = state.book
-    fun dispatch(intent: TocIntent) {
-        onDismiss()
-        onIntent(intent)
+    when (id) {
+        ReaderBookTocMenuAction.DownloadAll.id -> onIntent(TocIntent.DownloadAll)
+        ReaderBookTocMenuAction.ExpandAllVolumes.id -> onIntent(TocIntent.ExpandAllVolumes)
+        ReaderBookTocMenuAction.CollapseAllVolumes.id -> onIntent(TocIntent.CollapseAllVolumes)
+        ReaderBookTocMenuAction.UpdateToc.id -> onIntent(TocIntent.UpdateToc)
+        ReaderBookTocMenuAction.TxtTocRule.id -> onEditLocalTocRule(state.book?.tocUrl)
+        ReaderBookTocMenuAction.ToggleSplitLongChapter.id ->
+            onIntent(TocIntent.ToggleSplitLongChapter)
     }
-    RoundDropdownMenuItem(
-        text = stringResource(R.string.download_all),
-        onClick = { dispatch(TocIntent.DownloadAll) },
+}
+
+/** 书签页顶栏菜单的稳定 ID：声明与分派共用，避免字面量漂移。 */
+private enum class ReaderBookBookmarkMenuAction(val id: String, @StringRes val labelRes: Int) {
+    ExportJson("export_bookmarks_json", R.string.export_bookmarks_json),
+    ExportMarkdown("export_bookmarks_markdown", R.string.export_bookmarks_markdown),
+}
+
+@Composable
+private fun readerBookBookmarkMenuGroups(): ImmutableList<AppActionGroup> {
+    val actions = ReaderBookBookmarkMenuAction.entries.map { action ->
+        AppAction(id = action.id, label = stringResource(action.labelRes))
+    }
+    return persistentListOf(
+        AppActionGroup(id = "reader_book_bookmarks", actions = actions.toImmutableList()),
     )
-    if (state.action.items.any { it.isVolume }) {
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.expand_volume),
-            onClick = { dispatch(TocIntent.ExpandAllVolumes) },
-        )
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.coll_volume),
-            onClick = { dispatch(TocIntent.CollapseAllVolumes) },
-        )
+}
+
+private fun readerBookBookmarkActionFor(
+    id: String,
+    fileNameBase: String,
+    onExportBookmarks: (Boolean, String) -> Unit,
+) {
+    val markdown = when (id) {
+        ReaderBookBookmarkMenuAction.ExportJson.id -> false
+        ReaderBookBookmarkMenuAction.ExportMarkdown.id -> true
+        else -> return
     }
-    RoundDropdownMenuItem(
-        text = stringResource(R.string.update_toc),
-        onClick = { dispatch(TocIntent.UpdateToc) },
-    )
-    if (book?.isLocal == true) {
-        if (book.isLocalTxt) {
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.txt_toc_rule),
-                onClick = {
-                    onDismiss()
-                    onEditLocalTocRule(book.tocUrl)
-                },
-            )
-        }
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.split_long_chapters),
-            isSelected = state.isSplitLongChapter,
-            onClick = { dispatch(TocIntent.ToggleSplitLongChapter) },
-        )
-    }
+    onExportBookmarks(markdown, "$fileNameBase.${if (markdown) "md" else "json"}")
 }
 
 @Composable
@@ -1122,6 +1167,7 @@ private fun ReaderBookBookmarksPage(
 ) {
     var menuExpanded by rememberSaveable { mutableStateOf(false) }
     val date = remember { SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault()).format(Date()) }
+    val fileNameBase = "${state.book?.name ?: "bookmark"}_$date"
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier
@@ -1143,25 +1189,17 @@ private fun ReaderBookBookmarksPage(
                     contentDescription = stringResource(R.string.more_menu),
                     onClick = { menuExpanded = !menuExpanded },
                 )
-                RoundDropdownMenu(
-                    expanded = menuExpanded,
+                // 展开态还要给工具按钮做高亮，开合留给页面；入口只渲染弹层。
+                AppActionMenu(
+                    groups = readerBookBookmarkMenuGroups(),
+                    onAction = { id ->
+                        readerBookBookmarkActionFor(id, fileNameBase, onExportBookmarks)
+                    },
+                    modifier = Modifier.matchParentSize(),
+                    embeddedExpanded = menuExpanded,
                     onDismissRequest = { menuExpanded = false },
-                ) {
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.export_bookmarks_json),
-                        onClick = {
-                            menuExpanded = false
-                            onExportBookmarks(false, "${state.book?.name ?: "bookmark"}_$date.json")
-                        },
-                    )
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.export_bookmarks_markdown),
-                        onClick = {
-                            menuExpanded = false
-                            onExportBookmarks(true, "${state.book?.name ?: "bookmark"}_$date.md")
-                        },
-                    )
-                }
+                    trigger = {},
+                )
             }
         }
         ReaderSheetBookmarkList(

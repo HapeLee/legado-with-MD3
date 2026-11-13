@@ -498,6 +498,178 @@ fun TopBarTextActionButton(
     )
 }
 
+/**
+ * 顶栏按钮壳的 slot 版：尺寸、容器底色、液体玻璃、合并态分隔线、引擎原生按钮全部由这里决定，
+ * 内容由调用方画。
+ *
+ * 给「按钮外观归顶栏、弹层归统一菜单入口」的场景用——例如 `AppActionMenu` 的 Icon 锚点，
+ * 它自己画按钮时只能用裸 `IconButton`，和同排 [TopBarActionButton] 的样式、合并态都不一致。
+ * 壳与 [TopBarActionButton] 共用同一套样式来源（[currentTopBarButtonStyle]、[mergedDivider]、
+ * [topBarLiquidGlass]），因此四引擎外观逐项对齐。
+ *
+ * Miuix 的弹层需要库里自己渲染 `IconButton`，那类场景仍走库分支，不经过这里。
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun TopBarActionSurface(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    contentDescription: String? = null,
+    onLongClick: (() -> Unit)? = null,
+    onLongClickLabel: String? = null,
+    contentKey: Any? = null,
+    content: @Composable () -> Unit,
+) {
+    val engine = LegadoTheme.composeEngine
+    if (engine == ComposeEngine.Coui && ThemeResolver.isCouiSupported() &&
+        LocalAppCouiNativeToolbar.current
+    ) {
+        val renderer = rememberCouiCapsuleRenderer()
+        if (renderer != null) {
+            CouiTopAppBarButton(
+                modifier = modifier.semantics {
+                    role = Role.Button
+                    if (contentDescription != null) this.contentDescription = contentDescription
+                },
+                onClick = { if (enabled) onClick() },
+                text = false,
+                renderer = renderer,
+            ) { content() }
+            return
+        }
+    }
+    if (engine == ComposeEngine.Mochi) {
+        val buttonModifier = modifier
+            .keyboardClick(enabled, onClick)
+            .semantics(mergeDescendants = true) {
+                if (contentDescription != null) this.contentDescription = contentDescription
+            }
+        if (onLongClick == null) {
+            MochiBarIconButton(
+                onClick, buttonModifier, contentKey = contentKey ?: "topbar-action",
+            ) {
+                CompositionLocalProvider(LocalContentColor provides MochiContentColor.current) {
+                    content()
+                }
+            }
+        } else {
+            MochiTopBarPressable(
+                onClick, modifier.size(MochiButtonDefaults.BarItemSize), onLongClick, onLongClickLabel,
+            ) {
+                CompositionLocalProvider(LocalContentColor provides MochiContentColor.current) {
+                    content()
+                }
+            }
+        }
+        return
+    }
+    if (engine == ComposeEngine.Miuix) {
+        val glass = LocalMiuixGlassTopBar.current
+        val scoped = modifier.semantics {
+            role = Role.Button
+            if (contentDescription != null) this.contentDescription = contentDescription
+        }
+        when {
+            onLongClick == null && glass -> MiuixGlassIconButton(
+                onClick = { if (enabled) onClick() },
+                modifier = scoped,
+                backdrop = LocalMiuixBarBackdrop.current,
+            ) {
+                CompositionLocalProvider(LocalContentColor provides MiuixContentColor.current) {
+                    content()
+                }
+            }
+
+            onLongClick == null -> MiuixIconButton(
+                onClick = { if (enabled) onClick() },
+                modifier = scoped,
+            ) {
+                CompositionLocalProvider(LocalContentColor provides MiuixContentColor.current) {
+                    content()
+                }
+            }
+
+            else -> MiuixTopBarActionSurface(modifier) { actionModifier ->
+                Box(
+                    modifier = actionModifier.defaultMinSize(
+                        minWidth = MiuixIconButtonDefaults.MinWidth,
+                        minHeight = MiuixIconButtonDefaults.MinHeight,
+                    ).combinedClickable(
+                        enabled = enabled,
+                        role = Role.Button,
+                        onClick = onClick,
+                        onLongClick = onLongClick,
+                        onLongClickLabel = onLongClickLabel,
+                    ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CompositionLocalProvider(LocalContentColor provides MiuixContentColor.current) {
+                        content()
+                    }
+                }
+            }
+        }
+        return
+    }
+    // Material（以及未接入原生按钮壳的引擎）：与 TopBarActionButton 同一套 SeriesButton / 合并态。
+    val style = currentTopBarButtonStyle()
+    val isMerged = LocalTopBarMergeState.current
+    val liquidGlassEnabled = style == TopBarButtonStyle.LiquidGlass &&
+            topBarLiquidGlassEnabled()
+    val descriptionModifier = modifier.semantics {
+        if (contentDescription != null) this.contentDescription = contentDescription
+    }
+    if (isMerged) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = descriptionModifier
+                .size(style.buttonSize)
+                .mergedDivider()
+                .combinedClickable(
+                    enabled = enabled,
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = if (liquidGlassEnabled) null else LocalIndication.current,
+                    role = Role.Button,
+                    onLongClick = onLongClick,
+                    onLongClickLabel = onLongClickLabel,
+                    onClick = onClick,
+                )
+        ) { content() }
+    } else {
+        val containerColor = when {
+            liquidGlassEnabled -> Color.Transparent
+            style == TopBarButtonStyle.SemiTransparent ||
+                    style == TopBarButtonStyle.LiquidGlass ->
+                GlassTopAppBarDefaults.controlContainerColor()
+
+            else -> null
+        }
+        SeriesButton(
+            onClick = onClick,
+            onLongClick = onLongClick,
+            onLongClickLabel = onLongClickLabel,
+            enabled = enabled,
+            modifier = if (liquidGlassEnabled) {
+                descriptionModifier.topBarLiquidGlass(RoundedCornerShape(50))
+            } else {
+                descriptionModifier
+            },
+            enforceMinimumInteractiveSize = false,
+            clipToShape = !liquidGlassEnabled,
+            size = style.buttonSize,
+            style = style.seriesStyle,
+            contentColor = LegadoTheme.colorScheme.onSurface,
+            containerColor = containerColor,
+            indication = if (liquidGlassEnabled) null else LocalIndication.current
+        ) { resolvedContentColor ->
+            CompositionLocalProvider(LocalContentColor provides resolvedContentColor) {
+                content()
+            }
+        }
+    }
+}
+
 // Only the background follows the floating transition. The action and its label stay opaque.
 @Composable
 private fun MiuixTopBarActionSurface(

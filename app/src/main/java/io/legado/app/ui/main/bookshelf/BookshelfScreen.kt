@@ -128,7 +128,7 @@ import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.checkBox.AppCheckbox
-import io.legado.app.ui.widget.components.divider.PillHeaderDivider
+
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
@@ -137,8 +137,6 @@ import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyVerticalGrid
 import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
 import io.legado.app.ui.widget.components.log.AppLogSheet
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.privacy.PrivateLockedPage
 import io.legado.app.ui.widget.components.privacy.findFragmentActivity
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
@@ -768,109 +766,51 @@ fun BookshelfScreen(
                             horizontalPadding = 12.dp,
                             trailingAction = if (uiState.settings.shouldShowExpandButton) {
                                 {
-                                    AppTabRowIconButton(
-                                        checked = showGroupMenu,
-                                        onClick = {
-                                            if (showGroupMenu) {
+                                    val pagerGroups = uiState.groups
+                                    Box {
+                                        AppTabRowIconButton(
+                                            checked = showGroupMenu,
+                                            onClick = {
+                                                if (showGroupMenu) {
+                                                    onIntent(BookshelfIntent.DismissOverlay)
+                                                } else {
+                                                    onIntent(
+                                                        BookshelfIntent.ShowOverlay(BookshelfOverlay.GroupMenu)
+                                                    )
+                                                }
+                                            },
+                                            icon = Icons.AutoMirrored.Filled.FormatListBulleted,
+                                            contentDescription = stringResource(R.string.group_manage),
+                                        )
+                                        BookshelfGroupMenu(
+                                            groups = pagerGroups,
+                                            currentGroupId = currentMenuGroupId,
+                                            expanded = showGroupMenu,
+                                            modifier = Modifier.matchParentSize(),
+                                            onDismiss = {
                                                 onIntent(BookshelfIntent.DismissOverlay)
-                                            } else {
-                                                onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.GroupMenu))
-                                            }
-                                        },
-                                        icon = Icons.AutoMirrored.Filled.FormatListBulleted,
-                                        contentDescription = stringResource(R.string.group_manage),
-                                    )
-                                    RoundDropdownMenu(
-                                        expanded = showGroupMenu,
-                                        onDismissRequest = { onIntent(BookshelfIntent.DismissOverlay) }
-                                    ) { dismiss ->
-                                        uiState.groups.forEachIndexed { index, group ->
-                                            RoundDropdownMenuItem(
-                                                text = group.groupName,
-                                                onClick = {
-                                                    if (uiState.isSearch) {
-                                                        onIntent(BookshelfIntent.ChangeGroup(group.groupId))
-                                                    }
+                                            },
+                                            onSelect = { group ->
+                                                val index = pagerGroups.indexOfFirst {
+                                                    it.groupId == group.groupId
+                                                }
+                                                if (uiState.isSearch) {
+                                                    onIntent(
+                                                        BookshelfIntent.ChangeGroup(group.groupId)
+                                                    )
+                                                }
+                                                if (index >= 0) {
                                                     scope.launch {
-                                                        pagerState.animateScrollToPage(
-                                                            index
-                                                        )
-                                                    }
-                                                    dismiss()
-                                                },
-                                                trailingIcon = {
-                                                    val isSelected = if (uiState.isSearch) {
-                                                        uiState.selectedGroupId == group.groupId
-                                                    } else {
-                                                        selectedTabIndex == index
-                                                    }
-                                                    if (isSelected) {
-                                                        AppIcon(
-                                                            Icons.Default.Check,
-                                                            null,
-                                                            modifier = Modifier.size(18.dp)
-                                                        )
+                                                        pagerState.animateScrollToPage(index)
                                                     }
                                                 }
-                                            )
-                                        }
-
-                                        if (uiState.isSearch) {
-                                            val allGroup = uiState.allGroups.firstOrNull {
-                                                it.groupId == BookGroup.IdAll
-                                            }
-                                            val hiddenGroups = uiState.allGroups.filter {
-                                                !it.show && it.groupId != BookGroup.IdAll
-                                            }
-
-                                            if (allGroup != null || hiddenGroups.isNotEmpty()) {
-                                                PillHeaderDivider(
-                                                    title = "${stringResource(R.string.all)} / ${
-                                                        stringResource(
-                                                            R.string.hide
-                                                        )
-                                                    }"
-                                                )
-
-                                                allGroup?.let { group ->
-                                                    RoundDropdownMenuItem(
-                                                        text = group.groupName,
-                                                        onClick = {
-                                                            onIntent(BookshelfIntent.ChangeGroup(group.groupId))
-                                                            dismiss()
-                                                        },
-                                                        trailingIcon = {
-                                                            if (uiState.selectedGroupId == group.groupId) {
-                                                                AppIcon(
-                                                                    Icons.Default.Check,
-                                                                    null,
-                                                                    modifier = Modifier.size(18.dp)
-                                                                )
-                                                            }
-                                                        }
-                                                    )
-                                                }
-
-                                                hiddenGroups.forEach { group ->
-                                                    RoundDropdownMenuItem(
-                                                        text = group.groupName,
-                                                        onClick = {
-                                                            onIntent(BookshelfIntent.ChangeGroup(group.groupId))
-                                                            dismiss()
-                                                        },
-                                                        trailingIcon = {
-                                                            if (uiState.selectedGroupId == group.groupId) {
-                                                                AppIcon(
-                                                                    Icons.Default.Check,
-                                                                    null,
-                                                                    modifier = Modifier.size(18.dp)
-                                                                )
-                                                            }
-                                                        }
-                                                    )
-                                                }
-                                            }
-                                        }
+                                            },
+                                            extraGroups = if (uiState.isSearch) {
+                                                bookshelfSearchMenuGroups(uiState.allGroups)
+                                            } else {
+                                                emptyList()
+                                            },
+                                        )
                                     }
                                 }
                             } else null,
@@ -1224,43 +1164,32 @@ fun BookshelfScreen(
 
 
                     if (summary.showGroupName) {
-                        RoundDropdownMenu(
+                        BookshelfGroupMenu(
+                            groups = uiState.groups,
+                            currentGroupId = currentMenuGroupId,
                             expanded = showGroupMenu,
-                            onDismissRequest = { onIntent(BookshelfIntent.DismissOverlay) }
-                        ) { dismiss ->
-                            uiState.groups.forEach { group ->
-                                RoundDropdownMenuItem(
-                                    text = group.groupName,
-                                    onClick = {
-                                        val targetIndex =
-                                            uiState.groups.indexOfFirst { it.groupId == group.groupId }
-                                        if (targetIndex >= 0) {
-                                            scope.launch {
-                                                if (pagerState.currentPage != targetIndex) {
-                                                    pagerState.animateScrollToPage(targetIndex)
-                                                }
-                                            }
-                                        }
-                                        if (uiState.isSearch || uiState.selectedGroupId != group.groupId) {
-                                            onIntent(BookshelfIntent.ChangeGroup(group.groupId))
-                                        }
-                                        if (bookGroupStyle == 2) {
-                                            onIntent(BookshelfIntent.SetInFolderRoot(false))
-                                        }
-                                        dismiss()
-                                    },
-                                    trailingIcon = {
-                                        if (currentMenuGroupId == group.groupId) {
-                                            AppIcon(
-                                                Icons.Default.Check,
-                                                null,
-                                                modifier = Modifier.size(18.dp)
-                                            )
+                            modifier = Modifier.matchParentSize(),
+                            onDismiss = { onIntent(BookshelfIntent.DismissOverlay) },
+                            onSelect = { group ->
+                                val targetIndex =
+                                    uiState.groups.indexOfFirst { it.groupId == group.groupId }
+                                if (targetIndex >= 0) {
+                                    scope.launch {
+                                        if (pagerState.currentPage != targetIndex) {
+                                            pagerState.animateScrollToPage(targetIndex)
                                         }
                                     }
-                                )
-                            }
-                        }
+                                }
+                                if (uiState.isSearch ||
+                                    uiState.selectedGroupId != group.groupId
+                                ) {
+                                    onIntent(BookshelfIntent.ChangeGroup(group.groupId))
+                                }
+                                if (bookGroupStyle == 2) {
+                                    onIntent(BookshelfIntent.SetInFolderRoot(false))
+                                }
+                            },
+                        )
                     }
                 }
             }
@@ -1279,6 +1208,69 @@ fun BookshelfScreen(
         clearSelection = clearSelection
     )
 }
+
+private const val BookshelfGroupMenuIdPrefix = "group:"
+
+/**
+ * 书架分组切换菜单（顶栏分组按钮与编辑态分组胶囊两处入口共用）。
+ *
+ * 受控模式：开合由 `BookshelfOverlay.GroupMenu` 统一持有，这里只渲染弹层，锚点取调用方给的容器，
+ * 因此两处都必须在外面留一个有尺寸的 `Box`。当前分组用 `AppAction.selected` 表达；
+ * 原菜单里的「全部 / 隐藏」标题按口径降级为组间分段线（第二组存在时才画线）。
+ *
+ * 两处入口的点击语义略有差别（编辑态那处还要退回复层、改分组），所以选中后的动作由
+ * [onSelect] 交给调用方，本组件只负责把 `group:<id>` 还原成 [BookGroupUi]。
+ */
+@Composable
+private fun BookshelfGroupMenu(
+    groups: List<BookGroupUi>,
+    currentGroupId: Long,
+    expanded: Boolean,
+    modifier: Modifier = Modifier,
+    onDismiss: () -> Unit,
+    onSelect: (BookGroupUi) -> Unit,
+    extraGroups: List<BookGroupUi> = emptyList(),
+) {
+    val all = groups + extraGroups
+    val menuGroups = persistentListOf(
+        AppActionGroup(
+            id = "bookshelf_groups",
+            actions = groups.map { group ->
+                AppAction(
+                    id = "$BookshelfGroupMenuIdPrefix${group.groupId}",
+                    label = group.groupName,
+                    selected = currentGroupId == group.groupId,
+                )
+            }.toImmutableList(),
+        ),
+        AppActionGroup(
+            id = "bookshelf_hidden_groups",
+            actions = extraGroups.map { group ->
+                AppAction(
+                    id = "$BookshelfGroupMenuIdPrefix${group.groupId}",
+                    label = group.groupName,
+                    selected = currentGroupId == group.groupId,
+                )
+            }.toImmutableList(),
+        ),
+    )
+    AppActionMenu(
+        groups = menuGroups,
+        onAction = { id ->
+            all.firstOrNull { "$BookshelfGroupMenuIdPrefix${it.groupId}" == id }
+                ?.let(onSelect)
+        },
+        modifier = modifier,
+        embeddedExpanded = expanded,
+        onDismissRequest = onDismiss,
+        trigger = {},
+    )
+}
+
+/** 搜索态的第二组：`全部` + 已隐藏的分组。 */
+private fun bookshelfSearchMenuGroups(allGroups: List<BookGroupUi>): List<BookGroupUi> =
+    listOfNotNull(allGroups.firstOrNull { it.groupId == BookGroup.IdAll }) +
+        allGroups.filter { !it.show && it.groupId != BookGroup.IdAll }
 
 internal fun toggleBookshelfFilter(
     isSearch: Boolean,

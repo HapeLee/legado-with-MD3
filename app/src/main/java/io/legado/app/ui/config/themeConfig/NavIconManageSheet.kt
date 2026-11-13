@@ -31,11 +31,15 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.menu.AppAction
+import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.MochiSheetLayout
 import io.legado.app.ui.widget.components.text.AppText
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 
 private data class NavIconDestination(
     val key: String,
@@ -144,6 +148,22 @@ fun NavIconManageSheet(
     }
 }
 
+/** 导航图标卡菜单的稳定 ID：声明与分派共用，避免字面量漂移。 */
+private enum class NavIconMenuAction(val id: String, @param:StringRes val labelRes: Int) {
+    Replace("replace_nav_icon", R.string.theme_config_replace_nav_icon),
+    Clear("clear_nav_icon", R.string.delete),
+}
+
+@Composable
+private fun navIconMenuGroups(): ImmutableList<AppActionGroup> {
+    val actions = NavIconMenuAction.entries.map { action ->
+        AppAction(id = action.id, label = stringResource(action.labelRes))
+    }
+    return persistentListOf(
+        AppActionGroup(id = "nav_icon_slot", actions = actions.toImmutableList()),
+    )
+}
+
 @Composable
 private fun NavigationIconSlot(
     label: String,
@@ -182,25 +202,21 @@ private fun NavigationIconSlot(
                 }
             }
         }
-        RoundDropdownMenu(
-            expanded = menuExpanded,
+        // 卡片自身的点击语义（未设图标时直接选图）留在页面，开合由页面持有，
+        // 入口只渲染弹层；受控模式没有 trigger 节点，因此锚点取这层 Box 的矩形。
+        AppActionMenu(
+            groups = navIconMenuGroups(),
+            onAction = { id ->
+                when (id) {
+                    NavIconMenuAction.Replace.id -> onSelect()
+                    NavIconMenuAction.Clear.id -> onClear()
+                }
+            },
+            modifier = Modifier.matchParentSize(),
+            embeddedExpanded = menuExpanded,
             onDismissRequest = { menuExpanded = false },
-        ) { dismiss ->
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.theme_config_replace_nav_icon),
-                onClick = {
-                    dismiss()
-                    onSelect()
-                },
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.delete),
-                onClick = {
-                    dismiss()
-                    onClear()
-                },
-            )
-        }
+            trigger = {},
+        )
     }
 }
 
