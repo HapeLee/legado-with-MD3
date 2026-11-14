@@ -23,10 +23,9 @@ class SelectionBottomBarMenuContractTest {
         assertFalse("多选栏仍手画 RoundDropdownMenu", source.contains("RoundDropdownMenu("))
         assertFalse("仍自持 showMenu 展开状态", source.contains("showMenu"))
         assertEquals(
-            "Miuix 与其它引擎两个分支都要走原生菜单",
-            2,
-            Regex("SelectionMoreMenu\\(secondaryActions, moreActionsDescription\\)")
-                .findAll(source).count(),
+            "Miuix（自定义 trigger）/ COUI（自定义 trigger）/ 其它引擎（默认 trigger）都要走原生菜单",
+            3,
+            Regex("(?<!fun )SelectionMoreMenu\\(").findAll(source).count(),
         )
         assertTrue(
             "必须用 Row 锚点（Icon 锚点在底栏拿不到 Miuix 玻璃 morph）",
@@ -70,13 +69,31 @@ class SelectionBottomBarMenuContractTest {
         )
     }
 
-    /** 栏上所有非主按钮（全选 / 反选 / 前导动作 / 更多）统一到 medium 档位。 */
+    /**
+     * Miuix 栏对齐组件库 catalog：primary 实色胶囊 + onPrimary 图标 + 原生 IconButton；
+     * 其它引擎（M3 外观）仍用 medium 档 series 按钮。
+     */
     @Test
-    fun allSecondaryButtonsUseMediumSeries() {
+    fun miuixBarUsesCatalogCapsuleAndM3KeepsMediumSeries() {
         val source = sourceOf(BAR)
+        assertTrue(
+            "Miuix 栏要按组件库 catalog 的形态：primary 实色胶囊 + onPrimary 图标",
+            source.contains("color = MiuixTheme.colorScheme.primary,") &&
+                source.contains("cornerRadius = MiuixSelectionBarCornerRadius,") &&
+                source.contains("val iconTint = MiuixTheme.colorScheme.onPrimary"),
+        )
+        assertTrue(
+            "Miuix 动作项必须是原生 IconButton（40dp、无底色）",
+            source.contains("private fun MiuixSelectionAction(") &&
+                source.contains("MiuixIconButton(onClick = onClick) {"),
+        )
+        assertFalse(
+            "Miuix 主操作不再用 secondaryContainer 强调（catalog 里全栏同色）",
+            source.contains("backgroundColor = MiuixTheme.colorScheme.secondaryContainer"),
+        )
         assertEquals(
-            "Miuix 3 处 + 其它引擎 3 处 + 菜单 trigger 1 处",
-            7,
+            "M3 分支 3 处动作 + 菜单默认 trigger 1 处；Miuix 已改用原生 IconButton",
+            4,
             Regex("MediumPlainButton\\(").findAll(source).count(),
         )
         assertFalse("仍留着 small 档位按钮", source.contains("SmallPlainButton("))
@@ -85,7 +102,6 @@ class SelectionBottomBarMenuContractTest {
             source.lines().any { it.trim() == "import androidx.compose.material3.IconButton" },
         )
         assertTrue("主操作仍保留 FilledIconButton", source.contains("FilledIconButton("))
-        assertTrue("主操作仍保留 MiuixIconButton", source.contains("MiuixIconButton("))
     }
 
     /**
