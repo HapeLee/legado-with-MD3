@@ -675,19 +675,28 @@ class BookshelfViewModel(
             title = title,
             subtitle = when {
                 interaction.isEditMode -> {
-                    val selectedText = context.getString(
-                        R.string.bookshelf_selected_count,
-                        interaction.selectedBookUrls.size
-                    )
-                    val groupTotalText = context.getString(
-                        R.string.bookshelf_total_count,
-                        books.size
-                    )
-                    context.getString(
-                        R.string.bookshelf_edit_subtitle,
-                        selectedText,
-                        groupTotalText
-                    )
+                    // 隐藏标签时「已选 / 共」已由吸顶悬浮栏显示，副标题留空避免同屏重复
+                    if (bookshelfEditInfoUsesSticky(
+                            isEditMode = interaction.isEditMode,
+                            bookGroupStyle = interaction.bookGroupStyle,
+                        )
+                    ) {
+                        null
+                    } else {
+                        val selectedText = context.getString(
+                            R.string.bookshelf_selected_count,
+                            interaction.selectedBookUrls.size
+                        )
+                        val groupTotalText = context.getString(
+                            R.string.bookshelf_total_count,
+                            books.size
+                        )
+                        context.getString(
+                            R.string.bookshelf_edit_subtitle,
+                            selectedText,
+                            groupTotalText
+                        )
+                    }
                 }
 
                 selectedBooks.isSearchMode -> {
