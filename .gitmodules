@@ -1,6 +1,7 @@
 [submodule "modules/miuix"]
 	path = modules/miuix
-	url = https://github.com/compose-miuix-ui/miuix.git
+	url = https://github.com/HapeLee/miuix.git
+	branch = legado/glass-tab-sampling
 [submodule "modules/coui"]
 	path = modules/coui
 	url = https://github.com/HapeLee/COUI-Kit.git
