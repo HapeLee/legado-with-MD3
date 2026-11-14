@@ -4,6 +4,7 @@ import io.legado.app.domain.model.readaloud.ChapterSpeechSegment
 import io.legado.app.domain.model.readaloud.SpeechPlanItem
 import io.legado.app.domain.model.readaloud.SpeechResolutionSource
 import io.legado.app.domain.model.readaloud.SpeechRoleType
+import io.legado.app.feature.reader.core.cast.CastMarkers
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -11,9 +12,8 @@ import org.junit.Test
  * 「一个字符都没有」的朗读单元不进队列。
  *
  * 这种单元送进引擎只会得到一段无声音频（`res/raw/silent_sound.mp3` 长 1224 毫秒），
- * 听感就是段与段之间、以及正则命中前凭空顿一下。这里锁三件事：空白段被丢掉、
+ * 听感就是段与段之间、以及正则命中前凭空顿一下。这里锁三件事：空白段与纯符号段被丢掉、
  * 它身上挂的音效不丢（并给下一个单元）、章末那种并回最后一个。
- * `——`、`……` 这类整段纯符号是正文，留着交给引擎念。
  */
 class CastSilentUnitDropTest {
 
@@ -47,19 +47,26 @@ class CastSilentUnitDropTest {
     }
 
     @Test
-    fun `纯符号单元留着交给引擎念`() {
-        // `——` / `……` 这类整段纯符号是正文：不丢，原样送引擎，念成停顿还是念成声音由引擎决定；
-        // 它身上挂的音效留在自己这一格上
+    fun `纯符号单元不进播放队列`() {
+        // `——` / `……` 送进引擎只会得到合成失败；留在队列里还会让「上一段/下一段」
+        // 选中一个不会出声的单元。它身上挂的音效并给下一个可念单元。
         val (kept, dropped) = CastSpeechOverlay.dropSilentUnits(
             listOf(item("正文一句"), item("——"), item("……", "/boom.mp3"), item("下一句"))
         )
-        assertEquals(0, dropped)
-        assertEquals(
-            listOf("正文一句", "——", "……", "下一句"),
-            kept.map { it.segment.text },
+        assertEquals(2, dropped)
+        assertEquals(listOf("正文一句", "下一句"), kept.map { it.segment.text })
+        assertEquals("/boom.mp3", kept.last().soundEffect)
+    }
+
+    @Test
+    fun `只剩角色标记的单元仍被丢掉`() {
+        // strip 之后是空串，补回纯符号判据不能把这一条一起回退掉
+        val marker = requireNotNull(CastMarkers.markerText("甲", "旁白"))
+        val (kept, dropped) = CastSpeechOverlay.dropSilentUnits(
+            listOf(item("正文一句"), item(marker), item("下一句"))
         )
-        assertEquals("/boom.mp3", kept[2].soundEffect)
-        assertEquals("", kept[3].soundEffect)
+        assertEquals(1, dropped)
+        assertEquals(listOf("正文一句", "下一句"), kept.map { it.segment.text })
     }
 
     @Test

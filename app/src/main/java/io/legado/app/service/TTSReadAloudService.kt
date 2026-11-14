@@ -313,8 +313,8 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
         // 偏移用完才去掉标记：这一句要么干净正文，要么带着 <<角色（池）>> 交给认标签的引擎
         val utteranceId = ttsUtteranceId(AppConst.APP_TAG, session, nowSpeak)
         val spoken = speakable(storedTail, utteranceId, storedStart, readAloudNumber, limitLength = true)
-        if (spoken.text.isBlank()) {
-            AppLog.putDebug("TTS段落全标点跳过: nowSpeak=$nowSpeak")
+        if (spoken.text.isBlankReadAloudUnit()) {
+            AppLog.putDebug("TTS段落无可念字符跳过: nowSpeak=$nowSpeak")
             pendingUtterances.remove(utteranceId)
             val nextChunkOffset = speechProgress.remove(utteranceId)?.nextChunkOffset
             postTtsCallback {
@@ -377,7 +377,7 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
                 val storedTail = paragraphs[i].substring(storedStart)
                 val utteranceId = ttsUtteranceId(AppConst.APP_TAG, session, i)
                 val text = speakable(storedTail, utteranceId, storedStart).text
-                if (text.isBlank()) {
+                if (text.isBlankReadAloudUnit()) {
                     pendingUtterances.remove(utteranceId)
                     speechProgress.remove(utteranceId)
                     return@synchronized
@@ -581,7 +581,9 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
                 base = 0,
                 startReadAloudNumber = playbackQueue.cues[cue].chapterStart,
             )
-            if (spoken.text.isBlank() || spoken.text.length > TextToSpeech.getMaxSpeechInputLength()) {
+            if (spoken.text.isBlankReadAloudUnit() ||
+                spoken.text.length > TextToSpeech.getMaxSpeechInputLength()
+            ) {
                 pendingUtterances.remove(utteranceId)
                 speechProgress.remove(utteranceId)
                 // 空句和需要切片的长句留给串行路径，预取不能越过它们。

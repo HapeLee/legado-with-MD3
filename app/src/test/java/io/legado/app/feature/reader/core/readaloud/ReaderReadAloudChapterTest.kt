@@ -2,7 +2,9 @@ package io.legado.app.feature.reader.core.readaloud
 
 import io.legado.app.domain.model.readaloud.ContentSplitPolicies
 import io.legado.app.domain.model.settings.ReadAloudContentSplitMode
+import io.legado.app.feature.reader.core.cast.CastMarkers
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReaderReadAloudChapterTest {
@@ -93,40 +95,68 @@ class ReaderReadAloudChapterTest {
     }
 
     @Test
-    fun symbolOnlyUnitsStaySpeakable() {
-        // `——`、`……` 这类整段纯符号是正文的一部分：留在朗读单元里，也照样当游标落点，
-        // 念法由引擎决定：单元集合不按标点筛，只筛一个字符都没有的段
+    fun symbolOnlyUnitsAreNotSpeechLandings() {
+        // 整段 `……`/`——` 送进 HTTP/云端引擎只会得到 TTS Generation Failed：合成失败改成
+        // 显式报错后，这种段会让朗读直接暂停；留在集合里还会让「上一句」停在一个不会
+        // 出声的单元上。判据必须和送引擎前的 readAloudSpeechText 同源。
         val chapter = ReaderReadAloudChapter.create(
             chapterIndex = 0,
             title = "",
-            semanticContent = "第一段。\n——\n第二段。\n",
+            semanticContent = "第一段。\n……\n——\n第二段。\n",
             pageStarts = listOf(0),
         )
 
         assertEquals(
-            listOf("第一段。", "——", "第二段。"),
+            listOf("第一段。", "……", "——", "第二段。"),
+            chapter.paragraphs(splitByPage = false).map { it.text },
+        )
+        assertEquals(
+            listOf("第一段。", "第二段。"),
             chapter.readAloudParagraphs(splitByPage = false).map { it.text },
         )
+        // 送引擎的文本为空：文件合成侧据此落静音占位，不会拿纯符号去请求引擎
+        assertEquals("", "……".readAloudSpeechText())
+        assertEquals("", "——".readAloudSpeechText())
+        assertEquals("第一段。", "第一段。".readAloudSpeechText())
+        // 过滤后的集合就是「上一句/下一句」的落点：从「第二段。」退一格应直接到「第一段。」
         assertEquals(0, chapter.paragraphIndexAtOrAfter(4, splitByPage = false))
         assertEquals(1, chapter.paragraphIndexAtOrAfter(6, splitByPage = false))
-        assertEquals(2, chapter.paragraphIndexAtOrAfter(8, splitByPage = false))
+        assertEquals(1, chapter.paragraphIndexAtOrAfter(9, splitByPage = false))
+    }
+
+    @Test
+    fun markerOnlyUnitIsStillDropped() {
+        // 整段只剩角色标记时 strip 之后是空串：只按「至少一个标点/符号」的旧正则会漏掉它，
+        // 游标与引擎回调因此错开。补回纯符号判据时不能把这一条一起回退掉。
+        val marker = requireNotNull(CastMarkers.markerText("甲", "旁白"))
+        assertTrue(marker.isBlankReadAloudUnit())
+        assertEquals("", marker.readAloudSpeechText())
+        val chapter = ReaderReadAloudChapter.create(
+            chapterIndex = 0,
+            title = "",
+            semanticContent = "第一段。\n$marker\n第二段。\n",
+            pageStarts = listOf(0),
+        )
+        assertEquals(
+            listOf("第一段。", "第二段。"),
+            chapter.readAloudParagraphs(splitByPage = false).map { it.text },
+        )
     }
 
     @Test
     fun chapterWithoutSpeakableUnitFallsBackToRawUnits() {
-        // 整章都没有可念单元（空白页、图片页）时单元集合退回原始列表，
-        // 由朗读服务的「读完本章」那一套收尾，而不是定位不到段落就放弃
+        // 整章都没有可念单元（空白页、纯符号页）时单元集合退回原始列表，
+        // 由朗读服务的「读完本章」那一套收尾；这些段仍然不能去请求引擎，只能落静音占位。
         val chapter = ReaderReadAloudChapter.create(
             chapterIndex = 0,
             title = "",
-            semanticContent = "　　\n",
+            semanticContent = "　　\n……\n",
             pageStarts = listOf(0),
         )
 
-        assertEquals(
-            chapter.paragraphs(splitByPage = false).map { it.text },
-            chapter.readAloudParagraphs(splitByPage = false).map { it.text },
-        )
+        val raw = chapter.paragraphs(splitByPage = false).map { it.text }
+        assertEquals(raw, chapter.readAloudParagraphs(splitByPage = false).map { it.text })
+        assertEquals(listOf("", ""), raw.map { it.readAloudSpeechText() })
     }
 
     @Test
