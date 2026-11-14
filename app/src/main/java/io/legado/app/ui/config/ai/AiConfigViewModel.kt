@@ -93,6 +93,11 @@ class AiConfigViewModel(
     fun onIntent(intent: AiConfigIntent) {
         when (intent) {
             is AiConfigIntent.SetDefaultModel -> setDefaultModel(intent.modelProfileId)
+            is AiConfigIntent.SaveSkill -> viewModelScope.launch {
+                _effects.tryEmit(
+                    AiConfigEffect.ShowSkillSaved("Skill draft accepted: ${intent.skill.name}")
+                )
+            }
         }
     }
 
