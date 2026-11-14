@@ -171,7 +171,7 @@ fun AiConfigScreen(
                 SplicedColumnGroup(title = stringResource(R.string.ai_skills)) {
                     ClickableSettingItem(
                         title = stringResource(R.string.ai_new_skill),
-                        onClick = { editingSkill = AiSkillConfig() }
+                        onClick = { editingSkill = AiSkillConfig(name = "", content = "") }
                     )
                 }
             }
