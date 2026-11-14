@@ -2,10 +2,13 @@ package io.legado.app.model
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.util.Base64
 import android.util.Size
 import androidx.collection.LruCache
 import io.legado.app.R
 import io.legado.app.constant.AppLog.putDebug
+import io.legado.app.constant.AppPattern.dataUriRegex
+import io.legado.app.model.analyzeRule.AnalyzeUrl.Companion.paramPattern
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookSource
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
@@ -197,13 +200,36 @@ object ImageProvider {
     }
 
     /**
-     *获取图片宽度高度信息
+     * 从 data URI 本身探测内在尺寸，不依赖磁盘缓存。
+     *
+     * 首次分页时图片文件可能尚未落盘（或被并发取消写坏），而书源 SVG 的
+     * `width`/`height`/`viewBox` 就在 src 里；直接探测可避免把错误占位图的
+     * 方形宽高比交给排版（#2522 / #2607）。先剥掉图片选项 `,{"style":"FULL"}`。
+     */
+    fun dataUriImageSize(src: String): Size? {
+        val optionStart = paramPattern.find(src)?.range?.first ?: src.length
+        val encoded = dataUriRegex.find(src.substring(0, optionStart).trim())
+            ?.groupValues?.getOrNull(1)?.takeIf(String::isNotEmpty) ?: return null
+        val bytes = runCatching {
+            Base64.decode(encoded, Base64.DEFAULT)
+        }.getOrNull() ?: return null
+        val op = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, op)
+        if (op.outWidth > 0 && op.outHeight > 0) {
+            return Size(op.outWidth, op.outHeight)
+        }
+        return SvgUtils.getSize(bytes.inputStream())
+            ?.takeIf { it.width > 0 && it.height > 0 }
+    }
+
+    /**
+     *获取图片宽度高度信息；探测失败返回 null，不用错误占位图的尺寸冒充。
      */
     suspend fun getImageSize(
         book: Book,
         src: String,
         bookSource: BookSource?
-    ): Size {
+    ): Size? {
         // 段评气泡是现算的位图，没有磁盘文件，不能走下载/解码路径
         if (ParagraphBubbleRenderer.isBubbleSrc(src)) {
             return ParagraphBubbleRenderer.getSize(src)
@@ -213,15 +239,17 @@ object ImageProvider {
         // inJustDecodeBounds如果设置为true,仅仅返回图片实际的宽和高,宽和高是赋值给opts.outWidth,opts.outHeight;
         op.inJustDecodeBounds = true
         BitmapFactory.decodeFile(file.absolutePath, op)
-        if (op.outWidth < 1 && op.outHeight < 1) {
-            //svg size
-            val size = SvgUtils.getSize(file.absolutePath)
-            if (size != null) return size
-            putDebug("ImageProvider: $src Unsupported image type")
-            //file.delete() 重复下载
-            return Size(errorBitmap.width, errorBitmap.height)
+        if (op.outWidth > 0 && op.outHeight > 0) {
+            return Size(op.outWidth, op.outHeight)
         }
-        return Size(op.outWidth, op.outHeight)
+        //svg size
+        SvgUtils.getSize(file.absolutePath)
+            ?.takeIf { it.width > 0 && it.height > 0 }
+            ?.let { return it }
+        // 磁盘副本尚不可解码时，data URI 仍能给出真实比例；避免首次分页按 1:1 占位。
+        dataUriImageSize(src)?.let { return it }
+        putDebug("ImageProvider: $src Unsupported image type")
+        return null
     }
 
     /**

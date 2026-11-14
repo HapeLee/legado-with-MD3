@@ -474,7 +474,8 @@ class ReaderChapterBlockMeasurer(
                         // loader already supplies an error image; reserve stable line geometry
                         // until real dimensions are available.
                         val placeholderExtent = (lineHeight ?: baseStyle.fontSizePx).coerceAtLeast(1f)
-                        val originalSize = imageDimensionsResolver.resolve(item.source)
+                        val measuredSize = imageDimensionsResolver.resolve(item.source)
+                        val originalSize = measuredSize
                             ?: ReaderImageDimensions(placeholderExtent, placeholderExtent)
                         val requestedWidth = options?.requestedWidthFraction?.let { fraction ->
                             style.imageAvailableWidthPx?.times(fraction)
@@ -509,6 +510,7 @@ class ReaderChapterBlockMeasurer(
                                 scaleMode = mode.toScaleMode(),
                                 pageBreakBefore = mode == ReaderImageLayoutMode.SINGLE_PAGE,
                                 pageBreakAfter = mode == ReaderImageLayoutMode.SINGLE_PAGE,
+                                dimensionsKnown = measuredSize != null,
                             )
                         } else {
                             // 文字嵌入（行内图）：对照旧 `TextChapterLayout` 的 ImageColumn —— 占位宽
@@ -584,7 +586,8 @@ class ReaderChapterBlockMeasurer(
                     }
                     val placeholderExtent = (style.bodyLineHeightPx ?: style.bodyStyle.fontSizePx)
                         .coerceAtLeast(1f)
-                    val originalSize = imageDimensionsResolver.resolve(block.source)
+                    val measuredSize = imageDimensionsResolver.resolve(block.source)
+                    val originalSize = measuredSize
                         ?: ReaderImageDimensions(placeholderExtent, placeholderExtent)
                     val requestedWidth = options?.requestedWidthFraction?.let { fraction ->
                         style.imageAvailableWidthPx?.times(fraction)
@@ -601,6 +604,7 @@ class ReaderChapterBlockMeasurer(
                         scaleMode = mode.toScaleMode(),
                         pageBreakBefore = mode == ReaderImageLayoutMode.SINGLE_PAGE,
                         pageBreakAfter = mode == ReaderImageLayoutMode.SINGLE_PAGE,
+                        dimensionsKnown = measuredSize != null,
                     )
                 }
                 is ReaderChapterSourceBlock.Paragraph -> {

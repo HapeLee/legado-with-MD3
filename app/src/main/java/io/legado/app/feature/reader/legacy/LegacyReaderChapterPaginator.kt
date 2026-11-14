@@ -232,7 +232,7 @@ object LegacyReaderChapterPaginator {
             titleShaper = AndroidReaderTextShaper(titlePaint),
             imageDimensionsResolver = { imageSource ->
                 try {
-                    ImageProvider.getImageSize(book, imageSource, bookSource).let {
+                    ImageProvider.getImageSize(book, imageSource, bookSource)?.let {
                         ReaderImageDimensions(it.width.toFloat(), it.height.toFloat())
                     }
                 } catch (error: CancellationException) {
