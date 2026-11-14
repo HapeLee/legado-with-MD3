@@ -1,12 +1,13 @@
 package io.legado.app.ui.config.ai
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
-
-import io.legado.app.feature.settings.search.SearchableSetting
-import io.legado.app.feature.settings.search.SearchableSettingsList
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -19,6 +20,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.feature.settings.search.SearchableSetting
+import io.legado.app.feature.settings.search.SearchableSettingsList
+import io.legado.app.ui.main.ai.AiSkillConfig
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
@@ -71,11 +75,13 @@ fun AiConfigScreen(
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val snackbarHostState = remember { SnackbarHostState() }
     var showModelSheet by remember { mutableStateOf(false) }
+    var editingSkill by remember { mutableStateOf<AiSkillConfig?>(null) }
 
     LaunchedEffect(Unit) {
         effects.collectLatest { effect ->
             when (effect) {
                 is AiConfigEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
+                is AiConfigEffect.ShowSkillSaved -> snackbarHostState.showSnackbar(effect.message)
             }
         }
     }
@@ -101,7 +107,7 @@ fun AiConfigScreen(
         ) {
             item {
                 SplicedColumnGroup(title = stringResource(R.string.ai_provider_database)) {
-            state.providers.forEach { provider ->
+                    state.providers.forEach { provider ->
                         ClickableSettingItem(
                             title = provider.providerName,
                             description = provider.baseUrl,
@@ -123,7 +129,9 @@ fun AiConfigScreen(
                     SearchableSetting("ai.ai_current_model") {
                         ClickableSettingItem(
                             title = stringResource(R.string.ai_current_model),
-                            description = state.currentModelName.ifBlank { stringResource(R.string.ai_model_not_configured) },
+                            description = state.currentModelName.ifBlank {
+                                stringResource(R.string.ai_model_not_configured)
+                            },
                             onClick = {
                                 if (state.models.none { it.text && it.enabled }) {
                                     onNavigateToProviderEdit(null)
@@ -164,7 +172,7 @@ fun AiConfigScreen(
                 SplicedColumnGroup(title = stringResource(R.string.ai_skills)) {
                     ClickableSettingItem(
                         title = stringResource(R.string.ai_new_skill),
-                        onClick = {}
+                        onClick = { editingSkill = AiSkillConfig(name = "", content = "") }
                     )
                 }
             }
@@ -177,37 +185,96 @@ fun AiConfigScreen(
         title = stringResource(R.string.ai_select_model)
     ) {
         LazyColumn {
-            state.providers.filter { it.models.any { model -> model.text && model.enabled } }.forEach { provider ->
-                item {
-                    SplicedColumnGroup(title = provider.providerName) {
-                        if (provider.models.isEmpty()) {
-                            ClickableSettingItem(
-                                title = stringResource(R.string.ai_no_models_imported),
-                                description = stringResource(R.string.ai_fetch_and_save_models),
-                                onClick = {
-                                    showModelSheet = false
-                                    onNavigateToProviderEdit(provider.providerId)
-                                }
-                            )
-                        } else {
-                            provider.models.filter { it.text && it.enabled }.forEach { model ->
+            state.providers
+                .filter { it.models.any { model -> model.text && model.enabled } }
+                .forEach { provider ->
+                    item {
+                        SplicedColumnGroup(title = provider.providerName) {
+                            if (provider.models.isEmpty()) {
                                 ClickableSettingItem(
-                                    title = model.modelName,
-                                    description = model.modelId,
-                                    trailingContent = if (model.isCurrent) {
-                                        { TextCard(text = stringResource(R.string.ai_current)) }
-                                    } else {
-                                        null
-                                    },
+                                    title = stringResource(R.string.ai_no_models_imported),
+                                    description = stringResource(R.string.ai_fetch_and_save_models),
                                     onClick = {
-                                        onIntent(AiConfigIntent.SetDefaultModel(model.modelProfileId))
                                         showModelSheet = false
+                                        onNavigateToProviderEdit(provider.providerId)
                                     }
                                 )
+                            } else {
+                                provider.models.filter { it.text && it.enabled }.forEach { model ->
+                                    ClickableSettingItem(
+                                        title = model.modelName,
+                                        description = model.modelId,
+                                        trailingContent = if (model.isCurrent) {
+                                            { TextCard(text = stringResource(R.string.ai_current)) }
+                                        } else {
+                                            null
+                                        },
+                                        onClick = {
+                                            onIntent(AiConfigIntent.SetDefaultModel(model.modelProfileId))
+                                            showModelSheet = false
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
                 }
+        }
+    }
+
+    if (editingSkill != null) {
+        val skill = editingSkill!!
+        var name by remember(skill) { mutableStateOf(skill.name) }
+        var content by remember(skill) { mutableStateOf(skill.content) }
+        var desc by remember(skill) { mutableStateOf(skill.description) }
+        var url by remember(skill) { mutableStateOf(skill.sourceUrl) }
+
+        AppModalBottomSheet(
+            show = true,
+            onDismissRequest = { editingSkill = null },
+            title = stringResource(R.string.ai_new_skill)
+        ) {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Name") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = desc,
+                onValueChange = { desc = it },
+                label = { Text("Description") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = content,
+                onValueChange = { content = it },
+                label = { Text("Content") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = url,
+                onValueChange = { url = it },
+                label = { Text("Source URL") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Button(
+                onClick = {
+                    onIntent(
+                        AiConfigIntent.SaveSkill(
+                            skill.copy(
+                                name = name.trim(),
+                                description = desc.trim(),
+                                content = content.trim(),
+                                sourceUrl = url.trim()
+                            )
+                        )
+                    )
+                    editingSkill = null
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.save))
             }
         }
     }
