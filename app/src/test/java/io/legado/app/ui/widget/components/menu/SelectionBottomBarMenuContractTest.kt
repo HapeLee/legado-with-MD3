@@ -88,6 +88,32 @@ class SelectionBottomBarMenuContractTest {
         assertTrue("主操作仍保留 MiuixIconButton", source.contains("MiuixIconButton("))
     }
 
+    /**
+     * 采样源不能包含消费者自身：COUI 的玻璃材质会把源图层画进自己的 patch，源图层一旦是
+     * 多选栏的祖先，hwui 会在 prepareTree 里无限递归直到 RenderThread 栈溢出（native 闪退，
+     * Java 层拦不到）。因此多选栏只能渲染在 `AppScaffold` 的浮层槽位里。
+     */
+    @Test
+    fun selectionBarRendersOutsideThePageSamplingSource() {
+        listOf(LIST_SCAFFOLD, TOC_SCREEN).forEach { path ->
+            val source = sourceOf(path)
+            val overlayIndex = source.indexOf("overlay = {")
+            val barIndex = source.indexOf("SelectionBottomBar(")
+            assertTrue("$path 缺少 AppScaffold 浮层槽位", overlayIndex >= 0)
+            assertTrue(
+                "$path 的多选栏没有渲染在浮层槽位里（正文采样源会包含它自身）",
+                barIndex > overlayIndex,
+            )
+        }
+
+        val scaffold = sourceOf(APP_SCAFFOLD)
+        assertTrue(
+            "AppScaffold 的浮层槽位必须绘制在正文采样源之外",
+            scaffold.contains("Box(modifier = Modifier.fillMaxSize(), content = overlay)") ||
+                scaffold.contains("CompositionLocalProvider(LocalCouiPageBackdrop provides couiBackdrop) {"),
+        )
+    }
+
     private fun sourceOf(path: String): String {
         var directory: File? = File("").absoluteFile
         while (directory != null) {
@@ -100,5 +126,8 @@ class SelectionBottomBarMenuContractTest {
 
     private companion object {
         const val BAR = "io/legado/app/ui/widget/components/SelectionBottomBar.kt"
+        const val APP_SCAFFOLD = "io/legado/app/ui/widget/components/AppScaffold.kt"
+        const val LIST_SCAFFOLD = "io/legado/app/ui/widget/components/list/ListScaffold.kt"
+        const val TOC_SCREEN = "io/legado/app/ui/book/toc/TocScreen.kt"
     }
 }

@@ -203,18 +203,32 @@ class ThemeConfigCouiThemeContractTest {
         )
     }
 
+    /**
+     * COUI 的玻璃材质会把采样源图层画进自己的 patch：采样源一旦包含消费者自身，源图层就成为
+     * 自己的子节点，hwui 在 prepareTree 里无限递归，直到 RenderThread 栈溢出（native 闪退）。
+     * 因此多选栏只能用 AppScaffold 浮层槽位提供的正文源，不能自取窗口级菜单源（整页都在里面）。
+     */
     @Test
-    fun couiFloatingToolbarOnlyRunsInTheActivityWindow() {
+    fun couiFloatingToolbarOnlySamplesThePageOverlaySlot() {
         val bar = sourceOf(SELECTION_BAR)
-        assertTrue(
-            "COUI 胶囊操作栏未限制在页面窗口",
-            bar.contains(
-                "val inActivityWindow = LocalView.current.rootView === LocalActivity.current?.window?.decorView",
-            ),
+        assertFalse(
+            "多选栏仍自取窗口级菜单采样源（该源录制整页，含本栏自身）",
+            bar.contains("rememberCouiWindowBackdrop"),
         )
         assertTrue(
-            "COUI 分支未使用窗口判断",
-            bar.contains("if (LegadoTheme.composeEngine == ComposeEngine.Coui && inActivityWindow) {"),
+            "COUI 分支必须只消费浮层槽位提供的正文源",
+            bar.contains("val backdrop = LocalCouiPageBackdrop.current"),
+        )
+
+        val scaffold = sourceOf(APP_SCAFFOLD)
+        assertTrue(
+            "AppScaffold 缺少页面级浮层槽位",
+            scaffold.contains("overlay: @Composable BoxScope.() -> Unit = {}"),
+        )
+        assertTrue(
+            "浮层槽位未拿到正文采样源",
+            scaffold.contains("CompositionLocalProvider(LocalCouiPageBackdrop provides couiBackdrop) {") &&
+                scaffold.contains("Box(modifier = Modifier.fillMaxSize(), content = overlay)"),
         )
     }
 

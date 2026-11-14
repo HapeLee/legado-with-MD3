@@ -1,7 +1,6 @@
 package io.legado.app.ui.widget.components
 
 import android.os.Build
-import androidx.activity.compose.LocalActivity
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,20 +34,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.itos.coui.backdrop.CouiBackdrop
 import com.itos.coui.floatingtoolbar.CouiFloatingToolbarDefaults
 import com.itos.coui.floatingtoolbar.FloatingToolbar
 import com.itos.coui.floatingtoolbar.FloatingToolbarItem
-import com.itos.coui.menu.rememberCouiWindowBackdrop
 import io.legado.app.R
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.button.series.MediumPlainButton
+import io.legado.app.ui.widget.components.coui.LocalCouiPageBackdrop
 import io.legado.app.ui.widget.components.coui.rememberCouiCapsuleRenderer
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
@@ -106,12 +104,14 @@ fun SelectionBottomBar(
         )
         .scale(if (compact) 0.85f else 1f)
 
-    // COUI：走原生胶囊操作栏。它需要所属页面的背景采样源（AppTheme 的 ProvideCouiMenuBackdrop
-    // 挂在窗口内容根上），且采样源必须和操作栏在同一窗口；弹层（ModalBottomSheet / Dialog 的独立窗口）
-    // 里沿用页面窗口的 backdrop 会跨窗口采样，直接闪退，因此退回 M3 工具栏。
-    val inActivityWindow = LocalView.current.rootView === LocalActivity.current?.window?.decorView
-    if (LegadoTheme.composeEngine == ComposeEngine.Coui && inActivityWindow) {
-        val backdrop = rememberCouiWindowBackdrop()
+    // COUI：走原生胶囊操作栏。玻璃材质会把采样源图层画进自己的 patch，所以采样源必须**不含本栏**：
+    // 唯一合法的来源是 AppScaffold 的浮层槽位（`overlay`）提供的正文源——本栏画在该源之外，
+    // 二者是兄弟节点。若改用窗口级菜单源（AppTheme 的 ProvideCouiMenuBackdrop，录的是整页内容，
+    // 本栏就在其中），源图层会成为自己的子节点，hwui 的 prepareTree 会无限递归直到 RenderThread
+    // 栈溢出（native 闪退，Java 层拦不到）。弹层（ModalBottomSheet / Dialog）里没有这个槽位，
+    // 保持 M3 工具栏。
+    if (LegadoTheme.composeEngine == ComposeEngine.Coui) {
+        val backdrop = LocalCouiPageBackdrop.current
         if (backdrop != null && ThemeResolver.isCouiSupported()) {
             CouiSelectionBottomBar(
                 modifier = safeModifier,
