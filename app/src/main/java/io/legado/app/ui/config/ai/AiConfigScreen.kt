@@ -274,7 +274,7 @@ fun AiConfigScreen(
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(stringResource(R.string.ai_skill_save))
+                Text(stringResource(R.string.save))
             }
         }
     }
