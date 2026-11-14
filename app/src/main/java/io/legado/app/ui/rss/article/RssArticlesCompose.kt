@@ -34,9 +34,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -118,10 +120,11 @@ fun RssArticlesPage(
             AppLog.put("订阅文章界面获取数据失败\n${it.localizedMessage}", it)
         }.flowOn(IO)
     }
-    val articles by articleFlow.collectAsStateWithLifecycle(initialValue = emptyList())
+    val articles by articleFlow.collectAsStateWithLifecycle(initialValue = viewModel.cachedArticles)
+    SideEffect { viewModel.cacheArticles(articles) }
 
     LaunchedEffect(rssSource?.sourceUrl, sortName, sortUrl) {
-        rssSource?.let(viewModel::loadArticles)
+        rssSource?.let(viewModel::loadArticlesIfNeeded)
     }
 
     LaunchedEffect(loadState.errorMessage) {
@@ -143,7 +146,13 @@ fun RssArticlesPage(
             (loadState.isLoadingMore || loadState.errorMessage != null || !loadState.hasMore)
         when (layout) {
             RssArticleLayout.List, RssArticleLayout.LargeCard -> {
-                val listState = rememberLazyListState()
+                val listState = rememberLazyListState(
+                    initialFirstVisibleItemIndex = viewModel.scrollIndex,
+                    initialFirstVisibleItemScrollOffset = viewModel.scrollOffset,
+                )
+                TrackRssScrollPosition(viewModel) {
+                    listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+                }
                 LoadMoreDetector(
                     state = listState,
                     enabled = loadState.canLoadMore,
@@ -181,7 +190,13 @@ fun RssArticlesPage(
             }
 
             RssArticleLayout.GridCard -> {
-                val gridState = rememberLazyGridState()
+                val gridState = rememberLazyGridState(
+                    initialFirstVisibleItemIndex = viewModel.scrollIndex,
+                    initialFirstVisibleItemScrollOffset = viewModel.scrollOffset,
+                )
+                TrackRssScrollPosition(viewModel) {
+                    gridState.firstVisibleItemIndex to gridState.firstVisibleItemScrollOffset
+                }
                 GridLoadMoreDetector(
                     state = gridState,
                     enabled = loadState.canLoadMore,
@@ -221,7 +236,14 @@ fun RssArticlesPage(
             }
 
             RssArticleLayout.Waterfall -> {
-                val staggeredState = rememberLazyStaggeredGridState()
+                val staggeredState = rememberLazyStaggeredGridState(
+                    initialFirstVisibleItemIndex = viewModel.scrollIndex,
+                    initialFirstVisibleItemScrollOffset = viewModel.scrollOffset,
+                )
+                TrackRssScrollPosition(viewModel) {
+                    staggeredState.firstVisibleItemIndex to
+                        staggeredState.firstVisibleItemScrollOffset
+                }
                 StaggeredLoadMoreDetector(
                     state = staggeredState,
                     enabled = loadState.canLoadMore,
@@ -260,6 +282,19 @@ fun RssArticlesPage(
                 }
             }
         }
+    }
+}
+
+/** 把滚动位置写回 ViewModel，使组合销毁后重建仍能恢复到原来的条目。 */
+@Composable
+private fun TrackRssScrollPosition(
+    viewModel: RssArticlesViewModel,
+    position: () -> Pair<Int, Int>,
+) {
+    val currentPosition = rememberUpdatedState(position)
+    LaunchedEffect(viewModel) {
+        snapshotFlow { currentPosition.value() }
+            .collect { (index, offset) -> viewModel.saveScrollPosition(index, offset) }
     }
 }
 

@@ -23,6 +23,16 @@ class RssArticlesViewModel(
     private val _loadState = MutableStateFlow(RssArticlesLoadState())
     val loadState: StateFlow<RssArticlesLoadState> = _loadState.asStateFlow()
 
+    private val restoreState = RssArticlesRestoreState()
+    val cachedArticles: List<RssArticle> get() = restoreState.articles
+    val scrollIndex: Int get() = restoreState.scrollIndex
+    val scrollOffset: Int get() = restoreState.scrollOffset
+
+    fun cacheArticles(articles: List<RssArticle>) = restoreState.rememberArticles(articles)
+
+    fun saveScrollPosition(index: Int, offset: Int) =
+        restoreState.rememberScrollPosition(index, offset)
+
     var order = System.currentTimeMillis()
     private var nextPageUrl: String? = null
     var sortName: String = ""
@@ -50,7 +60,23 @@ class RssArticlesViewModel(
         _loadState.value = RssArticlesLoadState()
     }
 
+    /** 进入或返回列表时使用：同一个「源 + 分类 + 搜索词」只自动拉取一次。 */
+    fun loadArticlesIfNeeded(rssSource: RssSource) {
+        if (restoreState.requestAutoLoad(autoLoadKey(rssSource))) {
+            loadArticles(rssSource)
+        }
+    }
+
+    private fun autoLoadKey(rssSource: RssSource) = listOf(
+        rssSource.sourceUrl,
+        sortName,
+        sortUrl,
+        searchKey.orEmpty(),
+    ).joinToString("|")
+
+    /** 下拉刷新、加载失败重试等用户主动操作仍走强制刷新。 */
     fun loadArticles(rssSource: RssSource) {
+        val loadKey = autoLoadKey(rssSource)
         _loadState.value = _loadState.value.copy(
             isRefreshing = true,
             isLoadingMore = false,
@@ -76,6 +102,7 @@ class RssArticlesViewModel(
                 hasMore = hasMore,
                 errorMessage = null
             )
+            restoreState.markLoaded(loadKey)
         }.onError {
             AppLog.put("rss获取内容失败", it)
             _loadState.value = _loadState.value.copy(
@@ -84,6 +111,7 @@ class RssArticlesViewModel(
                 hasMore = false,
                 errorMessage = it.stackTraceStr
             )
+            restoreState.markFailed(loadKey)
         }
     }
 
