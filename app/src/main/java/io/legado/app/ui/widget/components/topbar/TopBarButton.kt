@@ -88,7 +88,7 @@ import top.yukonga.miuix.kmp.basic.IconButtonDefaults as MiuixIconButtonDefaults
 import top.yukonga.miuix.kmp.basic.Text as MiuixText
 import top.yukonga.miuix.kmp.basic.TextButton as MiuixTextButton
 import top.yukonga.miuix.kmp.glass.GlassIconButton as MiuixGlassIconButton
-import top.yukonga.miuix.kmp.glass.GlassShape as MiuixGlassShape
+import top.yukonga.miuix.kmp.material.GlassShape as MiuixGlassShape
 import top.yukonga.miuix.kmp.glass.GlassTopAppBarDefaults as MiuixGlassTopAppBarDefaults
 import top.yukonga.miuix.kmp.glass.glassPanel
 
