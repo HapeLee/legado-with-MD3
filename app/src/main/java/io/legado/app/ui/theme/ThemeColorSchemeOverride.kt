@@ -145,9 +145,18 @@ fun ProvideColorSchemeOverride(
         }
     }
 
+    // 记录本次覆盖，供玻璃 sheet / dialog 把色板带进 root popup host 的独立 composition。
+    val overrideState = remember(colorScheme, seedColor, resolvedIsDark) {
+        ThemeOverrideState(
+            seedColor = seedColor,
+            colorScheme = colorScheme,
+            isDark = resolvedIsDark,
+        )
+    }
     CompositionLocalProvider(
         LocalLegadoThemeColors provides overrideThemeMode,
-        LocalLegadoColorScheme provides legadoColorScheme
+        LocalLegadoColorScheme provides legadoColorScheme,
+        LocalThemeOverride provides overrideState
     ) {
         when (composeEngine) {
             ComposeEngine.Miuix -> {

@@ -56,6 +56,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -69,10 +70,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.collectAsState
 import io.legado.app.R
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookSource
@@ -110,6 +113,7 @@ import io.legado.app.utils.HtmlFormatter
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -151,9 +155,14 @@ fun ReaderBookSheetRoute(
      * 回灌阅读页，规则保存后本面板会随 `bookRepository.flowBook` 自动刷新。
      */
     onEditLocalTocRule: (String?) -> Unit = {},
+    /** 宿主内存中的 Book：与顶栏更多菜单同源，不依赖 books 表查询是否命中。 */
+    book: Book? = null,
     viewModel: TocViewModel = koinViewModel(key = "reader-book-sheet-$bookUrl"),
 ) {
-    val state by viewModel.screenState.collectAsStateWithLifecycle()
+    // 组合期同步绑定，早于订阅建立：首次打开不再赌 LaunchedEffect
+    // 与订阅的先后顺序，也不再赌 flowBook 是否已从 books 表发射。
+    viewModel.bindBook(bookUrl, book)
+    val currentBook by rememberUpdatedState(book)
     val context = LocalContext.current
     var pendingExportMarkdown by remember { mutableStateOf(false) }
 
@@ -164,7 +173,7 @@ fun ReaderBookSheetRoute(
     }
 
     LaunchedEffect(bookUrl) {
-        viewModel.onIntent(TocIntent.LoadBook(bookUrl))
+        viewModel.onIntent(TocIntent.LoadBook(bookUrl, currentBook))
     }
     LaunchedEffect(viewModel) {
         viewModel.effects.collectLatest { effect ->
@@ -175,9 +184,13 @@ fun ReaderBookSheetRoute(
         }
     }
 
+    // 不传 TocUiState 快照：玻璃 sheet 的 content 会被注册到 root dialog host 的
+    // 另一个 composition，Compose 记忆化的 lambda 会把捕获的值固化成首帧。
+    // StateFlow 是稳定引用，订阅发生在消费侧时更新才能穿透这条边界。
     ReaderBookSheet(
         show = show,
-        state = state,
+        screenStateFlow = viewModel.screenState,
+        hostBook = book,
         initialTab = initialTab,
         onDismissRequest = {
             viewModel.onIntent(TocIntent.ClearSelection)
@@ -222,7 +235,8 @@ fun ReaderBookSheetRoute(
 @Composable
 private fun ReaderBookSheet(
     show: Boolean,
-    state: TocUiState,
+    screenStateFlow: StateFlow<TocUiState>,
+    hostBook: Book?,
     initialTab: ReaderBookSheetTab,
     onDismissRequest: () -> Unit,
     onIntent: (TocIntent) -> Unit,
@@ -262,6 +276,15 @@ private fun ReaderBookSheet(
         modifier = Modifier
             .heightIn(max = maxHeight),
     ) {
+        // 这里的 content 在 Miuix 玻璃 sheet 下由 root dialog host 的另一个 composition
+        // 执行。订阅必须发生在消费侧：上游只传稳定的 StateFlow 引用，StateFlow 的值变化
+        // 直接 invalidate 本 composition 的作用域，不依赖 content lambda 是否被重建。
+        val rawState by screenStateFlow.collectAsState()
+        val state = remember(rawState, hostBook) {
+            if (hostBook != null && rawState.book == null) {
+                rawState.copy(book = hostBook)
+            } else rawState
+        }
         BackHandler(enabled = show && state.action.selectedIds.isNotEmpty()) {
             onIntent(TocIntent.ClearSelection)
         }
@@ -670,6 +693,9 @@ private fun ReaderBookTocPage(
     var fabExpanded by rememberSaveable { mutableStateOf(false) }
     val selected = action.selectedIds.isNotEmpty()
     val selectAllText = stringResource(R.string.select_all)
+    val loadingText = stringResource(R.string.loading)
+    // 加载态只是一次反馈，不能成为内容显示不出来的闸门：章节到达后立即渲染列表。
+    val showLoading = state.isLoading && state.action.items.isEmpty()
     val invertText = stringResource(R.string.invert_selection)
     val bookmarkText = stringResource(R.string.bookmark_add)
     val downloadSelectedText = stringResource(
@@ -782,13 +808,24 @@ private fun ReaderBookTocPage(
             }
         }
         Box(modifier = Modifier.weight(1f)) {
-            ReaderSheetChapterList(
-                state = state,
-                listState = listState,
-                onIntent = onIntent,
-                onChapterClick = onChapterClick,
-                currentChapterIndex = currentChapterIndex,
-            )
+            if (showLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .semantics { contentDescription = loadingText },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    AppContainedLoadingIndicator()
+                }
+            } else {
+                ReaderSheetChapterList(
+                    state = state,
+                    listState = listState,
+                    onIntent = onIntent,
+                    onChapterClick = onChapterClick,
+                    currentChapterIndex = currentChapterIndex,
+                )
+            }
             AppFloatingActionButtonMenu(
                 expanded = fabExpanded,
                 onExpandedChange = { fabExpanded = it },
