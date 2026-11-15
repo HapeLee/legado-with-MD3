@@ -10,14 +10,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
@@ -31,6 +37,8 @@ import io.legado.app.ui.book.info.BookInfoScreen
 import io.legado.app.ui.book.info.BookInfoUiState
 import io.legado.app.ui.book.read.ReadAloudCapsule
 import io.legado.app.ui.theme.AppTheme
+import io.legado.app.ui.widget.components.card.SelectionItemCard
+import io.legado.app.ui.widget.components.topbar.TopBarAnimatedActionButton
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.LocalLegadoThemeColors
 import io.legado.app.ui.widget.components.button.series.MediumAnimatedButton
@@ -207,6 +215,65 @@ class AccessibilityRegressionTest {
         position("Position 3 of 3", 1)
         move(R.string.a11y_move_up)
         position("Position 2 of 3", 2)
+    }
+
+    @Test
+    fun animatedTopBarActionButtonKeepsNameAndSelectedStateInMaterialEngine() {
+        val checked = mutableStateOf(false)
+        var toggles = 0
+        show {
+            TopBarAnimatedActionButton(
+                checked = checked.value,
+                onCheckedChange = {
+                    toggles++
+                    checked.value = it
+                },
+                iconChecked = AppIcons.Check,
+                iconUnchecked = AppIcons.Close,
+                activeText = "Precision on",
+                inactiveText = "Precision off",
+            )
+        }
+        val off = compose.onNodeWithContentDescription("Precision off")
+        off.assertIsDisplayed().assertHasClickAction()
+        compose.runOnIdle {
+            assertEquals(false, off.fetchSemanticsNode().config[SemanticsProperties.Selected])
+        }
+        off.performClick()
+        val on = compose.onNodeWithContentDescription("Precision on")
+        on.assertHasClickAction()
+        compose.runOnIdle {
+            assertEquals(true, on.fetchSemanticsNode().config[SemanticsProperties.Selected])
+            assertEquals(1, toggles)
+        }
+    }
+
+    @Test
+    fun selectionCardsExposeOneCheckboxNodeWithMergedNameAndState() {
+        val selected = mutableStateOf(false)
+        show {
+            SelectionItemCard(
+                title = "Source name",
+                isSelected = selected.value,
+                inSelectionMode = true,
+                onToggleSelection = { selected.value = !selected.value },
+            )
+        }
+        fun assertState(expected: ToggleableState) {
+            // 名称（contentDescription）与勾选态必须合并在同一个可点击节点上，
+            // TalkBack 才能一次读完且内部文本不再拆出第二个焦点
+            val config = compose.onNode(hasClickAction() and hasContentDescription("Source name"))
+                .fetchSemanticsNode().config
+            assertTrue(
+                "role=${if (config.contains(SemanticsProperties.Role)) config[SemanticsProperties.Role] else "missing"}",
+                config.contains(SemanticsProperties.Role) &&
+                        config[SemanticsProperties.Role] == Role.Checkbox,
+            )
+            assertEquals(expected, config[SemanticsProperties.ToggleableState])
+        }
+        assertState(ToggleableState.Off)
+        compose.onNode(hasClickAction() and hasContentDescription("Source name")).performClick()
+        compose.runOnIdle { assertState(ToggleableState.On) }
     }
 
     private fun show(engine: () -> String = { "material" }, content: @Composable () -> Unit) {

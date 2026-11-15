@@ -754,6 +754,7 @@ fun TopBarAnimatedActionButton(
                     onClick = { onToggle(!checked) },
                     modifier = buttonModifier.semantics {
                         contentDescription = if (checked) activeText else inactiveText
+                        selected = checked
                     },
                 ) {
                     Row(
@@ -795,6 +796,7 @@ fun TopBarAnimatedActionButton(
             inactiveText = inactiveText,
             modifier = modifier.height(size).defaultMinSize(minWidth = size).semantics {
                 contentDescription = if (checked) activeText else inactiveText
+                selected = checked
             },
             iconSize = 24.dp,
             textStyle = LegadoTheme.typography.labelMedium,
@@ -837,7 +839,12 @@ fun TopBarAnimatedActionButton(
             iconUnchecked = iconUnchecked,
             activeText = activeText,
             inactiveText = inactiveText,
-            modifier = modifier.height(36.dp),
+            // 图标本身不携带语义（AnimatedIcon 的 contentDescription 为 null），
+            // 名称与选中态必须落在按钮节点上，否则 TalkBack 会跳过这三个入口。
+            modifier = modifier.height(36.dp).semantics {
+                contentDescription = if (checked) activeText else inactiveText
+                selected = checked
+            },
             iconSize = 20.dp,
             textStyle = LegadoTheme.typography.labelMedium,
             textStartPadding = 8.dp,

@@ -34,8 +34,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -79,6 +80,10 @@ fun SelectionItemCard(
     moreContentDescription: String? = null
 ) {
     val isMiuix = composeEngine == ComposeEngine.Miuix
+    // 多选行只保留卡片一个焦点：名称（含副标题）提升为卡片描述，
+    // 由 Checkbox 角色承载勾选态，一次读完“未勾选，名称”。
+    val a11yDescription = contentDescription
+        ?: if (subtitle.isNullOrBlank()) title else "$title, $subtitle"
     val animatedContainerColor by animateColorAsState(
         targetValue = if (isSelected)
             selectedContainerColor
@@ -97,11 +102,18 @@ fun SelectionItemCard(
             .then(
                 if (contentDescription != null || inSelectionMode) {
                     Modifier.semantics {
-                        contentDescription?.let { this.contentDescription = it }
                         if (inSelectionMode) {
-                            selected = isSelected
+                            // 多选行整卡即勾选目标：用 Checkbox 角色承载勾选态，
+                            // TalkBack 才会播报“已勾选/未勾选”；复选框本体已被清空语义，
+                            // 状态与名称合并后只留一个焦点。
+                            role = Role.Checkbox
+                            toggleableState =
+                                if (isSelected) ToggleableState.On else ToggleableState.Off
+                            this.contentDescription = a11yDescription
+                        } else {
+                            contentDescription?.let { this.contentDescription = it }
+                            role = Role.Button
                         }
-                        role = Role.Button
                     }
                 } else {
                     Modifier
@@ -185,7 +197,10 @@ fun SelectionItemCardContent(
         when (composeEngine) {
             ComposeEngine.Miuix -> {
                 BasicComponent(
+                    // 多选模式下卡片根已承载名称与勾选态；内部容器自带合并边界会把
+                    // 标题文本拆成第二个焦点，这里整块清空。
                     modifier = Modifier.weight(1f)
+                        .then(if (inSelectionMode) Modifier.clearAndSetSemantics { } else Modifier)
                 ) {
                     AppText(
                         text = title,
@@ -208,7 +223,9 @@ fun SelectionItemCardContent(
             }
             ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
                 ListItem(
-                    modifier = Modifier.weight(1f),
+                    // 同上：多选模式下清空内部容器语义，避免标题文本成为第二个焦点。
+                    modifier = Modifier.weight(1f)
+                        .then(if (inSelectionMode) Modifier.clearAndSetSemantics { } else Modifier),
                     supportingContent = when {
                         supportingContent != null -> supportingContent
                         !subtitle.isNullOrBlank() -> {

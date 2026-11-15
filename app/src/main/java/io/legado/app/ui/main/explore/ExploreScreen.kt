@@ -470,8 +470,8 @@ fun ExploreSourceHeader(
                     onLongClick = { showMenu = true }
                 )
                 .semantics(mergeDescendants = true) {
-                    contentDescription = item.bookSourceName
-                    role = Role.Button
+                    // 源名已由正文文本随合并语义读出，这里再写描述会读两遍；
+                    // 角色由 combinedClickable 提供。
                     if (loadingKinds) {
                         stateDescription = loadingLabel
                     }

@@ -65,7 +65,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -400,11 +403,10 @@ fun MainScreen(
                         val haptic = LocalHapticFeedback.current
                         val destinationLabel = stringResource(destination.labelId)
                         Box {
+                            // 标签文本由 MiuixNavigationRailItem 自行渲染并随合并语义读出；
+                            // 这里再写 contentDescription 会让 TalkBack 把同一名称念两遍。
                             MiuixNavigationRailItem(
-                                modifier = Modifier
-                                    .semantics(mergeDescendants = true) {
-                                        contentDescription = destinationLabel
-                                    }
+                                modifier = Modifier.semantics(mergeDescendants = true) {}
                                     .then(
                                         if (destination == MainDestination.Bookshelf) {
                                             Modifier.combinedClickable(
@@ -490,10 +492,9 @@ fun MainScreen(
                     val haptic = LocalHapticFeedback.current
                     val destinationLabel = stringResource(destination.labelId)
 
+                    // 同 Miuix rail：标签文本已由 label 槽渲染，重复描述会被朗读两遍。
                     WideNavigationRailItem(
-                        modifier = Modifier.semantics(mergeDescendants = true) {
-                            contentDescription = destinationLabel
-                        },
+                        modifier = Modifier.semantics(mergeDescendants = true) {},
                         railExpanded = navState.targetValue == WideNavigationRailValue.Expanded,
                         selected = selected,
                         onClick = {
@@ -560,9 +561,16 @@ fun MainScreen(
                                 val selectedCustomIconPath =
                                     mainUiState.selectedCustomIconPath(destination)
                                 val destinationLabel = stringResource(destination.labelId)
+                                // 标签可见时交给合并的文本节点朗读；只有标签被隐藏
+                                // （unlabeled / 未选中不带标签）时才用 contentDescription 兜底，
+                                // 否则 TalkBack 会把同一名称念两遍。
+                                val labelShown = labelVisibilityMode != "unlabeled" &&
+                                        showLabel && (alwaysShowLabel || selected)
                                 AppNavigationBarItem(
                                     modifier = Modifier.semantics(mergeDescendants = true) {
-                                        contentDescription = destinationLabel
+                                        role = Role.Tab
+                                        this.selected = selected
+                                        if (!labelShown) contentDescription = destinationLabel
                                     },
                                     selected = selected,
                                     onClick = {
