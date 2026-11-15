@@ -3,6 +3,7 @@ package io.legado.app.data.repository
 import io.legado.app.data.dao.AiProfileDao
 import io.legado.app.data.entities.AiModelProfile
 import io.legado.app.data.entities.AiProviderProfile
+import io.legado.app.data.entities.AiSkillProfile
 import io.legado.app.data.entities.AiTaskPreset
 import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.model.AiAvailableModel
@@ -25,6 +26,7 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.nameUuidFromBytes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
 import kotlin.uuid.Uuid
@@ -38,6 +40,34 @@ class AiProfileRepository(
     override fun observeModels(): Flow<List<AiModelProfile>> = aiProfileDao.observeModels()
 
     override fun observePresets(): Flow<List<AiTaskPreset>> = aiProfileDao.observePresets()
+
+    override fun observeSkills(): Flow<List<AiSkillProfile>> = aiProfileDao.observeSkills()
+
+    override suspend fun listSkills(): List<AiSkillProfile> = withContext(Dispatchers.IO) {
+        aiProfileDao.observeSkills().first()
+    }
+
+    override suspend fun saveSkill(skill: AiSkillProfile): AiSkillProfile = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        val normalized = skill.copy(
+            id = skill.id.ifBlank { Uuid.random().toString() },
+            name = skill.name.trim(),
+            description = skill.description.trim(),
+            content = skill.content.trim(),
+            sourceUrl = skill.sourceUrl.trim(),
+            updatedAt = now
+        )
+        aiProfileDao.insertSkill(normalized)
+        normalized
+    }
+
+    override suspend fun deleteSkill(id: String) = withContext(Dispatchers.IO) {
+        aiProfileDao.deleteSkill(id)
+    }
+
+    override suspend fun setSkillEnabled(id: String, enabled: Boolean) = withContext(Dispatchers.IO) {
+        aiProfileDao.setSkillEnabled(id, enabled, System.currentTimeMillis())
+    }
 
     override suspend fun getProvider(id: String): AiProviderProfile? = withContext(Dispatchers.IO) {
         aiProfileDao.getProvider(id)

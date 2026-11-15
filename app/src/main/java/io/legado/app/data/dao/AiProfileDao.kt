@@ -8,6 +8,7 @@ import androidx.room.Transaction
 import androidx.room.Update
 import io.legado.app.data.entities.AiModelProfile
 import io.legado.app.data.entities.AiProviderProfile
+import io.legado.app.data.entities.AiSkillProfile
 import io.legado.app.data.entities.AiTaskPreset
 import kotlinx.coroutines.flow.Flow
 
@@ -23,11 +24,17 @@ interface AiProfileDao {
     @Query("select * from ai_task_presets order by taskType, sortNumber, createdAt")
     fun observePresets(): Flow<List<AiTaskPreset>>
 
+    @Query("select * from ai_skill_profiles order by sortNumber, createdAt")
+    fun observeSkills(): Flow<List<AiSkillProfile>>
+
     @Query("select * from ai_provider_profiles where id = :id")
     suspend fun getProvider(id: String): AiProviderProfile?
 
     @Query("select * from ai_model_profiles where id = :id")
     suspend fun getModel(id: String): AiModelProfile?
+
+    @Query("select * from ai_skill_profiles where id = :id")
+    suspend fun getSkill(id: String): AiSkillProfile?
 
     @Query("select * from ai_model_profiles where providerId = :providerId order by sortNumber, createdAt")
     suspend fun getModelsByProvider(providerId: String): List<AiModelProfile>
@@ -50,6 +57,9 @@ interface AiProfileDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPreset(preset: AiTaskPreset)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSkill(skill: AiSkillProfile)
+
     @Update(onConflict = OnConflictStrategy.REPLACE)
     suspend fun updateProvider(provider: AiProviderProfile)
 
@@ -64,6 +74,12 @@ interface AiProfileDao {
 
     @Query("DELETE FROM ai_model_profiles WHERE id = :modelId")
     suspend fun deleteModel(modelId: String)
+
+    @Query("DELETE FROM ai_skill_profiles WHERE id = :id")
+    suspend fun deleteSkill(id: String)
+
+    @Query("UPDATE ai_skill_profiles SET enabled = :enabled, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun setSkillEnabled(id: String, enabled: Boolean, updatedAt: Long)
 
     @Query("DELETE FROM ai_model_profiles WHERE providerId = :providerId")
     suspend fun deleteModelsByProvider(providerId: String)

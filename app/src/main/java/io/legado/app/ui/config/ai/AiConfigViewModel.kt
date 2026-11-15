@@ -2,9 +2,11 @@ package io.legado.app.ui.config.ai
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.legado.app.R
+import io.legado.app.data.entities.AiSkillProfile
 import io.legado.app.domain.gateway.AiProfileGateway
-import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.AiImageModels
+import io.legado.app.domain.model.AiTaskType
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -88,14 +90,80 @@ class AiConfigViewModel(
                 }
             }
         }
+
+        // Skill 单独订阅：保存 / 删除 / 启停后由 Room Flow 自动回刷列表。
+        viewModelScope.launch {
+            aiProfileGateway.observeSkills().collect { skills ->
+                _uiState.update {
+                    it.copy(
+                        skills = skills.map { skill ->
+                            AiSkillListItemUi(
+                                id = skill.id,
+                                name = skill.name,
+                                description = skill.description,
+                                content = skill.content,
+                                sourceUrl = skill.sourceUrl,
+                                enabled = skill.enabled,
+                                sortNumber = skill.sortNumber,
+                                createdAt = skill.createdAt,
+                                updatedAt = skill.updatedAt
+                            )
+                        }.toImmutableList(),
+                        skillCount = skills.size
+                    )
+                }
+            }
+        }
     }
 
     fun onIntent(intent: AiConfigIntent) {
         when (intent) {
             is AiConfigIntent.SetDefaultModel -> setDefaultModel(intent.modelProfileId)
-            is AiConfigIntent.SaveSkill -> viewModelScope.launch {
+            is AiConfigIntent.SaveSkill -> saveSkill(intent.skill)
+            is AiConfigIntent.DeleteSkill -> deleteSkill(intent.skillId)
+            is AiConfigIntent.SetSkillEnabled -> setSkillEnabled(intent.skillId, intent.enabled)
+        }
+    }
+
+    private fun saveSkill(skill: AiSkillProfile) {
+        if (skill.name.isBlank()) {
+            _effects.tryEmit(AiConfigEffect.ShowMessageRes(R.string.ai_skill_name_required))
+            return
+        }
+        viewModelScope.launch {
+            runCatching {
+                aiProfileGateway.saveSkill(skill)
+            }.onSuccess {
+                _effects.tryEmit(AiConfigEffect.ShowMessageRes(R.string.ai_skill_saved))
+            }.onFailure { error ->
                 _effects.tryEmit(
-                    AiConfigEffect.ShowSkillSaved("Skill draft accepted: ${intent.skill.name}")
+                    AiConfigEffect.ShowMessage(error.message ?: "Failed to save skill")
+                )
+            }
+        }
+    }
+
+    private fun deleteSkill(skillId: String) {
+        viewModelScope.launch {
+            runCatching {
+                aiProfileGateway.deleteSkill(skillId)
+            }.onSuccess {
+                _effects.tryEmit(AiConfigEffect.ShowMessageRes(R.string.ai_skill_deleted))
+            }.onFailure { error ->
+                _effects.tryEmit(
+                    AiConfigEffect.ShowMessage(error.message ?: "Failed to delete skill")
+                )
+            }
+        }
+    }
+
+    private fun setSkillEnabled(skillId: String, enabled: Boolean) {
+        viewModelScope.launch {
+            runCatching {
+                aiProfileGateway.setSkillEnabled(skillId, enabled)
+            }.onFailure { error ->
+                _effects.tryEmit(
+                    AiConfigEffect.ShowMessage(error.message ?: "Failed to update skill")
                 )
             }
         }

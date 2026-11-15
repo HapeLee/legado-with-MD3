@@ -1,19 +1,21 @@
 package io.legado.app.ui.config.ai
 
 import androidx.compose.runtime.Stable
+import io.legado.app.data.entities.AiSkillProfile
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import io.legado.app.ui.main.ai.AiSkillConfig
 
 @Stable
 data class AiConfigUiState(
     val providers: ImmutableList<AiProviderListItemUi> = persistentListOf(),
     val models: ImmutableList<AiModelListItemUi> = persistentListOf(),
+    val skills: ImmutableList<AiSkillListItemUi> = persistentListOf(),
     val currentModelProfileId: String? = null,
     val currentModelName: String = "",
     val providerCount: Int = 0,
     val modelCount: Int = 0,
-    val presetCount: Int = 0
+    val presetCount: Int = 0,
+    val skillCount: Int = 0
 )
 
 @Stable
@@ -43,13 +45,41 @@ data class AiModelListItemUi(
     val text: Boolean = true,
 )
 
-sealed interface AiConfigIntent
-{
+/** Skill 列表项；保留 Room 实体的全部字段，编辑保存时不丢排序与时间戳。 */
+@Stable
+data class AiSkillListItemUi(
+    val id: String,
+    val name: String,
+    val description: String,
+    val content: String,
+    val sourceUrl: String,
+    val enabled: Boolean,
+    val sortNumber: Int,
+    val createdAt: Long,
+    val updatedAt: Long
+) {
+    fun toProfile(): AiSkillProfile = AiSkillProfile(
+        id = id,
+        name = name,
+        description = description,
+        content = content,
+        sourceUrl = sourceUrl,
+        enabled = enabled,
+        sortNumber = sortNumber,
+        createdAt = createdAt,
+        updatedAt = updatedAt
+    )
+}
+
+sealed interface AiConfigIntent {
     data class SetDefaultModel(val modelProfileId: String) : AiConfigIntent
-    data class SaveSkill(val skill: AiSkillConfig) : AiConfigIntent
+    data class SaveSkill(val skill: AiSkillProfile) : AiConfigIntent
+    data class DeleteSkill(val skillId: String) : AiConfigIntent
+    data class SetSkillEnabled(val skillId: String, val enabled: Boolean) : AiConfigIntent
 }
 
 sealed interface AiConfigEffect {
     data class ShowMessage(val message: String) : AiConfigEffect
-    data class ShowSkillSaved(val message: String) : AiConfigEffect
+    /** 用资源 id 走本地化，避免 ViewModel 里硬编码文案。 */
+    data class ShowMessageRes(val resId: Int) : AiConfigEffect
 }

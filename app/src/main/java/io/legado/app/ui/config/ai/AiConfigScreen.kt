@@ -1,10 +1,16 @@
 package io.legado.app.ui.config.ai
 
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -14,15 +20,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.data.entities.AiSkillProfile
 import io.legado.app.feature.settings.search.SearchableSetting
 import io.legado.app.feature.settings.search.SearchableSettingsList
-import io.legado.app.ui.main.ai.AiSkillConfig
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
@@ -74,14 +82,16 @@ fun AiConfigScreen(
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
     var showModelSheet by remember { mutableStateOf(false) }
-    var editingSkill by remember { mutableStateOf<AiSkillConfig?>(null) }
+    var editingSkill by remember { mutableStateOf<AiSkillProfile?>(null) }
 
     LaunchedEffect(Unit) {
         effects.collectLatest { effect ->
             when (effect) {
                 is AiConfigEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
-                is AiConfigEffect.ShowSkillSaved -> snackbarHostState.showSnackbar(effect.message)
+                is AiConfigEffect.ShowMessageRes ->
+                    snackbarHostState.showSnackbar(context.getString(effect.resId))
             }
         }
     }
@@ -170,10 +180,41 @@ fun AiConfigScreen(
 
             item {
                 SplicedColumnGroup(title = stringResource(R.string.ai_skills)) {
-                    ClickableSettingItem(
-                        title = stringResource(R.string.ai_new_skill),
-                        onClick = { editingSkill = AiSkillConfig(name = "", content = "") }
-                    )
+                    state.skills.forEach { skill ->
+                        ClickableSettingItem(
+                            title = skill.name,
+                            description = skill.description.ifBlank {
+                                stringResource(R.string.ai_skill_no_description)
+                            },
+                            trailingContent = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Switch(
+                                        checked = skill.enabled,
+                                        onCheckedChange = {
+                                            onIntent(AiConfigIntent.SetSkillEnabled(skill.id, it))
+                                        }
+                                    )
+                                    IconButton(
+                                        onClick = { onIntent(AiConfigIntent.DeleteSkill(skill.id)) }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = stringResource(R.string.delete)
+                                        )
+                                    }
+                                }
+                            },
+                            onClick = { editingSkill = skill.toProfile() }
+                        )
+                    }
+                    SearchableSetting("ai.ai_new_skill") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.ai_new_skill),
+                            onClick = {
+                                editingSkill = AiSkillProfile(id = "", name = "", content = "")
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -232,30 +273,34 @@ fun AiConfigScreen(
         AppModalBottomSheet(
             show = true,
             onDismissRequest = { editingSkill = null },
-            title = stringResource(R.string.ai_new_skill)
+            title = stringResource(
+                if (skill.id.isBlank()) R.string.ai_new_skill else R.string.ai_edit_skill
+            )
         ) {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Name") },
+                label = { Text(stringResource(R.string.ai_skill_name)) },
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
             OutlinedTextField(
                 value = desc,
                 onValueChange = { desc = it },
-                label = { Text("Description") },
+                label = { Text(stringResource(R.string.ai_skill_description)) },
                 modifier = Modifier.fillMaxWidth()
             )
             OutlinedTextField(
                 value = content,
                 onValueChange = { content = it },
-                label = { Text("Content") },
+                label = { Text(stringResource(R.string.ai_skill_content)) },
                 modifier = Modifier.fillMaxWidth()
             )
             OutlinedTextField(
                 value = url,
                 onValueChange = { url = it },
-                label = { Text("Source URL") },
+                label = { Text(stringResource(R.string.ai_skill_source_url)) },
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
             Button(
@@ -272,6 +317,7 @@ fun AiConfigScreen(
                     )
                     editingSkill = null
                 },
+                enabled = name.isNotBlank(),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(stringResource(R.string.save))

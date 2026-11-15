@@ -15,6 +15,7 @@ import io.legado.app.data.entities.BookCharacterRelation
 import io.legado.app.data.entities.BookKnowledgeEntry
 import io.legado.app.data.entities.BookOutlineNode
 import io.legado.app.domain.gateway.AiMemoryGateway
+import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.gateway.AiToolGateway
 import io.legado.app.domain.gateway.BookKnowledgeGateway
 import io.legado.app.domain.gateway.PrivateAccessGateway
@@ -38,6 +39,7 @@ class AiToolRepository(
     private val aiMemoryGateway: AiMemoryGateway,
     private val bookKnowledgeGateway: BookKnowledgeGateway,
     private val privateAccessGateway: PrivateAccessGateway,
+    private val aiProfileGateway: AiProfileGateway,
 ) : AiToolGateway {
 
     /**
@@ -93,6 +95,7 @@ class AiToolRepository(
             TOOL_SAVE_MEMORY -> saveMemory(args)
             TOOL_RECALL_MEMORY -> recallMemory(args)
             TOOL_DELETE_MEMORY -> deleteMemory(args)
+            TOOL_LOAD_SKILL -> loadSkill(args)
             else -> """{"error":"Unknown tool: ${call.name}"}"""
         }
         AiToolResult(
@@ -100,6 +103,39 @@ class AiToolRepository(
             name = call.name,
             content = content
         )
+    }
+
+    /**
+     * 渐进式 Skill 加载：不传 name 时只返回「名称 + 描述」索引；传 name 才返回
+     * 完整 SKILL.md 正文。只暴露已启用的 Skill，避免长文本常驻系统提示词。
+     */
+    private suspend fun loadSkill(args: JsonObject): String {
+        val skills = aiProfileGateway.listSkills().filter { it.enabled }
+        val name = args.string("name")?.trim().orEmpty()
+        val result: Map<String, Any?> = if (name.isBlank()) {
+            mapOf(
+                "ok" to true,
+                "hint" to "Call load_skill again with a name to load the full SKILL.md body.",
+                "skills" to skills.map { mapOf("name" to it.name, "description" to it.description) }
+            )
+        } else {
+            val skill = skills.firstOrNull { it.name.equals(name, ignoreCase = true) }
+            if (skill == null) {
+                mapOf(
+                    "ok" to false,
+                    "error" to "Skill not found: $name",
+                    "available" to skills.map { it.name }
+                )
+            } else {
+                mapOf(
+                    "ok" to true,
+                    "name" to skill.name,
+                    "description" to skill.description,
+                    "content" to skill.content
+                )
+            }
+        }
+        return GSON.toJson(result)
     }
 
     private fun searchBooks(args: JsonObject): String {
@@ -927,6 +963,7 @@ class AiToolRepository(
         const val TOOL_SAVE_MEMORY = "save_memory"
         const val TOOL_RECALL_MEMORY = "recall_memory"
         const val TOOL_DELETE_MEMORY = "delete_memory"
+        const val TOOL_LOAD_SKILL = "load_skill"
 
         private val confirmationRequiredTools = setOf(
             TOOL_SAVE_AI_ARTIFACT,
@@ -940,6 +977,13 @@ class AiToolRepository(
         )
 
         private val tools = listOf(
+            AiToolDefinition(
+                name = TOOL_LOAD_SKILL,
+                description = "Load a user-installed AI Skill. Call without a name first to list enabled skills (name + short description), then call again with the exact name to load its full SKILL.md body and follow the instructions inside. Only enabled skills are returned.",
+                inputSchema = objectSchema(
+                    "name" to stringSchema("Exact skill name. Leave empty to list all enabled skills.")
+                )
+            ),
             AiToolDefinition(
                 name = TOOL_SEARCH_BOOKS,
                 description = "Search the local bookshelf by book title, author, or source name.",

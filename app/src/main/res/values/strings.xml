@@ -2358,6 +2358,15 @@
     <string name="content_process_insert_action">Insert</string>
     <string name="ai_skills">Skills</string>
     <string name="ai_new_skill">New Skill</string>
+    <string name="ai_edit_skill">Edit Skill</string>
+    <string name="ai_skill_name">Name</string>
+    <string name="ai_skill_description">Description</string>
+    <string name="ai_skill_content">Content (SKILL.md body)</string>
+    <string name="ai_skill_source_url">Source URL</string>
+    <string name="ai_skill_name_required">Skill name is required</string>
+    <string name="ai_skill_saved">Skill saved</string>
+    <string name="ai_skill_deleted">Skill deleted</string>
+    <string name="ai_skill_no_description">No description</string>
     <string name="ai_chat">AI Chat</string>
     <string name="ai_recent_chats">Recent Chats</string>
     <string name="ai_new_chat">New Chat</string>

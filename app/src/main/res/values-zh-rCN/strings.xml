@@ -2414,6 +2414,15 @@
     <string name="content_process_insert_action">插入</string>
     <string name="ai_skills">Skills</string>
     <string name="ai_new_skill">新建 Skill</string>
+    <string name="ai_edit_skill">编辑 Skill</string>
+    <string name="ai_skill_name">名称</string>
+    <string name="ai_skill_description">描述</string>
+    <string name="ai_skill_content">正文（SKILL.md）</string>
+    <string name="ai_skill_source_url">来源链接</string>
+    <string name="ai_skill_name_required">请填写 Skill 名称</string>
+    <string name="ai_skill_saved">Skill 已保存</string>
+    <string name="ai_skill_deleted">Skill 已删除</string>
+    <string name="ai_skill_no_description">暂无描述</string>
     <string name="ai_chat">AI 对话</string>
     <string name="ai_recent_chats">最近对话</string>
     <string name="ai_new_chat">新建对话</string>

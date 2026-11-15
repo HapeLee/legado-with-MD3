@@ -62,6 +62,7 @@ import io.legado.app.data.entities.AiMemory
 import io.legado.app.data.entities.AiModelProfile
 import io.legado.app.data.entities.AiPromptPreset
 import io.legado.app.data.entities.AiProviderProfile
+import io.legado.app.data.entities.AiSkillProfile
 import io.legado.app.data.entities.AiTaskPreset
 import io.legado.app.data.entities.VoiceEffectPreset
 import io.legado.app.data.entities.BgmPoolEntity
@@ -136,7 +137,7 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 135,
+    version = 136,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
@@ -146,7 +147,7 @@ val appDb by lazy {
         RuleSub::class, DictRule::class, KeyboardAssist::class, Server::class,
         SearchContentHistory::class, HomepageModule::class, HomepageCustomSet::class,
         HighlightRule::class, AiProviderProfile::class, AiModelProfile::class,
-        AiTaskPreset::class, AiArtifact::class, AiChatConversation::class,
+        AiTaskPreset::class, AiSkillProfile::class, AiArtifact::class, AiChatConversation::class,
         AiChatMessage::class, AiMemory::class, HighlightTagRule::class, TagGroupRule::class,
         BookContentProcess::class, AiPromptPreset::class, BookCharacterProfile::class,
         BookCharacterEvent::class, BookCharacterRelation::class, BookKnowledgeEntry::class,
@@ -286,6 +287,9 @@ val appDb by lazy {
         // highlight_rules 新增四列夜间颜色：可空（null = 跟随白天那一栏），老规则读回来
         // 四列都是 NULL，解析口径见 HighlightRule.colorsFor。
         AutoMigration(from = 134, to = 135),
+        // ai_skill_profiles 新表：用户安装的 AI Skill（SKILL.md 正文 + 启用开关），
+        // 与 provider / model / preset 一样走 AutoMigration 自动建表。
+        AutoMigration(from = 135, to = 136),
     ]
 )
 abstract class AppDatabase : RoomDatabase() {
