@@ -2790,6 +2790,9 @@
     <string name="switch_to_light_mode_action">切换到浅色模式</string>
     <string name="switch_action">切换</string>
     <string name="cover_albums">封面图集</string>
+    <string name="cover_picker_online_section">在线封面</string>
+    <string name="cover_picker_album_no_images">该封面图集暂无图片</string>
+    <string name="cover_picker_select_cover">选择封面：%1$s</string>
     <string name="manage_cover_albums">管理封面图集</string>
     <string name="select_cover_album">选择封面图集</string>
     <string name="cover_album_none">应用内置封面</string>

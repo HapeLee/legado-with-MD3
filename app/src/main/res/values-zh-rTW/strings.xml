@@ -2571,6 +2571,9 @@
     <string name="switch_to_light_mode_action">切換至淺色模式</string>
     <string name="switch_action">切換</string>
     <string name="cover_albums">封面圖集</string>
+    <string name="cover_picker_online_section">線上封面</string>
+    <string name="cover_picker_album_no_images">此封面圖集暫無圖片</string>
+    <string name="cover_picker_select_cover">選擇封面：%1$s</string>
     <string name="manage_cover_albums">管理封面圖集</string>
     <string name="select_cover_album">選擇封面圖集</string>
     <string name="cover_album_none">應用程式內建封面</string>

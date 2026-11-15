@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.FolderZip
@@ -36,12 +38,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.flow.flowOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
@@ -49,11 +56,16 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
-import io.legado.app.data.entities.SearchBook
+import io.legado.app.data.entities.BookSourcePart
+import io.legado.app.domain.model.BookSearchScope
 import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
+import io.legado.app.ui.book.changecover.ChangeCoverIntent
 import io.legado.app.ui.book.changecover.ChangeCoverViewModel
+import io.legado.app.ui.book.changecover.CoverOption
 import io.legado.app.ui.book.group.GroupEditSheet
+import io.legado.app.ui.book.search.ScopeSelectSheet
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
@@ -63,6 +75,7 @@ import io.legado.app.ui.widget.components.checkBox.AppCheckbox
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
+import io.legado.app.ui.widget.components.tabRow.CardTabRow
 import io.legado.app.ui.widget.components.text.AppText
 import org.koin.androidx.compose.koinViewModel
 
@@ -199,24 +212,30 @@ fun ChangeCoverSheet(
     onSelect: (String) -> Unit,
     viewModel: ChangeCoverViewModel = koinViewModel(key = "cover-$name-$author"),
 ) {
-    val items by remember(show) {
-        // dataFlow 若无条件 collectAsStateWithLifecycle 收集会带来副作用：
-        // ChangeCoverSheet 在编辑页（BookInfoEditContent）里是 show=false 也照样组合的，
-        // callbackFlow 收集体立即执行：查库后若结果 ≤ 1 条就 startSearch() → 用全部启用
-        // 书源并发搜书（每源执行搜索规则/登录检测脚本），这就是“每次点开编辑页都弹某书源
-        // 未登录提示”的根源。
-        // 这里只有用户真正打开换封面面板（show=true）才开始收集/自动搜索；
-        // 隐藏时收集一个空的已完成 Flow，不触发任何网络与脚本。
-        if (show) viewModel.dataFlow else flowOf(emptyList())
-    }.collectAsStateWithLifecycle(initialValue = emptyList<SearchBook>())
-    val isSearching by viewModel.isSearching.collectAsStateWithLifecycle()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val groups by viewModel.enabledGroups.collectAsStateWithLifecycle(initialValue = emptyList())
+    val enabledSources by viewModel.enabledSources
+        .collectAsStateWithLifecycle(initialValue = emptyList<BookSourcePart>())
+    val isDark = LegadoTheme.isDark
+    val useDefaultCover = LocalAppUiConfiguration.current.cover.useDefaultCover
+    var showFilterSheet by rememberSaveable { mutableStateOf(false) }
 
-    LaunchedEffect(name, author) {
-        viewModel.initData(name, author)
+    // 编辑页在 show=false 时同样组合本 Sheet，因此只有真正打开面板才读缓存/自动补搜，
+    // 隐藏时停止搜索，避免对全部启用书源执行搜索规则与登录检测脚本。
+    LaunchedEffect(show, name, author, isDark) {
+        if (show) {
+            viewModel.onIntent(ChangeCoverIntent.Shown(name, author, isDark))
+        }
     }
     DisposableEffect(show) {
         onDispose {
-            viewModel.stopSearch()
+            viewModel.onIntent(ChangeCoverIntent.Hidden)
+        }
+    }
+    LaunchedEffect(state.pendingSelection) {
+        state.pendingSelection?.let { coverUrl ->
+            onSelect(coverUrl)
+            viewModel.onIntent(ChangeCoverIntent.SelectionConsumed)
         }
     }
 
@@ -225,49 +244,179 @@ fun ChangeCoverSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.change_cover_source),
         endAction = {
-            MediumTonalButton(
-                onClick = { viewModel.startOrStopSearch() },
-                icon = if (isSearching) Icons.Default.MoreVert else Icons.Default.Refresh,
-                contentDescription = stringResource(
-                    if (isSearching) R.string.more_menu else R.string.refresh
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                MediumTonalButton(
+                    onClick = { viewModel.onIntent(ChangeCoverIntent.ToggleSearch) },
+                    icon = if (state.isSearching) Icons.Default.MoreVert else Icons.Default.Refresh,
+                    contentDescription = stringResource(
+                        if (state.isSearching) R.string.more_menu else R.string.refresh
+                    )
                 )
-            )
+                MediumTonalButton(
+                    onClick = { showFilterSheet = true },
+                    icon = Icons.Default.FilterList,
+                    contentDescription = stringResource(R.string.screen)
+                )
+            }
         }
     ) {
-        if (isSearching) {
+        if (state.isSearching) {
             AppLinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(12.dp))
         }
-        LazyVerticalGrid(columns = GridCells.Fixed(3), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(items, key = { it.bookUrl + it.originName }) { item ->
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(4.dp))
-                        .clickable {
-                            onSelect(item.coverUrl.orEmpty())
+        if (useDefaultCover) {
+            AppText(
+                text = stringResource(R.string.use_default_cover_s),
+                style = LegadoTheme.typography.bodySmall
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(3),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                CoverSectionTitle(stringResource(R.string.cover_albums))
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                val defaultCoverLabel = stringResource(R.string.default_cover)
+                val tabTitles = remember(state.albums, defaultCoverLabel) {
+                    listOf(defaultCoverLabel) + state.albums.map { it.name }
+                }
+                CardTabRow(
+                    tabTitles = tabTitles,
+                    selectedTabIndex = state.selectedTabIndex.coerceIn(0, tabTitles.lastIndex),
+                    onTabSelected = { index ->
+                        viewModel.onIntent(ChangeCoverIntent.SelectTab(index))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    // 标签少时等分占满宽度；标签多时启用横划，避免被挤成省略号。
+                    scrollable = tabTitles.size > 3,
+                )
+            }
+            if (state.selectedTabIndex == 0) {
+                // 默认封面 tab 只给一张占位封面；下方不显示重复文案。
+                state.options.firstOrNull { it.isDefault }?.let { option ->
+                    item(key = option.key) {
+                        CoverOptionItem(option, name, author, showLabel = false) {
+                            viewModel.onIntent(ChangeCoverIntent.SelectOption(option))
                         }
-                        .padding(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    CoilBookCover(
-                        name = item.name,
-                        author = item.author,
-                        path = item.coverUrl,
-                        sourceOrigin = item.origin,
-                        modifier = Modifier
-                            .width(112.dp)
-                            .aspectRatio(5f / 7f),
-                    )
+                    }
+                }
+            } else {
+                val albumOptions = state.options.filter { it.albumPath != null }
+                items(albumOptions, key = { it.key }) { option ->
+                    CoverOptionItem(option, name, author, showLabel = false) {
+                        viewModel.onIntent(ChangeCoverIntent.SelectOption(option))
+                    }
+                }
+                if (albumOptions.isEmpty()) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        AppText(
+                            text = stringResource(R.string.cover_picker_album_no_images),
+                            style = LegadoTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                CoverSectionTitle(stringResource(R.string.cover_picker_online_section))
+            }
+            val onlineOptions = state.options.filter { !it.isDefault && it.albumPath == null }
+            items(onlineOptions, key = { it.key }) { option ->
+                CoverOptionItem(option, name, author) {
+                    viewModel.onIntent(ChangeCoverIntent.SelectOption(option))
+                }
+            }
+            if (onlineOptions.isEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
                     AppText(
-                        text = item.originName,
-                        style = LegadoTheme.typography.labelSmallEmphasized,
-                        maxLines = 2
+                        text = stringResource(R.string.empty),
+                        style = LegadoTheme.typography.bodySmall
                     )
                 }
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
+    }
+
+    // 复用换源页的范围选择组件：onApplyScope 启用草稿模式，确认时才提交，
+    // 因此下面三个即时切换回调不会被调用。
+    ScopeSelectSheet(
+        show = showFilterSheet,
+        onDismissRequest = { showFilterSheet = false },
+        isAll = state.scope.isAll,
+        onSelectAll = {},
+        groups = groups,
+        selectedGroups = state.scope.displayNames,
+        onToggleGroup = {},
+        sources = enabledSources,
+        selectedSources = state.scope.sourceUrls,
+        onToggleSource = {},
+        isSourceScope = state.scope.isSource,
+        onApplyScope = { selection ->
+            viewModel.onIntent(
+                ChangeCoverIntent.ApplyScope(
+                    groupNames = selection.groupNames,
+                    sources = selection.sources.map {
+                        BookSearchScope.ScopeSourceItem(it.bookSourceName, it.bookSourceUrl)
+                    },
+                    isSourceScope = selection.isSourceScope,
+                )
+            )
+            showFilterSheet = false
+        }
+    )
+}
+
+@Composable
+private fun CoverSectionTitle(text: String) {
+    AppText(
+        text = text,
+        modifier = Modifier.fillMaxWidth(),
+        textAlign = TextAlign.Center,
+        style = LegadoTheme.typography.labelMediumEmphasized,
+    )
+}
+
+@Composable
+private fun CoverOptionItem(
+    option: CoverOption,
+    name: String,
+    author: String,
+    showLabel: Boolean = true,
+    onClick: () -> Unit,
+) {
+    val selectLabel = stringResource(R.string.cover_picker_select_cover, option.label)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(4.dp))
+            .semantics(mergeDescendants = true) {
+                contentDescription = selectLabel
+                role = Role.Button
+            }
+            .clickable(onClick = onClick)
+            .padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        CoilBookCover(
+            name = name,
+            author = author,
+            path = option.coverUrl,
+            sourceOrigin = option.origin.takeIf { it.isNotEmpty() },
+            modifier = Modifier
+                .width(112.dp)
+                .aspectRatio(5f / 7f),
+        )
+        if (showLabel) {
+            AppText(
+                text = option.label,
+                style = LegadoTheme.typography.labelSmallEmphasized,
+                maxLines = 2
+            )
+        }
     }
 }
 
