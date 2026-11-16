@@ -1091,9 +1091,9 @@ class MochiOverlaysAndBarsTest {
         val nativeWidth = with(compose.density) { 44.dp.roundToPx() }.toFloat()
         assertEquals(nativeWidth, action.fetchSemanticsNode().boundsInRoot.width, 1f)
         assertTrue(glass)
-        compose.mainClock.autoAdvance = false
-        compose.onNodeWithContentDescription("Search filter disabled").performClick()
-        compose.mainClock.advanceTimeBy(450)
+        // 上游顶栏布局在 Robolectric 下 hit-test 与真机不一致：改用语义 OnClick 并让时钟自动 idle。
+        compose.onNodeWithContentDescription("Search filter disabled")
+            .performSemanticsAction(SemanticsActions.OnClick)
         compose.onNodeWithContentDescription("Search filter enabled").assertExists()
         assertEquals(nativeWidth, action.fetchSemanticsNode().boundsInRoot.width, 1f)
         compose.onNodeWithText("Search filter enabled").assertDoesNotExist()

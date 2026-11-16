@@ -68,6 +68,8 @@ object LocalPreferencesKeys {
     val CHANGE_SOURCE_LOAD_TOC = booleanPreferencesKey("changeSourceLoadToc")
     val CHANGE_SOURCE_LOAD_WORD_COUNT = booleanPreferencesKey("changeSourceLoadWordCount")
     val CHANGE_SOURCE_SEARCH_SCOPE = stringPreferencesKey("changeSourceSearchScope")
+    // 封面换源的书源范围，独立于换源 searchScope，两者互不联动
+    val CHANGE_COVER_SEARCH_SCOPE = stringPreferencesKey("changeCoverSearchScope")
 
     // Book source check options
     val CHECK_SOURCE_TIMEOUT = longPreferencesKey("checkSourceTimeout")

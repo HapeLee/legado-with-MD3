@@ -4,6 +4,7 @@ import android.content.Intent
 import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.core.net.toUri
+import io.legado.app.data.entities.Book
 import io.legado.app.domain.model.manga.MangaTranslationPage
 import io.legado.app.feature.manga.translation.MangaTranslationIntent
 import io.legado.app.feature.manga.translation.MangaTranslationSheet
@@ -343,6 +344,11 @@ fun MangaReaderRouteScreen(
         ReaderBookSheetRoute(
             show = true,
             bookUrl = state.bookUrl,
+            book = Book(
+                bookUrl = state.bookUrl,
+                name = state.bookName,
+                author = state.bookAuthor,
+            ),
             initialTab = ReaderBookSheetTab.Toc,
             currentChapterIndex = state.pendingChapterIndex ?: state.chapterIndex,
             onDismissRequest = { viewModel.onIntent(MangaReaderIntent.DismissSheet) },

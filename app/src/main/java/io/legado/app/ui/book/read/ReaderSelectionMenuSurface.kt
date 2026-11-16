@@ -59,13 +59,13 @@ internal class ReaderSelectionBackdrop(private val layer: GraphicsLayer) : Backd
         density: Density,
         coordinates: LayoutCoordinates?,
         layerBlock: (GraphicsLayerScope.() -> Unit)?,
-        downscaleFactor: Int,
+        downscaleFactor: Float,
     ) {
         val source = sourceCoordinates?.takeIf { it.isAttached } ?: return
         val target = coordinates?.takeIf { it.isAttached } ?: return
         val offset = target.positionOnScreen() - source.positionOnScreen()
         if (!offset.isSpecified) return
-        val scaleFactor = 1f / downscaleFactor.coerceAtLeast(1)
+        val scaleFactor = 1f / downscaleFactor.coerceAtLeast(1f)
         withTransform({
             translate(-offset.x * scaleFactor, -offset.y * scaleFactor)
             scale(scaleFactor, scaleFactor, Offset.Zero)

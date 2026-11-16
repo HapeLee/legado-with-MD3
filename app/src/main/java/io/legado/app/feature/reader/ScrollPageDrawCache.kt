@@ -26,6 +26,11 @@ internal class ScrollPageDrawData(val page: ReaderPage) {
     // 背景图不许开抗锯齿：九宫格相邻两格各画一条半覆盖的边会合成出一条透底的切割线。
     val textBackgroundPaint = Paint(Paint.FILTER_BITMAP_FLAG)
     val decorationDrawCache = ReaderPageDecorationDrawCache.create(page)
+    /** 可以整段画的正文。只跟排版元素有关，与本页的命中、朗读状态无关。 */
+    val textDrawRuns: Map<ReaderElement.Text, ReaderTextDrawRun> =
+        buildMergedTextRuns(page.elements)
+    /** 整段绘制时临时承载字距的画笔，避免改动 [paints] 里共用的画笔。 */
+    val mergedRunPaint = Paint()
 
     /** Text-background bitmaps are owned by ReaderTextBackgroundLoader's byte-bounded LRU. */
     val textBackgroundRevision = mutableIntStateOf(0)

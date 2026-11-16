@@ -1,6 +1,9 @@
 package io.legado.app.ui.widget.components
 
 import android.app.Application
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
@@ -134,19 +137,29 @@ class CouiComponentLibraryTest {
         )
     }
 
+    /**
+     * 多选栏只在 `AppScaffold` 的浮层槽位里采样正文：槽位外的正文采样源会包含栏自身，
+     * COUI 玻璃把源图层画进自己的 patch 后形成自引用，hwui 会栈溢出（native 闪退）。
+     * 这里走真实调用路径（浮层槽位 + 正文源），只锁语义与可点性。
+     */
     @Test
-    fun selectionBarKeepsActionSemanticsUnderCoui() {
+    fun selectionBarKeepsActionSemanticsInCouiPageOverlay() {
         val context = RuntimeEnvironment.getApplication()
         var selectAllClicks = 0
         var primaryClicks = 0
         setCouiContent {
-            SelectionBottomBar(
-                modifier = Modifier.width(320.dp),
-                onSelectAll = { selectAllClicks++ },
-                onSelectInvert = {},
-                primaryAction = ActionItem(text = "删除", icon = Icons.Default.Delete) { primaryClicks++ },
-                secondaryActions = listOf(ActionItem(text = "收藏") {}),
-            )
+            AppScaffold(
+                topBar = { Box(Modifier.fillMaxWidth().height(56.dp)) },
+                overlay = {
+                    SelectionBottomBar(
+                        modifier = Modifier.width(320.dp),
+                        onSelectAll = { selectAllClicks++ },
+                        onSelectInvert = {},
+                        primaryAction = ActionItem(text = "删除", icon = Icons.Default.Delete) { primaryClicks++ },
+                        secondaryActions = listOf(ActionItem(text = "收藏") {}),
+                    )
+                },
+            ) {}
         }
         compose.onNode(hasContentDescription(context.getString(R.string.select_all)) and hasClickAction())
             .assertIsDisplayed()

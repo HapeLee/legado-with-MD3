@@ -35,9 +35,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,7 +63,10 @@ import io.legado.app.ui.theme.LocalLegadoThemeColors
 import io.legado.app.ui.theme.ProvideAppContentColor
 import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.theme.ProvidePopupThemeOverride
+import io.legado.app.ui.theme.ThemeOverrideState
 import io.legado.app.ui.theme.rememberMochiOverlayBackdrop
+import io.legado.app.ui.theme.rememberPopupThemeOverride
 import io.legado.app.ui.widget.components.LocalAppGlassOverlay
 import io.legado.app.ui.widget.components.mochi.MochiOverlayAccessibility
 import io.legado.app.ui.widget.components.mochi.mochiOverlayContentModifier
@@ -80,24 +85,30 @@ import ui.feice.mochi.theme.MochiTheme
 private val MochiModalTopShape = ContinuousRoundedRectangle(32.dp, 32.dp, 0.dp, 0.dp, MochiContinuity)
 
 /**
- * 只在 HyperOS 4 开关关闭时使用窗口级 sheet。它的内容虽继承 Scaffold 的 local，但并不在
- * root host 中，必须清掉宿主信号，避免子菜单注册到画不到的地方；玻璃 sheet 与 root host 同根，
- * 保留信号。
+ * 玻璃 / 窗口 sheet 的内容包装。窗口级 sheet 的内容继承调用点 locals、但不在 root host
+ * 中，必须清掉宿主信号避免子菜单注册到画不到的地方；玻璃 sheet 与 root host 同根，保留
+ * 信号，并由 ProvidePopupThemeOverride 重放宿主侧捕获的页面级色板覆盖。
  */
 @Composable
 private fun MiuixSheetLocals(
     useGlassContainer: Boolean,
     sheetContentColor: Color,
+    themeOverride: State<ThemeOverrideState?>,
     content: @Composable () -> Unit,
 ) {
-    ProvideAppDensity {
-        ProvideAppContentColor(sheetContentColor) {
-            CompositionLocalProvider(
-                LocalHasMiuixPopupHost provides useGlassContainer,
-                LocalAppGlassOverlay provides LocalAppGlassOverlay.current.takeIf { useGlassContainer },
-                LocalMiuixBarBackdrop provides LocalMiuixBarBackdrop.current.takeIf { useGlassContainer },
-            ) {
-                content()
+    // 玻璃 sheet 的内容由 root popup host 的独立 composition 执行，那里只继承 AppTheme
+    // 的全局色板，看不到页面级 ProvideColorSchemeOverride，必须在这里重新提供。
+    // 放在最外层，让下面的 ContentColor 与 host 信号保持更高优先级。
+    ProvidePopupThemeOverride(themeOverride) {
+        ProvideAppDensity {
+            ProvideAppContentColor(sheetContentColor) {
+                CompositionLocalProvider(
+                    LocalHasMiuixPopupHost provides useGlassContainer,
+                    LocalAppGlassOverlay provides LocalAppGlassOverlay.current.takeIf { useGlassContainer },
+                    LocalMiuixBarBackdrop provides LocalMiuixBarBackdrop.current.takeIf { useGlassContainer },
+                ) {
+                    content()
+                }
             }
         }
     }
@@ -222,6 +233,8 @@ fun AppModalBottomSheet(
 
     when (composeEngine) {
         ComposeEngine.Miuix -> {
+            // 在宿主 composition 里捕获页面级色板覆盖，交给内容侧带到 root popup host。
+            val themeOverride = rememberPopupThemeOverride()
             val themeSettings = LocalAppUiConfiguration.current.theme
             // 开关打开后只走玻璃；无玻璃设施的独立窗口（如朗读悬浮窗）才退回窗口面板。
             val useGlassContainer = themeSettings.useHyperOs4Components &&
@@ -231,7 +244,7 @@ fun AppModalBottomSheet(
             val insideMargin = if (contentPaddingEnabled) DpSize(16.dp, 0.dp) else DpSize(0.dp, 0.dp)
             val wrappedStartAction: (@Composable () -> Unit)? = startAction?.let { action ->
                 {
-                    MiuixSheetLocals(useGlassContainer, sheetContentColor) {
+                    MiuixSheetLocals(useGlassContainer, sheetContentColor, themeOverride) {
                         Box(
                             modifier = if (contentPaddingEnabled) Modifier
                             else Modifier.padding(start = 16.dp),
@@ -241,7 +254,7 @@ fun AppModalBottomSheet(
             }
             val wrappedEndAction: (@Composable () -> Unit)? = endAction?.let { action ->
                 {
-                    MiuixSheetLocals(useGlassContainer, sheetContentColor) {
+                    MiuixSheetLocals(useGlassContainer, sheetContentColor, themeOverride) {
                         Box(
                             modifier = if (contentPaddingEnabled) Modifier
                             else Modifier.padding(end = 16.dp),
@@ -249,8 +262,11 @@ fun AppModalBottomSheet(
                     }
                 }
             }
+            // 玻璃 sheet 的内容在 root dialog host 的独立组合里执行。用 State 持有最新
+            // content，让该组合订阅宿主重组，避免只显示注册瞬间的快照；窗口分支同值幂等。
+            val currentSheetContent by rememberUpdatedState(content)
             val sheetBody: @Composable () -> Unit = {
-                MiuixSheetLocals(useGlassContainer, sheetContentColor) {
+                MiuixSheetLocals(useGlassContainer, sheetContentColor, themeOverride) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -264,8 +280,9 @@ fun AppModalBottomSheet(
                             .let { contentModifier ->
                                 if (animateContentSize) contentModifier.animateContentSize() else contentModifier
                             },
-                        content = content
-                    )
+                    ) {
+                        currentSheetContent()
+                    }
                 }
             }
             if (useGlassContainer) {

@@ -442,15 +442,16 @@ fun BookshelfScreen(
             }
     }
 
-    val currentTabGroupId by remember {
+    // pagerState.settledPage 是高频快照读，留在 derivedStateOf 内以免扩散到整个 Screen 作用域；
+    // remember 的 key 必须覆盖 lambda 读到的 uiState 字段，否则会永久缓存首次组合的 uiState。
+    val currentTabGroupId by remember(uiState.groups) {
         derivedStateOf {
             uiState.groups.getOrNull(pagerState.settledPage)?.groupId ?: BookGroup.IdAll
         }
     }
-    val searchGroupExists by remember {
-        derivedStateOf { uiState.allGroups.any { it.groupId == uiState.selectedGroupId } }
-    }
-    val currentGroupId by remember {
+    val searchGroupExists =
+        uiState.allGroups.any { it.groupId == uiState.selectedGroupId }
+    val currentGroupId by remember(uiState.isSearch, uiState.selectedGroupId, searchGroupExists) {
         derivedStateOf {
             if (uiState.isSearch && searchGroupExists) {
                 uiState.selectedGroupId
@@ -459,7 +460,7 @@ fun BookshelfScreen(
             }
         }
     }
-    val isUsingStandaloneSearchGroup by remember {
+    val isUsingStandaloneSearchGroup by remember(uiState.isSearch, uiState.groups) {
         derivedStateOf {
             uiState.isSearch && uiState.groups.none { it.groupId == currentGroupId }
         }
@@ -480,7 +481,7 @@ fun BookshelfScreen(
             }
         }
     }
-    val currentGroupBookCount by remember { derivedStateOf { uiState.currentGroupBookCount } }
+    val currentGroupBookCount = uiState.currentGroupBookCount
 
     val clearSelection = {
         onIntent(BookshelfIntent.ClearSelection)
@@ -507,7 +508,7 @@ fun BookshelfScreen(
         }
     }
 
-    val currentGroupName by remember { derivedStateOf { uiState.currentGroupName } }
+    val currentGroupName = uiState.currentGroupName
 
     PredictiveBackHandler(enabled = bookGroupStyle == 2 && !isInFolderRoot && !isEditMode) { progress ->
         try {
@@ -538,23 +539,19 @@ fun BookshelfScreen(
     } else {
         uiState.settings.bookshelfFolderLayoutListPortrait
     }
-    val currentMenuGroupId by remember {
+    val currentMenuGroupId by remember(uiState.isSearch, uiState.selectedGroupId) {
         derivedStateOf { if (uiState.isSearch) uiState.selectedGroupId else currentTabGroupId }
     }
-    val editStickySummary by remember {
-        derivedStateOf {
-            if (uiState.isEditMode) {
-                BookshelfEditStickySummary(
-                    selectedCount = uiState.selectedBookUrls.size,
-                    currentGroupTotalCount = currentGroupBookCount,
-                    groupName = currentGroupName,
-                    showGroupName = uiState.bookGroupStyle != 0
-                )
-            } else {
-                null
-            }
-        }
-    }
+    // 分组标签栏只在 bookGroupStyle == 0（Tab）时展示，见下方 AppTabRow。标签可见时，
+    // 编辑态的「已选 / 共」已在 TopBar subtitle，切分组也有标签栏入口，吸顶条是冗余的；
+    // 标签隐藏（Hide Tab / Folder）时才由它补上组名与分组菜单。
+    val editStickySummary = buildBookshelfEditSticky(
+        isEditMode = uiState.isEditMode,
+        bookGroupStyle = uiState.bookGroupStyle,
+        selectedCount = uiState.selectedBookUrls.size,
+        currentGroupTotalCount = currentGroupBookCount,
+        groupName = currentGroupName,
+    )
 
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val showAlternateSearchInMenu = LegadoTheme.composeEngine == ComposeEngine.Coui ||
@@ -1143,7 +1140,7 @@ fun BookshelfScreen(
                                 style = LegadoTheme.typography.labelSmallEmphasized
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            if (summary.showGroupName && !summary.groupName.isNullOrBlank()) {
+                            if (!summary.groupName.isNullOrBlank()) {
                                 TextCard(
                                     text = summary.groupName,
                                     textStyle = LegadoTheme.typography.labelSmallEmphasized,
@@ -1163,34 +1160,32 @@ fun BookshelfScreen(
                     }
 
 
-                    if (summary.showGroupName) {
-                        BookshelfGroupMenu(
-                            groups = uiState.groups,
-                            currentGroupId = currentMenuGroupId,
-                            expanded = showGroupMenu,
-                            modifier = Modifier.matchParentSize(),
-                            onDismiss = { onIntent(BookshelfIntent.DismissOverlay) },
-                            onSelect = { group ->
-                                val targetIndex =
-                                    uiState.groups.indexOfFirst { it.groupId == group.groupId }
-                                if (targetIndex >= 0) {
-                                    scope.launch {
-                                        if (pagerState.currentPage != targetIndex) {
-                                            pagerState.animateScrollToPage(targetIndex)
-                                        }
+                    BookshelfGroupMenu(
+                        groups = uiState.groups,
+                        currentGroupId = currentMenuGroupId,
+                        expanded = showGroupMenu,
+                        modifier = Modifier.matchParentSize(),
+                        onDismiss = { onIntent(BookshelfIntent.DismissOverlay) },
+                        onSelect = { group ->
+                            val targetIndex =
+                                uiState.groups.indexOfFirst { it.groupId == group.groupId }
+                            if (targetIndex >= 0) {
+                                scope.launch {
+                                    if (pagerState.currentPage != targetIndex) {
+                                        pagerState.animateScrollToPage(targetIndex)
                                     }
                                 }
-                                if (uiState.isSearch ||
-                                    uiState.selectedGroupId != group.groupId
-                                ) {
-                                    onIntent(BookshelfIntent.ChangeGroup(group.groupId))
-                                }
-                                if (bookGroupStyle == 2) {
-                                    onIntent(BookshelfIntent.SetInFolderRoot(false))
-                                }
-                            },
-                        )
-                    }
+                            }
+                            if (uiState.isSearch ||
+                                uiState.selectedGroupId != group.groupId
+                            ) {
+                                onIntent(BookshelfIntent.ChangeGroup(group.groupId))
+                            }
+                            if (bookGroupStyle == 2) {
+                                onIntent(BookshelfIntent.SetInFolderRoot(false))
+                            }
+                        },
+                    )
                 }
             }
 
@@ -1558,12 +1553,31 @@ private fun BookshelfOverlays(
     )
 }
 
-private data class BookshelfEditStickySummary(
+internal data class BookshelfEditStickySummary(
     val selectedCount: Int,
     val currentGroupTotalCount: Int,
     val groupName: String?,
-    val showGroupName: Boolean,
 )
+
+/**
+ * 编辑态吸顶条只在分组标签栏隐藏时出现。
+ *
+ * `bookGroupStyle == 0`（Tab）会渲染 AppTabRow，编辑态的「已选 / 共」也已在 TopBar
+ * subtitle，此时吸顶条是重复信息；Hide Tab / Folder 没有标签栏，才需要它提供组名与
+ * 分组菜单入口，TopBar 副标题同时留空。标签可见时的分组菜单由 AppTabRow 的
+ * trailingAction 提供，功能不会丢失。承载规则见 `bookshelfEditInfoUsesSticky`。
+ */
+internal fun buildBookshelfEditSticky(
+    isEditMode: Boolean,
+    bookGroupStyle: Int,
+    selectedCount: Int,
+    currentGroupTotalCount: Int,
+    groupName: String?,
+): BookshelfEditStickySummary? = if (!bookshelfEditInfoUsesSticky(isEditMode, bookGroupStyle)) {
+    null
+} else {
+    BookshelfEditStickySummary(selectedCount, currentGroupTotalCount, groupName)
+}
 
 /**
  * 私密分组的锁定态内容区。

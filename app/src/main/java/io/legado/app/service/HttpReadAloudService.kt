@@ -485,10 +485,10 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     /**
-     * 等到这一格**有音频可播**。就绪只看正式名非空，不看 [hasSpeakFile]：引擎拒掉的那一格
-     * （纯符号段只回 `TTS Generation Failed`）合成不出人声，循环给它的只有 [createSilentSound]
-     * 那份占位，而 [hasSpeakFile] 有意不把占位算成命中（占位是失败留下的空壳，认了等于把真失败的
-     * 句子永久静音）。两边共用 hasSpeakFile 的话这一格永远不就绪，续播要白等满
+     * 等到这一格**有音频可播**。就绪只看正式名非空，不看 [hasSpeakFile]：无可发音字符的那一格
+     * （空行、只剩角色标记、`——`/`……` 这类纯符号段）不请求引擎，循环给它的只有
+     * [createSilentSound] 那份占位，而 [hasSpeakFile] 有意不把占位算成命中（占位是空壳，认了等于
+     * 把这一句永久静音）。两边共用 hasSpeakFile 的话这一格永远不就绪，续播要白等满
      * [SPEAK_FILE_WAIT_MILLIS] 才退回 [play]，那段时间播放停死、引擎侧一个请求也没有，
      * 退回后整章重新请求一遍。
      *

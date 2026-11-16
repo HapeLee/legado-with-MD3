@@ -1,12 +1,12 @@
 package io.legado.app.ui.widget.components
 
 import android.os.Build
-import androidx.activity.compose.LocalActivity
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
@@ -34,21 +34,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.itos.coui.backdrop.CouiBackdrop
 import com.itos.coui.floatingtoolbar.CouiFloatingToolbarDefaults
 import com.itos.coui.floatingtoolbar.FloatingToolbar
 import com.itos.coui.floatingtoolbar.FloatingToolbarItem
-import com.itos.coui.menu.rememberCouiWindowBackdrop
 import io.legado.app.R
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.button.series.MediumPlainButton
+import io.legado.app.ui.widget.components.coui.LocalCouiPageBackdrop
 import io.legado.app.ui.widget.components.coui.rememberCouiCapsuleRenderer
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
@@ -64,6 +64,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.basic.FloatingToolbar as MiuixFloatingToolbar
 import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
 import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
+import top.yukonga.miuix.kmp.basic.IconButtonDefaults as MiuixIconButtonDefaults
 
 data class SelectionActions(
     val primaryAction: ActionItem,
@@ -106,12 +107,14 @@ fun SelectionBottomBar(
         )
         .scale(if (compact) 0.85f else 1f)
 
-    // COUI：走原生胶囊操作栏。它需要所属页面的背景采样源（AppTheme 的 ProvideCouiMenuBackdrop
-    // 挂在窗口内容根上），且采样源必须和操作栏在同一窗口；弹层（ModalBottomSheet / Dialog 的独立窗口）
-    // 里沿用页面窗口的 backdrop 会跨窗口采样，直接闪退，因此退回 M3 工具栏。
-    val inActivityWindow = LocalView.current.rootView === LocalActivity.current?.window?.decorView
-    if (LegadoTheme.composeEngine == ComposeEngine.Coui && inActivityWindow) {
-        val backdrop = rememberCouiWindowBackdrop()
+    // COUI：走原生胶囊操作栏。玻璃材质会把采样源图层画进自己的 patch，所以采样源必须**不含本栏**：
+    // 唯一合法的来源是 AppScaffold 的浮层槽位（`overlay`）提供的正文源——本栏画在该源之外，
+    // 二者是兄弟节点。若改用窗口级菜单源（AppTheme 的 ProvideCouiMenuBackdrop，录的是整页内容，
+    // 本栏就在其中），源图层会成为自己的子节点，hwui 的 prepareTree 会无限递归直到 RenderThread
+    // 栈溢出（native 闪退，Java 层拦不到）。弹层（ModalBottomSheet / Dialog）里没有这个槽位，
+    // 保持 M3 工具栏。
+    if (LegadoTheme.composeEngine == ComposeEngine.Coui) {
+        val backdrop = LocalCouiPageBackdrop.current
         if (backdrop != null && ThemeResolver.isCouiSupported()) {
             CouiSelectionBottomBar(
                 modifier = safeModifier,
@@ -127,56 +130,14 @@ fun SelectionBottomBar(
     }
 
     when (LegadoTheme.composeEngine) {
-        ComposeEngine.Miuix -> {
-            val selectAllDescription = stringResource(R.string.select_all)
-            val invertSelectionDescription = stringResource(R.string.invert_selection)
-            val moreActionsDescription = stringResource(R.string.more_menu)
-            MiuixFloatingToolbar(
-                modifier = safeModifier
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(8.dp)
-                ) {
-                    MediumPlainButton(
-                        onClick = onSelectAll,
-                        icon = Icons.Default.SelectAll,
-                        contentDescription = selectAllDescription,
-                    )
-                    MediumPlainButton(
-                        onClick = onSelectInvert,
-                        icon = Icons.Default.Refresh,
-                        contentDescription = invertSelectionDescription,
-                    )
-
-                    // 前导动作（可选）：反选之后、主操作之前
-                    leadingAction?.let { action ->
-                        MediumPlainButton(
-                            onClick = action.onClick,
-                            icon = action.icon,
-                            contentDescription = action.text,
-                        )
-                    }
-
-                    MiuixIconButton(
-                        onClick = primaryAction.onClick,
-                        backgroundColor = MiuixTheme.colorScheme.secondaryContainer,
-                        minWidth = 64.dp
-                    ) {
-                        MiuixIcon(
-                            imageVector = primaryAction.icon,
-                            contentDescription = primaryAction.text,
-                            tint = MiuixTheme.colorScheme.onSecondaryContainer
-                        )
-                    }
-
-                    if (secondaryActions.isNotEmpty()) {
-                        SelectionMoreMenu(secondaryActions, moreActionsDescription)
-                    }
-                }
-            }
-        }
+        ComposeEngine.Miuix -> MiuixSelectionBottomBar(
+            modifier = safeModifier,
+            onSelectAll = onSelectAll,
+            onSelectInvert = onSelectInvert,
+            primaryAction = primaryAction,
+            secondaryActions = secondaryActions,
+            leadingAction = leadingAction,
+        )
         ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> MaterialSelectionBottomBar(
             modifier = safeModifier,
             onSelectAll = onSelectAll,
@@ -185,6 +146,89 @@ fun SelectionBottomBar(
             secondaryActions = secondaryActions,
             leadingAction = leadingAction,
         )
+    }
+}
+
+/** Miuix 栏的胶囊圆角：组件库 catalog 示例（`AppContent` 里的 FloatingToolbar）用 20dp。 */
+private val MiuixSelectionBarCornerRadius = 20.dp
+
+/**
+ * Miuix 原生浮动操作栏，形态对齐组件库 catalog：`primary` 实色胶囊 + `onPrimary` 图标，
+ * 内容区 8dp padding、动作间 8dp，每个动作都是原生 [MiuixIconButton]（40dp、无底色）。
+ *
+ * 与其它引擎的差异是刻意的：这里不再借 M3 的 series 按钮 —— 那套按钮会在这条 primary 胶囊上
+ * 保留自己的底色/强调色，观感就退回成「和 M3 差不多」；栏内也不区分主次，主操作不再用
+ * `secondaryContainer` 强调。点击顺序与无障碍名称和其它引擎一致。
+ */
+@Composable
+private fun MiuixSelectionBottomBar(
+    modifier: Modifier,
+    onSelectAll: () -> Unit,
+    onSelectInvert: () -> Unit,
+    primaryAction: ActionItem,
+    secondaryActions: List<ActionItem>,
+    leadingAction: ActionItem?,
+) {
+    val selectAllDescription = stringResource(R.string.select_all)
+    val invertSelectionDescription = stringResource(R.string.invert_selection)
+    val moreActionsDescription = stringResource(R.string.more_menu)
+    val iconTint = MiuixTheme.colorScheme.onPrimary
+    MiuixFloatingToolbar(
+        modifier = modifier,
+        color = MiuixTheme.colorScheme.primary,
+        cornerRadius = MiuixSelectionBarCornerRadius,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(8.dp)
+        ) {
+            MiuixSelectionAction(onSelectAll, Icons.Default.SelectAll, selectAllDescription, iconTint)
+            MiuixSelectionAction(onSelectInvert, Icons.Default.Refresh, invertSelectionDescription, iconTint)
+
+            // 前导动作（可选）：反选之后、主操作之前
+            leadingAction?.let { action ->
+                MiuixSelectionAction(action.onClick, action.icon, action.text, iconTint)
+            }
+
+            MiuixSelectionAction(primaryAction.onClick, primaryAction.icon, primaryAction.text, iconTint)
+
+            if (secondaryActions.isNotEmpty()) {
+                SelectionMoreMenu(
+                    secondaryActions = secondaryActions,
+                    title = moreActionsDescription,
+                    trigger = {
+                        // 纯展示：唯一可点节点由 AppActionMenu(Row) 提供，这里只画图标；
+                        // 尺寸对齐原生 IconButton，和左右动作同高。
+                        Box(
+                            modifier = this.modifier.defaultMinSize(
+                                MiuixIconButtonDefaults.MinWidth,
+                                MiuixIconButtonDefaults.MinHeight,
+                            ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            MiuixIcon(
+                                imageVector = AppIcons.MoreVert,
+                                contentDescription = moreActionsDescription,
+                                tint = iconTint,
+                            )
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiuixSelectionAction(
+    onClick: () -> Unit,
+    icon: ImageVector,
+    contentDescription: String,
+    tint: Color,
+) {
+    MiuixIconButton(onClick = onClick) {
+        MiuixIcon(imageVector = icon, contentDescription = contentDescription, tint = tint)
     }
 }
 

@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -241,6 +242,9 @@ private fun ActionButton(
         AppText(
             text = label,
             style = LegadoTheme.typography.labelSmall,
+            // 下方文字与按钮的 contentDescription 重复，清掉语义只留按钮一个焦点，
+            // 避免“设置/后台”这类入口被朗读两遍。
+            modifier = Modifier.clearAndSetSemantics { },
             // 底栏有五个入口，标签在窄屏上会换行；单行 + 省略号保证按钮行高一致
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

@@ -18,10 +18,11 @@ import top.yukonga.miuix.kmp.blur.LayerBackdrop
 import top.yukonga.miuix.kmp.blur.ProgressiveBlur
 import top.yukonga.miuix.kmp.blur.blur
 import top.yukonga.miuix.kmp.blur.drawBackdrop
-import top.yukonga.miuix.kmp.blur.highlight.Highlight
 import top.yukonga.miuix.kmp.blur.progressiveBlur
 import top.yukonga.miuix.kmp.blur.progressiveTextureBlur
 import top.yukonga.miuix.kmp.blur.runtimeShaderEffect
+import top.yukonga.miuix.kmp.material.GlassEdgeStrokes
+import top.yukonga.miuix.kmp.material.drawEdgeStroke
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -109,16 +110,21 @@ internal fun Modifier.miuixCapsuleGlass(
     lensRadius: Dp = 8.dp,
 ): Modifier {
     val backdrop = LocalMiuixBarBackdrop.current ?: return this
-    val highlight = if (LegadoTheme.isDark) Highlight.GlassStrokeSmallDark else Highlight.GlassStrokeSmallLight
+    val capsuleShape = RoundedCornerShape(50)
+    val stroke = GlassEdgeStrokes.forTheme(
+        isDark = LegadoTheme.isDark,
+        light = GlassEdgeStrokes.SmallLight,
+        dark = GlassEdgeStrokes.SmallDark,
+    )
     return drawBackdrop(
         backdrop = backdrop,
-        shape = { RoundedCornerShape(50) },
+        shape = { capsuleShape },
         effects = {
             val refraction = lensRadius.toPx().coerceAtMost(size.minDimension / 2f)
             padding = maxOf(padding, refraction)
             blur(blurRadius.toPx())
             if (refraction > 0f) {
-                val scale = downscaleFactor.coerceAtLeast(1).toFloat()
+                val scale = downscaleFactor.coerceAtLeast(1f)
                 runtimeShaderEffect("LegadoCapsuleLens", CapsuleLensShader, "source") {
                     setFloatUniform("halfSize", size.width / (2f * scale), size.height / (2f * scale))
                     setFloatUniform("inset", padding / scale)
@@ -126,8 +132,8 @@ internal fun Modifier.miuixCapsuleGlass(
                 }
             }
         },
-        highlight = { highlight },
         onDrawSurface = { drawRect(tint) },
+        onDrawFront = { drawEdgeStroke(capsuleShape, stroke) },
     )
 }
 

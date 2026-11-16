@@ -75,6 +75,23 @@ jobs:
           VERSION_SUFFIX_NAME=""
           IS_RELEASE="false" # 默认为 Pre-release
           
+          # 取更新日志起点：HEAD 可达、图距离最近的 tag。
+          # 不要用 `git tag --sort=-committerdate | head -n N | tail -n 1`：
+          #   1) 当前版本的 tag 是在 create_release 里才创建的，此刻列表第一位就是上一个正式版，
+          #      再退一位会把上一个正式版的提交重复算进本次日志；
+          #   2) --sort=-committerdate 既不保证 tag 属于当前历史，也不等于 tag 创建顺序；
+          #   3) 按次版本号前缀过滤（$MAJOR.$MINOR.*）在跨次版本发布时会整个落空。
+          # $1=official 时只认正式版 tag（排除 *-beta.*），并排除当前版本号（重跑同一版本时该 tag 已存在）。
+          nearest_tag() {
+            local mode="$1"
+            local current_tag="${CURRENT_VERSION}${VERSION_SUFFIX_NAME}"
+            local args=(--tags --abbrev=0 --exclude="$current_tag")
+            if [[ "$mode" == "official" ]]; then
+              args+=(--exclude='*-*')
+            fi
+            git describe "${args[@]}" HEAD 2>/dev/null || true
+          }
+
           # 2. 确定版本类型和后缀
           if [[ "${RELEASE_FLAG}" == "0" ]]; then
             # 标记为正式版 (VERSION_SUFFIX=0)
@@ -82,18 +99,19 @@ jobs:
             IS_RELEASE="true"
             echo "版本类型: 正式版 (Release), 版本名: $CURRENT_VERSION"
           
-            # 找到最近的正式版本 tag 作为日志起点
-            LAST_TAG_FOR_LOG=$(git tag --list "$MAJOR.$MINOR.*" --sort=-committerdate | grep -v 'beta' | head -n 2 | tail -n 1)
+            # 日志起点固定为上一个正式版；beta 不参与
+            LAST_TAG_FOR_LOG=$(nearest_tag official)
             if [ -z "$LAST_TAG_FOR_LOG" ]; then
-                # 如果找不到上一个正式版，则从最近的非本次构建的 tag 开始
-                LAST_TAG_FOR_LOG=$(git tag --sort=-committerdate | head -n 2 | tail -n 1)
+                # 仓库里还没有正式 tag（首次正式发布），退化为最近的任意 tag
+                LAST_TAG_FOR_LOG=$(nearest_tag any)
             fi
           
           elif [[ ("${{ github.event_name }}" == "push" || "${{ inputs.publish }}" == "true") && "${{ github.ref }}" == "refs/heads/main" ]]; then
             # 标记为测试版 (VERSION_SUFFIX=1 或其他/空)，且在 main 分支推送
           
             # 查找匹配当前 CURRENT_VERSION 的上一个 BETA TAG (e.g., 3.26.4-beta.X)
-            LAST_MATCHING_TAG=$(git tag --list "$CURRENT_VERSION-beta.*" --sort=-committerdate | head -n 1)
+            # 用 -v:refname 按版本号排序，保证 beta.10 > beta.9，也不受提交时间影响
+            LAST_MATCHING_TAG=$(git tag --list "$CURRENT_VERSION-beta.*" --sort=-v:refname | head -n 1)
           
             if [[ $LAST_MATCHING_TAG =~ [0-9]+\.[0-9]+\.[0-9]+-beta\.([0-9]+) ]]; then
               LAST_BUILD_NUM="${BASH_REMATCH[1]}"
@@ -105,18 +123,18 @@ jobs:
             VERSION_SUFFIX_NAME="-beta.$NEW_BUILD_NUM"
           
             # 日志从最近的任意 TAG 开始 (包括上一个 beta.x tag)
-            LAST_ANY_TAG=$(git tag --sort=-committerdate | head -n 1)
-            LAST_TAG_FOR_LOG="${LAST_ANY_TAG#v}"
+            LAST_TAG_FOR_LOG=$(nearest_tag any)
             echo "版本类型: 预发布版 (Pre-release), 构建号: $NEW_BUILD_NUM"
           
           else
             # 其它情况 (PR, 非 main 分支推送等)，构建号设为 0
             NEW_BUILD_NUM=0
-            LAST_ANY_TAG=$(git tag --sort=-committerdate | head -n 1)
-            LAST_TAG_FOR_LOG="${LAST_ANY_TAG#v}"
+            LAST_TAG_FOR_LOG=$(nearest_tag any)
             echo "非 main 分支推送/PR，构建号设置为 $NEW_BUILD_NUM"
           fi
           
+          echo "更新日志起点 tag: ${LAST_TAG_FOR_LOG:-（无，回落到单条提交）}"
+
           # 3. 构造最终版本信息
           FULL_VERSION_NAME="${CURRENT_VERSION}${VERSION_SUFFIX_NAME}"
           

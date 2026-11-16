@@ -12,7 +12,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -23,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowLeft
@@ -58,6 +58,7 @@ import io.legado.app.ui.book.readRecord.component.ReadingTimeBarChartCard
 import io.legado.app.ui.book.readRecord.component.StatItem
 import io.legado.app.ui.book.readRecord.component.StatsGridCard
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.adaptiveContentPaddingOnlyVertical
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.button.series.MediumPlainButton
@@ -104,6 +105,7 @@ fun ReadRecordOverviewScreen(
     onBookClick: (String, String) -> Unit,
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
+    val listState = rememberLazyListState()
 
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -111,86 +113,89 @@ fun ReadRecordOverviewScreen(
             GlassMediumFlexibleTopAppBar(
                 title = stringResource(R.string.read_record_overview),
                 scrollBehavior = scrollBehavior,
+                isContentScrolled = listState.canScrollBackward,
                 navigationIcon = {
                     TopBarNavigationButton(onClick = onBackClick)
+                },
+                // 周期/日期切换必须留在顶栏槽位：Miuix 的 AppScaffold 把 `LocalMiuixBarBackdrop`
+                // 提供给整棵树，正文所在的 Box 就是这份 layer backdrop 的录制源。`AppTabRow`
+                // 的玻璃胶囊会采样该 backdrop，一旦落在正文里就成了自己的子节点，hwui 在
+                // prepareTree 阶段无限递归直到 RenderThread 栈溢出（native 闪退）。
+                // 同理，正文不能整体 `.padding(顶栏高度)`，否则顶栏后面没有内容可采样。
+                bottomContent = {
+                    PeriodSelector(
+                        selectedPeriod = state.period,
+                        onPeriodSelected = { onIntent(ReadRecordOverviewIntent.SetPeriod(it)) }
+                    )
+                    DateNavigator(
+                        period = state.period,
+                        referenceDate = state.referenceDate,
+                        onPrevClick = { onIntent(ReadRecordOverviewIntent.PreviousDate) },
+                        onNextClick = { onIntent(ReadRecordOverviewIntent.NextDate) }
+                    )
                 }
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = adaptiveContentPaddingOnlyVertical(
+                top = padding.calculateTopPadding(),
+                bottom = padding.calculateBottomPadding() + 16.dp
+            )
         ) {
-            PeriodSelector(
-                selectedPeriod = state.period,
-                onPeriodSelected = { onIntent(ReadRecordOverviewIntent.SetPeriod(it)) }
-            )
-
-            DateNavigator(
-                period = state.period,
-                referenceDate = state.referenceDate,
-                onPrevClick = { onIntent(ReadRecordOverviewIntent.PreviousDate) },
-                onNextClick = { onIntent(ReadRecordOverviewIntent.NextDate) }
-            )
-
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
-
-                if (state.period != ReadPeriod.ALL && state.dailyTimeData.isNotEmpty()) {
-                    item {
-                        ReadingTimeBarChartCard(data = state.dailyTimeData, period = state.period)
-                    }
-                }
-
+            if (state.period != ReadPeriod.ALL && state.dailyTimeData.isNotEmpty()) {
                 item {
-                    val readingTime = ReadRecordFormatter.hourMinuteDuration(state.totalTime)
-                    val readingTimeText = when {
-                        readingTime.hours > 0 && readingTime.minutes > 0 -> stringResource(
-                            R.string.hours_minutes_format,
-                            readingTime.hours,
-                            readingTime.minutes,
-                        )
-                        readingTime.hours > 0 -> stringResource(
-                            R.string.whole_hours_format,
-                            readingTime.hours,
-                        )
-                        else -> stringResource(
-                            R.string.minutes_format,
-                            readingTime.minutes,
-                        )
-                    }
-                    val stats = listOf(
-                        StatItem(
-                            stringResource(R.string.reading_time),
-                            readingTimeText,
-                        ),
-                        StatItem(stringResource(R.string.reading_days), stringResource(R.string.days_format, state.readingDays)),
-                        StatItem(stringResource(R.string.total_read_books), stringResource(R.string.books_format, state.totalBooks)),
-                        StatItem(stringResource(R.string.finished_books), stringResource(R.string.books_format, state.finishedBooks)),
-                        StatItem(
-                            stringResource(R.string.reading_books),
-                            stringResource(R.string.books_format, state.readingBooks)
-                        )
+                    ReadingTimeBarChartCard(data = state.dailyTimeData, period = state.period)
+                }
+            }
+
+            item {
+                val readingTime = ReadRecordFormatter.hourMinuteDuration(state.totalTime)
+                val readingTimeText = when {
+                    readingTime.hours > 0 && readingTime.minutes > 0 -> stringResource(
+                        R.string.hours_minutes_format,
+                        readingTime.hours,
+                        readingTime.minutes,
                     )
-                    StatsGridCard(title = stringResource(R.string.reading_data), items = stats)
+                    readingTime.hours > 0 -> stringResource(
+                        R.string.whole_hours_format,
+                        readingTime.hours,
+                    )
+                    else -> stringResource(
+                        R.string.minutes_format,
+                        readingTime.minutes,
+                    )
                 }
+                val stats = listOf(
+                    StatItem(
+                        stringResource(R.string.reading_time),
+                        readingTimeText,
+                    ),
+                    StatItem(stringResource(R.string.reading_days), stringResource(R.string.days_format, state.readingDays)),
+                    StatItem(stringResource(R.string.total_read_books), stringResource(R.string.books_format, state.totalBooks)),
+                    StatItem(stringResource(R.string.finished_books), stringResource(R.string.books_format, state.finishedBooks)),
+                    StatItem(
+                        stringResource(R.string.reading_books),
+                        stringResource(R.string.books_format, state.readingBooks)
+                    )
+                )
+                StatsGridCard(title = stringResource(R.string.reading_data), items = stats)
+            }
 
+            item {
+                HeatmapCard(state)
+            }
+
+            if (state.topBooks.isNotEmpty()) {
                 item {
-                    HeatmapCard(state)
+                    TopReadingListCard(state.topBooks, loadBookCover, onBookClick)
                 }
+            }
 
-                if (state.topBooks.isNotEmpty()) {
-                    item {
-                        TopReadingListCard(state.topBooks, loadBookCover, onBookClick)
-                    }
-                }
-
-                item {
-                    ReadingCalendarCard(state, loadBookCover)
-                }
+            item {
+                ReadingCalendarCard(state, loadBookCover)
             }
         }
     }

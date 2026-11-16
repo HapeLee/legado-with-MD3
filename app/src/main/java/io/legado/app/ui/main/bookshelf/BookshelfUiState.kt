@@ -16,6 +16,16 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.collections.immutable.persistentSetOf
 
+/**
+ * 编辑态的「已选 / 共」信息由吸顶悬浮栏承载，还是留在 TopBar 副标题。
+ *
+ * `bookGroupStyle == 0`（Tab）会显示分组标签栏，此时没有吸顶悬浮栏，信息留在副标题；
+ * Hide Tab / Folder 隐藏标签栏，改由吸顶悬浮栏显示（见 `buildBookshelfEditSticky`）。
+ * 两处必须互补，避免同屏重复或同时消失。
+ */
+internal fun bookshelfEditInfoUsesSticky(isEditMode: Boolean, bookGroupStyle: Int): Boolean =
+    isEditMode && bookGroupStyle != 0
+
 @Stable
 data class BookshelfGroupSelectorState(
     val isInitialLoading: Boolean = true,

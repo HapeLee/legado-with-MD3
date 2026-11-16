@@ -138,6 +138,8 @@ sealed interface ReaderMeasuredBlock {
         val pageBreakBefore: Boolean = false,
         val pageBreakAfter: Boolean = false,
         val link: String? = null,
+        /** false = 测量期拿不到内在尺寸，不能用兜底比例放大整图几何。 */
+        val dimensionsKnown: Boolean = true,
     ) : ReaderMeasuredBlock
 
     data class InlineParagraph(
@@ -503,7 +505,13 @@ internal class ReaderPaginationSession(
         } else finishPage()
     }
 
-    private fun addImage(image: ReaderMeasuredBlock.Image) {
+    private fun addImage(sourceBlock: ReaderMeasuredBlock.Image) {
+        // 尺寸未知时不能用 1:1 的兜底比例：FULL_WIDTH 会把它放大成整宽方形，
+        // 真实位图随后被 fitCenter 内接，留下整块空白（#2522 / #2607）。
+        val image = if (sourceBlock.dimensionsKnown) sourceBlock else sourceBlock.copy(
+            intrinsicWidthPx = config.contentWidthPx.coerceAtLeast(1f),
+            intrinsicHeightPx = config.lineHeightPx.coerceAtLeast(1f),
+        )
         if (image.pageBreakBefore) advanceColumn()
         val sourceWidth = image.intrinsicWidthPx.coerceAtLeast(1f)
         val sourceHeight = image.intrinsicHeightPx.coerceAtLeast(1f)

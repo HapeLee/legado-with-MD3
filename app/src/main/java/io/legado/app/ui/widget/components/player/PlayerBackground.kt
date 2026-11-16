@@ -15,7 +15,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.effect.BgEffectBackground
 import io.legado.app.ui.widget.components.effect.BgEffectConfig
 import io.legado.app.ui.widget.components.image.cover.CoverBlurBackdrop
-import top.yukonga.miuix.kmp.blur.isRuntimeShaderSupported
+import top.yukonga.miuix.kmp.material.isRuntimeShaderSupported
 
 /**
  * 播放器通用背景：纯色 / 封面模糊 / 流动光 / 透明 四种模式。

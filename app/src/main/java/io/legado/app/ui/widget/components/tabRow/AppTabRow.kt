@@ -15,6 +15,7 @@ import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -27,6 +28,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
@@ -40,6 +42,8 @@ import top.yukonga.miuix.kmp.basic.TabRowWithContour
 import top.yukonga.miuix.kmp.glass.GlassTabRow
 import top.yukonga.miuix.kmp.glass.GlassTabRowDefaults
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.roundToInt
 
 private val GlassTabShadowPadding = 8.dp
@@ -174,6 +178,34 @@ private fun AppTabRowContent(
     }
 }
 
+/**
+ * Tabs that need a live backdrop sample. Only the visible slice (plus one tab of prefetch on each
+ * side) pays for an offscreen glass layer; the rest keep their resting fills, shadow and stroke.
+ * `hasOverflow == false` and RTL keep every tab sampled — `horizontalScroll` flips its origin in
+ * RTL, so deriving a range from [scrollValue] there would switch the glass on the wrong pill.
+ */
+internal fun computeGlassTabSamplingRange(
+    tabCount: Int,
+    hasOverflow: Boolean,
+    isRtl: Boolean,
+    scrollValue: Float,
+    viewportSize: Int,
+    shadowPaddingPx: Int,
+    tabWidthPx: Float,
+    gapPx: Int,
+): IntRange {
+    if (tabCount <= 0) return IntRange.EMPTY
+    val full = 0 until tabCount
+    if (!hasOverflow || isRtl) return full
+    val step = tabWidthPx + gapPx
+    if (step <= 0f) return full
+    val first = floor((scrollValue - shadowPaddingPx) / step).toInt() - 1
+    val visible = ceil(viewportSize / step).toInt() + 2
+    val start = first.coerceAtLeast(0)
+    val end = (start + visible + 1).coerceAtMost(tabCount)
+    return start until end.coerceAtLeast(start)
+}
+
 @Composable
 private fun AppGlassTabRow(
     titles: List<String>,
@@ -233,6 +265,27 @@ private fun AppGlassTabRow(
             }
             lastSelectedIndex = selectedIndex
         }
+        // Only visible tabs (plus one on each side) pay for an offscreen glass layer; the rest
+        // keep their resting fills. The scroll container and equal-width layout stay untouched.
+        val samplingRange = remember(
+            hasOverflow, tabWidthPx, gapPx, shadowPaddingPx, titles.size, scrollState, layoutDirection
+        ) {
+            derivedStateOf {
+                computeGlassTabSamplingRange(
+                    tabCount = titles.size,
+                    hasOverflow = hasOverflow,
+                    isRtl = layoutDirection == LayoutDirection.Rtl,
+                    scrollValue = scrollState.value.toFloat(),
+                    viewportSize = scrollState.viewportSize,
+                    shadowPaddingPx = shadowPaddingPx,
+                    tabWidthPx = tabWidthPx,
+                    gapPx = gapPx,
+                )
+            }
+        }
+        val samplingEnabled = remember(samplingRange) {
+            { position: Int -> position in samplingRange.value }
+        }
         Box(
             Modifier
                 .then(
@@ -253,6 +306,7 @@ private fun AppGlassTabRow(
                 modifier = Modifier.width(contentWidth),
                 height = GlassTabRowDefaults.NeutralHeight,
                 colors = GlassTabRowDefaults.neutralColors(),
+                samplingEnabled = samplingEnabled,
             )
         }
     }

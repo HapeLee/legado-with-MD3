@@ -891,9 +891,15 @@ fun ReadBookRouteScreen(
                         additionalSheetContent = { sheet, visible, dismissSheet ->
                             when (sheet) {
                                 is ReadBookSheet.BookNavigation -> {
-                                    ReaderBookSheetRoute(
+                                    // book 尚未投影时不组合目录面板：否则会用空 bookUrl 创建
+                                    // TocViewModel 并发 LoadBook("")，book 到达后 key 变化再
+                                    // 重建 VM。宿主内存 Book 同时直接下传，目录不再只靠
+                                    // books 表查询拿书籍信息（与顶栏更多菜单同源）。
+                                    val bookUrl = state.book?.bookUrl.orEmpty()
+                                    if (bookUrl.isNotEmpty()) ReaderBookSheetRoute(
                                         show = visible,
-                                        bookUrl = state.book?.bookUrl.orEmpty(),
+                                        bookUrl = bookUrl,
+                                        book = state.book,
                                         initialTab = sheet.initialTab,
                                         onEditLocalTocRule = { regex ->
                                             state.book?.bookUrl?.let {

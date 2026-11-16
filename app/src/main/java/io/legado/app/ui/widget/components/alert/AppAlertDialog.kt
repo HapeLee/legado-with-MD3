@@ -37,7 +37,9 @@ import io.legado.app.ui.theme.LocalHasMiuixPopupHost
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.LocalMiuixBarBackdrop
 import io.legado.app.ui.theme.ProvideAppDensity
+import io.legado.app.ui.theme.ProvidePopupThemeOverride
 import io.legado.app.ui.theme.rememberMochiOverlayBackdrop
+import io.legado.app.ui.theme.rememberPopupThemeOverride
 import kotlinx.collections.immutable.persistentListOf
 import ui.feice.mochi.basic.MochiDialog
 import ui.feice.mochi.effect.glass.LocalMochiBackdrop
@@ -78,7 +80,8 @@ fun AppAlertDialog(
                 LocalAppGlassOverlay.current != null
             val backdrop = LocalMiuixBarBackdrop.current
             val glassOverlay = LocalAppGlassOverlay.current
-            val dialogBody: @Composable () -> Unit = {
+            val themeOverride = rememberPopupThemeOverride()
+            val rawDialogBody: @Composable () -> Unit = {
                 // WindowDialog has no popup host; its content must not inherit the Scaffold's
                 // host signal. A glass dialog shares the root host with its dropdowns.
                 CompositionLocalProvider(
@@ -142,6 +145,13 @@ fun AppAlertDialog(
                             }
                         }
                     }
+                }
+            }
+            // 玻璃 dialog 的内容由 root popup host 的独立 composition 执行，只继承全局
+            // 色板；在这里重放宿主侧捕获的页面级覆盖，窗口分支重复提供同值幂等。
+            val dialogBody: @Composable () -> Unit = {
+                ProvidePopupThemeOverride(themeOverride) {
+                    rawDialogBody()
                 }
             }
             if (useGlassContainer) {

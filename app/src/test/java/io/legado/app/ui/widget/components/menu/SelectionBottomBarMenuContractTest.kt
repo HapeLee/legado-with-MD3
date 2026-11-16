@@ -23,10 +23,9 @@ class SelectionBottomBarMenuContractTest {
         assertFalse("多选栏仍手画 RoundDropdownMenu", source.contains("RoundDropdownMenu("))
         assertFalse("仍自持 showMenu 展开状态", source.contains("showMenu"))
         assertEquals(
-            "Miuix 与其它引擎两个分支都要走原生菜单",
-            2,
-            Regex("SelectionMoreMenu\\(secondaryActions, moreActionsDescription\\)")
-                .findAll(source).count(),
+            "Miuix（自定义 trigger）/ COUI（自定义 trigger）/ 其它引擎（默认 trigger）都要走原生菜单",
+            3,
+            Regex("(?<!fun )SelectionMoreMenu\\(").findAll(source).count(),
         )
         assertTrue(
             "必须用 Row 锚点（Icon 锚点在底栏拿不到 Miuix 玻璃 morph）",
@@ -70,13 +69,31 @@ class SelectionBottomBarMenuContractTest {
         )
     }
 
-    /** 栏上所有非主按钮（全选 / 反选 / 前导动作 / 更多）统一到 medium 档位。 */
+    /**
+     * Miuix 栏对齐组件库 catalog：primary 实色胶囊 + onPrimary 图标 + 原生 IconButton；
+     * 其它引擎（M3 外观）仍用 medium 档 series 按钮。
+     */
     @Test
-    fun allSecondaryButtonsUseMediumSeries() {
+    fun miuixBarUsesCatalogCapsuleAndM3KeepsMediumSeries() {
         val source = sourceOf(BAR)
+        assertTrue(
+            "Miuix 栏要按组件库 catalog 的形态：primary 实色胶囊 + onPrimary 图标",
+            source.contains("color = MiuixTheme.colorScheme.primary,") &&
+                source.contains("cornerRadius = MiuixSelectionBarCornerRadius,") &&
+                source.contains("val iconTint = MiuixTheme.colorScheme.onPrimary"),
+        )
+        assertTrue(
+            "Miuix 动作项必须是原生 IconButton（40dp、无底色）",
+            source.contains("private fun MiuixSelectionAction(") &&
+                source.contains("MiuixIconButton(onClick = onClick) {"),
+        )
+        assertFalse(
+            "Miuix 主操作不再用 secondaryContainer 强调（catalog 里全栏同色）",
+            source.contains("backgroundColor = MiuixTheme.colorScheme.secondaryContainer"),
+        )
         assertEquals(
-            "Miuix 3 处 + 其它引擎 3 处 + 菜单 trigger 1 处",
-            7,
+            "M3 分支 3 处动作 + 菜单默认 trigger 1 处；Miuix 已改用原生 IconButton",
+            4,
             Regex("MediumPlainButton\\(").findAll(source).count(),
         )
         assertFalse("仍留着 small 档位按钮", source.contains("SmallPlainButton("))
@@ -85,7 +102,32 @@ class SelectionBottomBarMenuContractTest {
             source.lines().any { it.trim() == "import androidx.compose.material3.IconButton" },
         )
         assertTrue("主操作仍保留 FilledIconButton", source.contains("FilledIconButton("))
-        assertTrue("主操作仍保留 MiuixIconButton", source.contains("MiuixIconButton("))
+    }
+
+    /**
+     * 采样源不能包含消费者自身：COUI 的玻璃材质会把源图层画进自己的 patch，源图层一旦是
+     * 多选栏的祖先，hwui 会在 prepareTree 里无限递归直到 RenderThread 栈溢出（native 闪退，
+     * Java 层拦不到）。因此多选栏只能渲染在 `AppScaffold` 的浮层槽位里。
+     */
+    @Test
+    fun selectionBarRendersOutsideThePageSamplingSource() {
+        listOf(LIST_SCAFFOLD, TOC_SCREEN).forEach { path ->
+            val source = sourceOf(path)
+            val overlayIndex = source.indexOf("overlay = {")
+            val barIndex = source.indexOf("SelectionBottomBar(")
+            assertTrue("$path 缺少 AppScaffold 浮层槽位", overlayIndex >= 0)
+            assertTrue(
+                "$path 的多选栏没有渲染在浮层槽位里（正文采样源会包含它自身）",
+                barIndex > overlayIndex,
+            )
+        }
+
+        val scaffold = sourceOf(APP_SCAFFOLD)
+        assertTrue(
+            "AppScaffold 的浮层槽位必须绘制在正文采样源之外",
+            scaffold.contains("Box(modifier = Modifier.fillMaxSize(), content = overlay)") ||
+                scaffold.contains("CompositionLocalProvider(LocalCouiPageBackdrop provides couiBackdrop) {"),
+        )
     }
 
     private fun sourceOf(path: String): String {
@@ -100,5 +142,8 @@ class SelectionBottomBarMenuContractTest {
 
     private companion object {
         const val BAR = "io/legado/app/ui/widget/components/SelectionBottomBar.kt"
+        const val APP_SCAFFOLD = "io/legado/app/ui/widget/components/AppScaffold.kt"
+        const val LIST_SCAFFOLD = "io/legado/app/ui/widget/components/list/ListScaffold.kt"
+        const val TOC_SCREEN = "io/legado/app/ui/book/toc/TocScreen.kt"
     }
 }

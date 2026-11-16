@@ -19,6 +19,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -37,6 +38,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.sp
@@ -272,6 +274,48 @@ class CouiFloatingAndMenusTest {
         compose.runOnIdle { selected.value = 0 }
         compose.onNodeWithText("Category 1").assertIsDisplayed().assertIsSelected().performClick()
         compose.runOnIdle { assertEquals(listOf(-1, 7, 0), clicks) }
+    }
+
+    @Test
+    fun couiTabsKeepCatalogHeightAndRevealSelectionAfterClippingIsRemoved() {
+        val selected = mutableStateOf(0)
+        val titles = List(8) { "Tab $it" }
+        setCouiContent {
+            Box(Modifier.width(200.dp).testTag("header")) {
+                AppTabRow(titles, selected.value, { selected.value = it })
+            }
+        }
+        val header = compose.onNodeWithTag("header").fetchSemanticsNode().boundsInRoot
+        // 投影靠 LazyRow 的纵向裁剪余量与渐隐层外扩获得绘制空间，不再撑高栏位。
+        assertEquals(with(compose.density) { 48.dp.toPx() }, header.height, 1f)
+        fun assertSelectedInsideRow() {
+            val chip = compose.onNodeWithText(titles[selected.value]).fetchSemanticsNode().boundsInRoot
+            assertTrue("${titles[selected.value]} 左边界越界: $chip in $header", chip.left >= header.left - 1f)
+            assertTrue("${titles[selected.value]} 右边界越界: $chip in $header", chip.right <= header.right + 1f)
+        }
+        assertSelectedInsideRow()
+        compose.runOnIdle { selected.value = titles.lastIndex }
+        assertSelectedInsideRow()
+        compose.runOnIdle { selected.value = 0 }
+        assertSelectedInsideRow()
+    }
+
+    @Test
+    fun couiTabsScrollByDragWithoutChangingSelection() {
+        val selected = mutableStateOf(0)
+        val titles = List(8) { "Tab $it" }
+        setCouiContent {
+            Box(Modifier.width(200.dp).testTag("header")) {
+                AppTabRow(titles, selected.value, { selected.value = it })
+            }
+        }
+        fun scrollPosition() = compose.onNode(hasScrollAction()).fetchSemanticsNode()
+            .config[SemanticsProperties.HorizontalScrollAxisRange].value()
+        val before = scrollPosition()
+        compose.onNode(hasScrollAction()).performTouchInput { swipeLeft() }
+        val after = scrollPosition()
+        assertTrue("拖拽后应产生滚动: $before -> $after", after > before)
+        compose.runOnIdle { assertEquals(0, selected.value) }
     }
 
     @Test

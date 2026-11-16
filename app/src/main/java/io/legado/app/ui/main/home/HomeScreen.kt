@@ -73,10 +73,8 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -1140,12 +1138,10 @@ private fun SemiCircleProgress(
     val progressColor = LegadoTheme.colorScheme.primary
 
     Box(
-        modifier = modifier.semantics {
-            progressBarRangeInfo = ProgressBarRangeInfo(
-                current = animatedProgress.coerceIn(0f, 1f),
-                range = 0f..1f,
-            )
-        },
+        // 装饰性进度环不暴露 progressBarRangeInfo：裸的进度语义会在 TalkBack 里
+        // 形成一个朗读“进度条”却无任何交互的空焦点；进度已由环内文本表达，
+        // 合并成一个节点即可。
+        modifier = modifier.semantics(mergeDescendants = true) {},
         contentAlignment = Alignment.BottomCenter,
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {

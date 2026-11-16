@@ -661,9 +661,9 @@ fun TocScreen(
                 visible = shouldShowFab,
                 focusRequester = focusRequester
             )
-        }
-    ) { padding ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        },
+        // 多选栏是页面级浮层：必须画在正文采样源之外，否则 COUI 玻璃会采样到自己上（native 闪退）。
+        overlay = {
             AnimatedVisibility(
                 visible = isSelectionMode,
                 modifier = Modifier
@@ -688,7 +688,9 @@ fun TocScreen(
                     secondaryActions = selectionSecondaryActions
                 )
             }
-
+        }
+    ) { padding ->
+        Box(modifier = Modifier.fillMaxSize()) {
             HorizontalPager(state = pagerState) { page ->
                 when (page) {
                     0 -> ChapterListContent(

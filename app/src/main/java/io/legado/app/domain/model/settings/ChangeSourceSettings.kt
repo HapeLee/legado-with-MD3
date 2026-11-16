@@ -4,6 +4,8 @@ import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
 
 data class ChangeSourceSettings(
     val searchScope: String = "",
+    /** 封面换源的书源范围，独立于 [searchScope]；两个面板互不联动。 */
+    val coverSearchScope: String = "",
     val checkAuthor: Boolean = false,
     val loadInfo: Boolean = false,
     val loadToc: Boolean = false,
