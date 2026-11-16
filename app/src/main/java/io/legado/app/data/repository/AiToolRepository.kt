@@ -4,6 +4,7 @@ import com.google.gson.JsonObject
 import io.legado.app.data.dao.AiArtifactDao
 import io.legado.app.data.dao.BookChapterDao
 import io.legado.app.data.dao.BookDao
+import io.legado.app.data.dao.BookSourceDao
 import io.legado.app.data.dao.BookmarkDao
 import io.legado.app.data.dao.ReadRecordDao
 import io.legado.app.data.entities.AiArtifact
@@ -14,6 +15,8 @@ import io.legado.app.data.entities.BookCharacterProfile
 import io.legado.app.data.entities.BookCharacterRelation
 import io.legado.app.data.entities.BookKnowledgeEntry
 import io.legado.app.data.entities.BookOutlineNode
+import io.legado.app.data.entities.BookSource
+import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.gateway.AiMemoryGateway
 import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.gateway.AiToolGateway
@@ -24,10 +27,20 @@ import io.legado.app.domain.model.AiToolDefinition
 import io.legado.app.domain.model.AiToolResult
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
+import io.legado.app.help.source.exploreKinds
+import io.legado.app.model.Debug
+import io.legado.app.model.analyzeRule.AnalyzeUrl
+import io.legado.app.model.webBook.WebBook
 import io.legado.app.utils.GSON
 import io.legado.app.utils.MD5Utils
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.coroutines.coroutineContext
 import kotlin.uuid.Uuid
 
 class AiToolRepository(
@@ -40,6 +53,8 @@ class AiToolRepository(
     private val bookKnowledgeGateway: BookKnowledgeGateway,
     private val privateAccessGateway: PrivateAccessGateway,
     private val aiProfileGateway: AiProfileGateway,
+    private val bookSourceRepository: BookSourceRepository,
+    private val bookSourceDao: BookSourceDao,
 ) : AiToolGateway {
 
     /**
@@ -96,6 +111,13 @@ class AiToolRepository(
             TOOL_RECALL_MEMORY -> recallMemory(args)
             TOOL_DELETE_MEMORY -> deleteMemory(args)
             TOOL_LOAD_SKILL -> loadSkill(args)
+            TOOL_LIST_BOOK_SOURCES -> listBookSources(args)
+            TOOL_GET_BOOK_SOURCE -> getBookSource(args)
+            TOOL_CREATE_BOOK_SOURCE -> createBookSource(args)
+            TOOL_UPDATE_BOOK_SOURCE -> updateBookSource(args)
+            TOOL_FETCH_WEB_PAGE -> fetchWebPage(args)
+            TOOL_SEARCH_WITH_BOOK_SOURCE -> searchWithBookSource(args)
+            TOOL_DEBUG_BOOK_SOURCE -> debugBookSource(args)
             else -> """{"error":"Unknown tool: ${call.name}"}"""
         }
         AiToolResult(
@@ -778,6 +800,274 @@ class AiToolRepository(
      *
      * 这道守卫必须在这里而不是各个工具里——工具是十来处，漏一个就漏一次正文。
      */
+    // ---------------- 书源 ----------------
+
+    /**
+     * 书源索引。单条规则动辄几十 KB，全量返回会挤占正文预算，所以默认只给
+     * url / 名称 / 分组 / 开关，需要规则细节时再调 [getBookSource]。
+     */
+    private suspend fun listBookSources(args: JsonObject): String {
+        val query = args.string("query").orEmpty().trim()
+        val group = args.string("group").orEmpty().trim()
+        val enabledOnly = args.bool("enabledOnly", false)
+        val limit = args.int("limit", 20).coerceIn(1, 100)
+        val all = bookSourceRepository.getAll()
+        val matched = all.asSequence()
+            .filter { !enabledOnly || it.enabled }
+            .filter { group.isBlank() || it.bookSourceGroup.orEmpty().contains(group, ignoreCase = true) }
+            .filter {
+                query.isBlank() ||
+                        it.bookSourceName.contains(query, ignoreCase = true) ||
+                        it.bookSourceUrl.contains(query, ignoreCase = true) ||
+                        it.bookSourceGroup.orEmpty().contains(query, ignoreCase = true)
+            }
+            .take(limit)
+            .map { it.toIndexMap() }
+            .toList()
+        return GSON.toJson(
+            mapOf(
+                "total" to all.size,
+                "returned" to matched.size,
+                "sources" to matched
+            )
+        )
+    }
+
+    /** 读单个书源。raw=false 只看索引，raw=true 给完整可导入 JSON。 */
+    private suspend fun getBookSource(args: JsonObject): String {
+        val source = resolveBookSource(args)
+            ?: return toolError("Book source not found. Call list_book_sources first.")
+        val json = if (args.bool("raw", true)) {
+            GSON.toJson(source)
+        } else {
+            GSON.toJson(source.toIndexMap())
+        }
+        val maxChars = args.int("maxChars", 16000).coerceIn(500, 60000)
+        val truncated = json.length > maxChars
+        return GSON.toJson(
+            mapOf(
+                "ok" to true,
+                "truncated" to truncated,
+                "sourceJson" to if (truncated) json.take(maxChars) else json
+            )
+        )
+    }
+
+    /** 新建书源。url 已存在时拒绝，交给 [updateBookSource]，避免无意覆盖用户已有源。 */
+    private suspend fun createBookSource(args: JsonObject): String {
+        val text = args.string("sourceJson").orEmpty().trim()
+        if (text.isBlank()) return toolError("sourceJson is required: pass one book source JSON object.")
+        val source = runCatching { GSON.fromJson(text, BookSource::class.java) }.getOrNull()
+            ?: return toolError("sourceJson is not a valid book source JSON object.")
+        if (source.bookSourceUrl.isBlank()) return toolError("bookSourceUrl is required.")
+        if (source.bookSourceName.isBlank()) return toolError("bookSourceName is required.")
+        if (bookSourceRepository.has(source.bookSourceUrl)) {
+            return toolError("A book source with this URL already exists. Use update_book_source instead.")
+        }
+        return runCatching { bookSourceDao.insert(source) }.fold(
+            onSuccess = {
+                GSON.toJson(
+                    mapOf(
+                        "ok" to true,
+                        "url" to source.bookSourceUrl,
+                        "name" to source.bookSourceName,
+                        "group" to source.bookSourceGroup,
+                        "hint" to "Saved. Call debug_book_source with target=search to verify the rules really work."
+                    )
+                )
+            },
+            onFailure = { toolError("Insert failed: ${it.message ?: it.toString()}") }
+        )
+    }
+
+    /**
+     * 局部改书源：只覆盖 patchJson 里出现的字段，嵌套的 rule* 对象按 key 深合并，
+     * 所以模型改一条规则不必重发整份书源。
+     */
+    private suspend fun updateBookSource(args: JsonObject): String {
+        val source = resolveBookSource(args)
+            ?: return toolError("Book source not found. Call list_book_sources first.")
+        val patchText = args.string("patchJson").orEmpty().trim()
+        if (patchText.isBlank()) return toolError("patchJson is required: pass a JSON object with the fields to change.")
+        val patch = runCatching { GSON.fromJson(patchText, JsonObject::class.java) }.getOrNull()
+            ?: return toolError("patchJson is not a valid JSON object.")
+        val current = GSON.toJsonTree(source).asJsonObject
+        current.deepMerge(patch)
+        val merged = runCatching { GSON.fromJson(current, BookSource::class.java) }.getOrNull()
+            ?: return toolError("Merged result is not a valid book source.")
+        if (merged.bookSourceUrl != source.bookSourceUrl) {
+            return toolError("bookSourceUrl cannot be changed.")
+        }
+        return runCatching { bookSourceDao.update(merged) }.fold(
+            onSuccess = {
+                GSON.toJson(
+                    mapOf(
+                        "ok" to true,
+                        "url" to merged.bookSourceUrl,
+                        "name" to merged.bookSourceName,
+                        "patched" to patch.keySet().toList()
+                    )
+                )
+            },
+            onFailure = { toolError("Update failed: ${it.message ?: it.toString()}") }
+        )
+    }
+
+    /**
+     * 抓网页源码。带上 sourceUrl 时会复用该源的 header / cookie / 限速，
+     * 这正是"照着目标站写规则"时需要的请求环境。
+     */
+    private suspend fun fetchWebPage(args: JsonObject): String {
+        val url = args.string("url").orEmpty().trim()
+        if (url.isBlank()) return toolError("url is required.")
+        val sourceKey = args.string("sourceUrl").orEmpty().trim()
+        val source = if (sourceKey.isBlank()) null else bookSourceRepository.getBookSource(sourceKey)
+        val maxChars = args.int("maxChars", 8000).coerceIn(500, 60000)
+        val useWebView = args.bool("useWebView", false)
+        val response = runCatching {
+            AnalyzeUrl(
+                mUrl = url,
+                baseUrl = source?.bookSourceUrl ?: url,
+                source = source,
+                coroutineContext = coroutineContext
+            ).getStrResponseAwait(useWebView = useWebView)
+        }.getOrElse {
+            return toolError("Request failed: ${it.message ?: it.toString()}")
+        }
+        val body = response.body.orEmpty()
+        return GSON.toJson(
+            mapOf(
+                "ok" to response.isSuccessful(),
+                "status" to response.code(),
+                "url" to response.url,
+                "length" to body.length,
+                "truncated" to body.length > maxChars,
+                "body" to if (body.length > maxChars) body.take(maxChars) else body
+            )
+        )
+    }
+
+    /** 用某个书源真跑一次搜索，返回结构化结果——这是验证 searchUrl / ruleSearch 最快的手段。 */
+    private suspend fun searchWithBookSource(args: JsonObject): String {
+        val source = resolveBookSource(args)
+            ?: return toolError("Book source not found. Call list_book_sources first.")
+        val key = args.string("key").orEmpty().trim()
+        if (key.isBlank()) return toolError("key is required: the keyword to search with this source.")
+        if (source.searchUrl.isNullOrBlank()) return toolError("This book source has no searchUrl.")
+        val page = args.int("page", 1).coerceIn(1, 20)
+        val limit = args.int("limit", 10).coerceIn(1, 30)
+        val books = runCatching { WebBook.searchBookAwait(source, key, page) }.getOrElse {
+            return toolError("Search failed: ${it.message ?: it.toString()}")
+        }
+        return GSON.toJson(
+            mapOf(
+                "ok" to true,
+                "source" to source.bookSourceName,
+                "key" to key,
+                "returned" to books.size,
+                "books" to books.take(limit).map { it.toSearchMap() }
+            )
+        )
+    }
+
+    /**
+     * 跑完整调试流程并回收日志，定位"规则哪一步断了"。
+     *
+     * 注意 [Debug] 是全局单例，会抢占当前调试会话——如果用户此刻正在界面里调同一个源，
+     * 那边的日志会被清掉。这是既有实现的限制，工具侧只做尽快结束（默认 45s 超时）。
+     */
+    private suspend fun debugBookSource(args: JsonObject): String {
+        val source = resolveBookSource(args)
+            ?: return toolError("Book source not found. Call list_book_sources first.")
+        val target = args.string("target").orEmpty().trim().ifBlank { "search" }
+        val key = args.string("key").orEmpty().trim()
+        val debugKey = when (target) {
+            "explore" -> {
+                val url = key.ifBlank {
+                    runCatching {
+                        source.exploreKinds()
+                            .firstOrNull { !it.url.isNullOrBlank() && !it.title.startsWith("ERROR") }
+                            ?.url.orEmpty()
+                    }.getOrElse { "" }
+                }
+                if (url.isBlank()) {
+                    return toolError("This source has no exploreUrl; pass key as the explore page URL.")
+                }
+                "发现::$url"
+            }
+            "info" -> {
+                if (key.isBlank()) return toolError("key must be the book detail URL when target=info.")
+                key
+            }
+            "toc" -> "++${key.removePrefix("++")}"
+            "content" -> "--${key.removePrefix("--")}"
+            else -> {
+                if (key.isBlank()) return toolError("key is required: the keyword to search.")
+                key
+            }
+        }
+        val timeoutMs = args.int("timeoutSeconds", 45).coerceIn(5, 120) * 1000L
+        val logs = mutableListOf<String>()
+        var failed = false
+        val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        val session = Debug.startDebug(scope, source, debugKey)
+        val timedOut = withTimeoutOrNull(timeoutMs) {
+            session.events.collect { event ->
+                logs += event.message.take(1200)
+                if (event.kind == Debug.EventKind.Error) failed = true
+            }
+        } == null
+        runCatching { session.cancel() }
+        scope.cancel()
+        return GSON.toJson(
+            mapOf(
+                "ok" to (!failed && logs.isNotEmpty()),
+                "source" to source.bookSourceName,
+                "target" to target,
+                "key" to debugKey,
+                "timedOut" to timedOut,
+                "log" to logs
+            )
+        )
+    }
+
+    private suspend fun resolveBookSource(args: JsonObject): BookSource? {
+        val url = args.string("sourceUrl").orEmpty().trim()
+        if (url.isNotBlank()) return bookSourceRepository.getBookSource(url)
+        val name = args.string("sourceName").orEmpty().trim()
+        if (name.isBlank()) return null
+        val all = bookSourceRepository.getAll()
+        return all.firstOrNull { it.bookSourceName.equals(name, ignoreCase = true) }
+            ?: all.firstOrNull { it.bookSourceName.contains(name, ignoreCase = true) }
+    }
+
+    private fun BookSource.toIndexMap(): Map<String, Any?> = mapOf(
+        "url" to bookSourceUrl,
+        "name" to bookSourceName,
+        "group" to bookSourceGroup,
+        "type" to bookSourceType,
+        "enabled" to enabled,
+        "exploreEnabled" to enabledExplore,
+        "hasSearch" to !searchUrl.isNullOrBlank(),
+        "hasExplore" to !exploreUrl.isNullOrBlank(),
+        "respondTime" to respondTime
+    )
+
+    private fun SearchBook.toSearchMap(): Map<String, Any?> = mapOf(
+        "name" to name,
+        "author" to author,
+        "kind" to kind,
+        "bookUrl" to bookUrl,
+        "intro" to intro?.take(200),
+        "latestChapter" to latestChapterTitle,
+        "wordCount" to wordCount,
+        "source" to originName
+    )
+
+    private fun toolError(message: String): String {
+        return GSON.toJson(mapOf("ok" to false, "error" to message))
+    }
+
     private fun resolveBook(args: JsonObject): Book? = resolveBookIgnoringPrivacy(args)?.takeIf {
         it.isReadable()
     }
@@ -964,6 +1254,13 @@ class AiToolRepository(
         const val TOOL_RECALL_MEMORY = "recall_memory"
         const val TOOL_DELETE_MEMORY = "delete_memory"
         const val TOOL_LOAD_SKILL = "load_skill"
+        const val TOOL_LIST_BOOK_SOURCES = "list_book_sources"
+        const val TOOL_GET_BOOK_SOURCE = "get_book_source"
+        const val TOOL_CREATE_BOOK_SOURCE = "create_book_source"
+        const val TOOL_UPDATE_BOOK_SOURCE = "update_book_source"
+        const val TOOL_FETCH_WEB_PAGE = "fetch_web_page"
+        const val TOOL_SEARCH_WITH_BOOK_SOURCE = "search_with_book_source"
+        const val TOOL_DEBUG_BOOK_SOURCE = "debug_book_source"
 
         private val confirmationRequiredTools = setOf(
             TOOL_SAVE_AI_ARTIFACT,
@@ -974,6 +1271,8 @@ class AiToolRepository(
             TOOL_SAVE_BOOK_OUTLINE_NODE,
             TOOL_SAVE_MEMORY,
             TOOL_DELETE_MEMORY,
+            TOOL_CREATE_BOOK_SOURCE,
+            TOOL_UPDATE_BOOK_SOURCE,
         )
 
         private val tools = listOf(
@@ -1258,6 +1557,74 @@ class AiToolRepository(
                     "key" to stringSchema("The memory key to delete."),
                     "conversationId" to stringSchema("Leave empty for global scope, or pass conversation id for scoped memory.")
                 )
+            ),
+            AiToolDefinition(
+                name = TOOL_LIST_BOOK_SOURCES,
+                description = "List installed book sources (书源) with url, name, group, type and whether search/explore rules exist. Call this first to find a source before reading, editing or debugging it.",
+                inputSchema = objectSchema(
+                    "query" to stringSchema("Keyword matching source name, url or group."),
+                    "group" to stringSchema("Only sources whose group contains this text."),
+                    "enabledOnly" to boolSchema("Only return enabled sources."),
+                    "limit" to intSchema("Maximum number of sources to return, default 20.")
+                )
+            ),
+            AiToolDefinition(
+                name = TOOL_GET_BOOK_SOURCE,
+                description = "Read one book source. Returns the full importable JSON by default, so you can inspect or rewrite its rules; set raw=false for index fields only.",
+                inputSchema = objectSchema(
+                    "sourceUrl" to stringSchema("Exact book source url from list_book_sources."),
+                    "sourceName" to stringSchema("Book source name, used when sourceUrl is unavailable."),
+                    "raw" to boolSchema("Return the full book source JSON. Default true."),
+                    "maxChars" to intSchema("Maximum characters of JSON to return, default 16000.")
+                )
+            ),
+            AiToolDefinition(
+                name = TOOL_CREATE_BOOK_SOURCE,
+                description = "Create a new book source from a complete JSON object and save it locally. Requires user confirmation. Fails if a source with the same bookSourceUrl already exists. Always verify with debug_book_source afterwards.",
+                inputSchema = objectSchema(
+                    "sourceJson" to stringSchema("One complete book source JSON object as a string. Must include bookSourceUrl, bookSourceName, searchUrl and ruleSearch at minimum; add ruleExplore / ruleBookInfo / ruleToc / ruleContent as needed.")
+                )
+            ),
+            AiToolDefinition(
+                name = TOOL_UPDATE_BOOK_SOURCE,
+                description = "Patch an existing book source. Only the fields present in patchJson are changed; nested rule objects (ruleSearch, ruleToc, ...) are deep-merged key by key. Requires user confirmation.",
+                inputSchema = objectSchema(
+                    "sourceUrl" to stringSchema("Exact book source url from list_book_sources."),
+                    "sourceName" to stringSchema("Book source name, used when sourceUrl is unavailable."),
+                    "patchJson" to stringSchema("JSON object containing only the fields to change, e.g. {\"searchUrl\":\"...\",\"ruleSearch\":{\"bookList\":\".result li\"}}.")
+                )
+            ),
+            AiToolDefinition(
+                name = TOOL_FETCH_WEB_PAGE,
+                description = "Fetch raw HTML/text from a URL. Pass sourceUrl to reuse that source's headers, cookies and rate limit, which is how you inspect a target site before writing rules for it.",
+                inputSchema = objectSchema(
+                    "url" to stringSchema("Absolute URL to fetch."),
+                    "sourceUrl" to stringSchema("Optional book source url whose headers and cookies should be applied."),
+                    "maxChars" to intSchema("Maximum characters of body to return, default 8000."),
+                    "useWebView" to boolSchema("Render with WebView instead of a plain HTTP request. Slower, needed for JS-rendered pages.")
+                )
+            ),
+            AiToolDefinition(
+                name = TOOL_SEARCH_WITH_BOOK_SOURCE,
+                description = "Run a real search through one book source and return structured results. The fastest way to check whether searchUrl and ruleSearch actually work.",
+                inputSchema = objectSchema(
+                    "sourceUrl" to stringSchema("Exact book source url from list_book_sources."),
+                    "sourceName" to stringSchema("Book source name, used when sourceUrl is unavailable."),
+                    "key" to stringSchema("Keyword to search."),
+                    "page" to intSchema("Page number, default 1."),
+                    "limit" to intSchema("Maximum number of results to return, default 10.")
+                )
+            ),
+            AiToolDefinition(
+                name = TOOL_DEBUG_BOOK_SOURCE,
+                description = "Run the source debugger and return its step-by-step log, to locate which rule breaks. target=search uses the keyword directly, info needs the book detail URL, toc needs the toc URL, content needs the chapter URL, explore needs the explore page URL.",
+                inputSchema = objectSchema(
+                    "sourceUrl" to stringSchema("Exact book source url from list_book_sources."),
+                    "sourceName" to stringSchema("Book source name, used when sourceUrl is unavailable."),
+                    "target" to stringSchema("One of search, explore, info, toc, content. Default search."),
+                    "key" to stringSchema("Keyword for search; URL for info/toc/content/explore."),
+                    "timeoutSeconds" to intSchema("Maximum seconds to wait for the session, default 45.")
+                )
             )
         )
 
@@ -1280,6 +1647,10 @@ class AiToolRepository(
         private fun floatSchema(description: String): Map<String, Any?> {
             return mapOf("type" to "number", "description" to description)
         }
+
+        private fun boolSchema(description: String): Map<String, Any?> {
+            return mapOf("type" to "boolean", "description" to description)
+        }
     }
 }
 
@@ -1288,4 +1659,16 @@ private fun String.excerptAround(index: Int, maxChars: Int): String {
     val start = (index - maxChars / 2).coerceAtLeast(0)
     val end = (start + maxChars).coerceAtMost(length)
     return substring(start, end).trim()
+}
+
+/** 把 patch 合并进 receiver：两边同为 JSON 对象时逐字段递归，否则整体覆盖。 */
+private fun JsonObject.deepMerge(patch: JsonObject) {
+    for ((key, value) in patch.entrySet()) {
+        val existing = get(key)
+        if (existing != null && existing.isJsonObject && value.isJsonObject) {
+            existing.asJsonObject.deepMerge(value.asJsonObject)
+        } else {
+            add(key, value)
+        }
+    }
 }
