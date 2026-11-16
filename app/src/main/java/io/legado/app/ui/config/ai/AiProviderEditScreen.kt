@@ -174,7 +174,9 @@ fun AiProviderEditScreen(
                     InputSettingItem(
                         title = stringResource(R.string.ai_provider_name),
                         value = state.providerName,
-                        onConfirm = { onIntent(AiProviderEditIntent.UpdateProviderName(it)) }
+                        onConfirm = { onIntent(AiProviderEditIntent.UpdateProviderName(it)) },
+                        // 实时回写，保证直接点右下角"保存"时也能拿到最新输入的名字。
+                        onValueChange = { onIntent(AiProviderEditIntent.UpdateProviderName(it)) }
                     )
                     DropdownListSettingItem(
                         title = stringResource(R.string.ai_protocol),
@@ -199,7 +201,8 @@ fun AiProviderEditScreen(
                     InputSettingItem(
                         title = stringResource(R.string.ai_base_url),
                         value = state.baseUrl,
-                        onConfirm = { onIntent(AiProviderEditIntent.UpdateBaseUrl(it)) }
+                        onConfirm = { onIntent(AiProviderEditIntent.UpdateBaseUrl(it)) },
+                        onValueChange = { onIntent(AiProviderEditIntent.UpdateBaseUrl(it)) }
                     )
                     if (imageProvider) AppText(stringResource(R.string.ai_image_provider_hint))
                     ClickableSettingItem(
@@ -249,8 +252,43 @@ fun AiProviderEditScreen(
                         title = stringResource(R.string.ai_models_url),
                         value = state.modelsUrl,
                         description = stringResource(R.string.ai_models_url_summary),
-                        onConfirm = { onIntent(AiProviderEditIntent.UpdateModelsUrl(it)) }
+                        onConfirm = { onIntent(AiProviderEditIntent.UpdateModelsUrl(it)) },
+                        onValueChange = { onIntent(AiProviderEditIntent.UpdateModelsUrl(it)) }
                     )
+                    if (!imageProvider) {
+                        AppText(
+                            text = stringResource(R.string.ai_endpoint_paths_summary),
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                        InputSettingItem(
+                            title = stringResource(R.string.ai_chat_path),
+                            value = state.chatPath,
+                            description = "/chat/completions",
+                            onConfirm = { onIntent(AiProviderEditIntent.UpdateChatPath(it)) },
+                            onValueChange = { onIntent(AiProviderEditIntent.UpdateChatPath(it)) }
+                        )
+                        InputSettingItem(
+                            title = stringResource(R.string.ai_responses_path),
+                            value = state.responsesPath,
+                            description = "/responses",
+                            onConfirm = { onIntent(AiProviderEditIntent.UpdateResponsesPath(it)) },
+                            onValueChange = { onIntent(AiProviderEditIntent.UpdateResponsesPath(it)) }
+                        )
+                        InputSettingItem(
+                            title = stringResource(R.string.ai_messages_path),
+                            value = state.messagesPath,
+                            description = "/v1/messages",
+                            onConfirm = { onIntent(AiProviderEditIntent.UpdateMessagesPath(it)) },
+                            onValueChange = { onIntent(AiProviderEditIntent.UpdateMessagesPath(it)) }
+                        )
+                        InputSettingItem(
+                            title = stringResource(R.string.ai_models_path),
+                            value = state.modelsPath,
+                            description = "/models",
+                            onConfirm = { onIntent(AiProviderEditIntent.UpdateModelsPath(it)) },
+                            onValueChange = { onIntent(AiProviderEditIntent.UpdateModelsPath(it)) }
+                        )
+                    }
                     ClickableSettingItem(
                         title = stringResource(R.string.ai_custom_headers),
                         description = if (state.customHeaders.none { it.name.isNotBlank() }) {

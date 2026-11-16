@@ -2438,6 +2438,9 @@
     <string name="ai_tool_group_source">书源</string>
     <string name="ai_tool_group_source_desc">列出、读取、新建、调试书源，抓网页源码</string>
     <string name="ai_chat">AI 对话</string>
+    <string name="ai_quick_fab">打开 AI 快捷面板</string>
+    <string name="ai_quick_panel_title">问 AI</string>
+    <string name="ai_quick_skills">技能</string>
     <string name="ai_recent_chats">最近对话</string>
     <string name="ai_new_chat">新建对话</string>
     <string name="ai_replying">AI 正在回复…</string>
@@ -2516,6 +2519,12 @@
     <string name="ai_delete_model">删除模型</string>
     <string name="ai_delete_model_confirm">确定要删除此模型吗？</string>
     <string name="ai_models_url_summary">可选。留空时使用该协议默认的模型列表端点。</string>
+    <string name="ai_endpoint_paths">接口路径</string>
+    <string name="ai_endpoint_paths_summary">可选。自定义拼接到基础 URL 后的 API 路径；留空则使用该协议默认路径。</string>
+    <string name="ai_chat_path">聊天补全路径</string>
+    <string name="ai_responses_path">Responses 路径</string>
+    <string name="ai_messages_path">Messages 路径</string>
+    <string name="ai_models_path">模型列表路径</string>
     <string name="ai_custom_headers">自定义请求头</string>
     <string name="ai_custom_headers_summary">可选。随每次请求发送的额外 HTTP 请求头；同名时覆盖内置请求头。</string>
     <string name="ai_custom_headers_count">已配置 %1$d 项</string>

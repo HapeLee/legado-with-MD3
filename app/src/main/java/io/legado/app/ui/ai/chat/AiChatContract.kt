@@ -84,6 +84,8 @@ sealed interface AiChatIntent {
     data class DeleteConversation(val id: String) : AiChatIntent
     data class RenameConversation(val id: String, val title: String) : AiChatIntent
     data class SetReadingContext(val context: AiReadingContext?) : AiChatIntent
+    /** 从阅读页技能悬浮窗进入：加载指定技能内容并作为首条消息自动开聊。 */
+    data class ApplySkill(val skillId: String) : AiChatIntent
 }
 
 sealed interface AiChatEffect {

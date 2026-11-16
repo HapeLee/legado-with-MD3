@@ -111,6 +111,8 @@ data class MainRouteAiChat(
     val bookAuthor: String? = null,
     val chapterIndex: Int? = null,
     val chapterTitle: String? = null,
+    /** 从阅读页技能悬浮窗进入时携带的技能 id，聊天页据此自动加载并应用该技能。 */
+    val initialSkillId: String? = null,
 ) : MainRoute
 
 @Serializable

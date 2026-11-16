@@ -13,10 +13,17 @@ data class AiProviderEditUiState(
     val selectedProviderPresetId: String = "",
     val providerId: String? = null,
     val providerName: String = "OpenAI Compatible",
+    /** 用户是否手动改过名字；为真时选预设不再覆盖，避免辛苦起的名字被预设冲掉。 */
+    val nameUserEdited: Boolean = false,
     val protocol: String = AiProtocol.OPENAI_CHAT_COMPLETIONS,
     val baseUrl: String = "",
     val modelsUrl: String = "",
     val apiKey: String = "",
+    /** 可编辑的端点路径；留空表示走协议默认路径。 */
+    val chatPath: String = "",
+    val responsesPath: String = "",
+    val messagesPath: String = "",
+    val modelsPath: String = "",
     val customHeaders: ImmutableList<AiProviderHeaderUi> = persistentListOf(),
     val providerModels: ImmutableList<AiProviderModelUi> = persistentListOf(),
     val editingModel: AiProviderModelEditorUi? = null,
@@ -85,6 +92,10 @@ sealed interface AiProviderEditIntent {
     data class UpdateProtocol(val value: String) : AiProviderEditIntent
     data class UpdateBaseUrl(val value: String) : AiProviderEditIntent
     data class UpdateModelsUrl(val value: String) : AiProviderEditIntent
+    data class UpdateChatPath(val value: String) : AiProviderEditIntent
+    data class UpdateResponsesPath(val value: String) : AiProviderEditIntent
+    data class UpdateMessagesPath(val value: String) : AiProviderEditIntent
+    data class UpdateModelsPath(val value: String) : AiProviderEditIntent
     data class UpdateApiKey(val value: String) : AiProviderEditIntent
     data class UpdateCustomHeaders(val headers: ImmutableList<AiProviderHeaderUi>) : AiProviderEditIntent
     data object AddModel : AiProviderEditIntent

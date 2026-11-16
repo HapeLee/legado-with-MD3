@@ -69,7 +69,7 @@ class AnthropicHandler : AiProtocolHandler {
 
         return retryWithBackoff(maxAttempts = 3, keyRotator = keyRotator) {
             val response = request.httpClient().newCallStrResponse {
-                url(provider.baseUrl + provider.messagesPath)
+                url(provider.endpointUrl(provider.messagesPath))
                 postJson(GSON.toJson(body))
                 addHeaders(
                     provider.aiRequestHeaders(
@@ -126,7 +126,7 @@ class AnthropicHandler : AiProtocolHandler {
         val keyRotator = KeyRotator(provider.apiKey)
         val response = retryWithBackoff(maxAttempts = 3, keyRotator = keyRotator) {
             request.httpClient().newCallResponse {
-                url(provider.baseUrl + provider.messagesPath)
+                url(provider.endpointUrl(provider.messagesPath))
                 postJson(GSON.toJson(body))
                 addHeaders(
                     provider.aiRequestHeaders(
@@ -234,9 +234,9 @@ class AnthropicHandler : AiProtocolHandler {
             "Anthropic configuration incomplete: baseUrl and apiKey are required"
         }
         val keyRotator = KeyRotator(provider.apiKey)
-        val modelsUrl = provider.modelsPath?.let { provider.baseUrl + it }
+        val modelsUrl = provider.modelsPath?.let { provider.endpointUrl(it) }
             ?: provider.modelsUrl
-            ?: (provider.baseUrl + "/v1/models")
+            ?: provider.endpointUrl("/v1/models")
         return retryWithBackoff(maxAttempts = 2, keyRotator = keyRotator) {
             val response = okHttpClient.newCallStrResponse {
                 url(modelsUrl)

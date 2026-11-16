@@ -99,10 +99,16 @@ class AiProviderEditViewModel(
                         current.copy(
                             providerId = provider?.id ?: current.providerId,
                             providerName = provider?.name ?: current.providerName,
+                            // 已有供应商把名字视为"用户已确定"，选预设不再覆盖它；新建则保持可覆盖。
+                            nameUserEdited = provider != null,
                             protocol = provider?.protocol ?: current.protocol,
                             baseUrl = provider?.baseUrl.orEmpty(),
                             modelsUrl = provider?.modelsUrl.orEmpty(),
                             apiKey = provider?.apiKey.orEmpty(),
+                            chatPath = provider?.chatPath.orEmpty(),
+                            responsesPath = provider?.responsesPath.orEmpty(),
+                            messagesPath = provider?.messagesPath.orEmpty(),
+                            modelsPath = provider?.modelsPath.orEmpty(),
                             customHeaders = parseHeaderList(provider?.customHeadersJson),
                             providerModels = providerModels,
                             initialized = true
@@ -116,12 +122,21 @@ class AiProviderEditViewModel(
     fun onIntent(intent: AiProviderEditIntent) {
         when (intent) {
             is AiProviderEditIntent.ApplyProviderPreset -> applyProviderPreset(intent.id)
-            is AiProviderEditIntent.UpdateProviderName -> _uiState.update { it.copy(providerName = intent.value) }
+            is AiProviderEditIntent.UpdateProviderName -> _uiState.update { current ->
+                // 实时回写会把初始文本原样回传一次；只有真正改动才标记"用户已编辑"，
+                // 否则新建供应商时选预设的名字会被误判为不可覆盖。
+                if (current.providerName == intent.value) current
+                else current.copy(providerName = intent.value, nameUserEdited = true)
+            }
             is AiProviderEditIntent.UpdateProtocol -> _uiState.update {
                 it.copy(protocol = intent.value, selectedProviderPresetId = "", fetchedModels = emptyList<AiFetchedModelUi>().toImmutableList())
             }
             is AiProviderEditIntent.UpdateBaseUrl -> _uiState.update { it.copy(baseUrl = intent.value, selectedProviderPresetId = "") }
             is AiProviderEditIntent.UpdateModelsUrl -> _uiState.update { it.copy(modelsUrl = intent.value, selectedProviderPresetId = "") }
+            is AiProviderEditIntent.UpdateChatPath -> _uiState.update { it.copy(chatPath = intent.value) }
+            is AiProviderEditIntent.UpdateResponsesPath -> _uiState.update { it.copy(responsesPath = intent.value) }
+            is AiProviderEditIntent.UpdateMessagesPath -> _uiState.update { it.copy(messagesPath = intent.value) }
+            is AiProviderEditIntent.UpdateModelsPath -> _uiState.update { it.copy(modelsPath = intent.value) }
             is AiProviderEditIntent.UpdateApiKey -> _uiState.update { it.copy(apiKey = intent.value) }
             is AiProviderEditIntent.UpdateCustomHeaders -> _uiState.update { it.copy(customHeaders = intent.headers) }
             AiProviderEditIntent.AddModel -> _uiState.update {
@@ -172,7 +187,8 @@ class AiProviderEditViewModel(
         _uiState.update {
             it.copy(
                 selectedProviderPresetId = preset.id,
-                providerName = preset.name,
+                // 用户已经起过名字就保留，不用预设名覆盖。
+                providerName = if (it.nameUserEdited) it.providerName else preset.name,
                 protocol = preset.protocol,
                 baseUrl = preset.baseUrl,
                 modelsUrl = preset.modelsUrl,
@@ -378,7 +394,11 @@ class AiProviderEditViewModel(
             baseUrl = baseUrl,
             modelsUrl = modelsUrl,
             apiKey = apiKey,
-            customHeaders = customHeaders.toCustomHeaderMap()
+            customHeaders = customHeaders.toCustomHeaderMap(),
+            chatPath = chatPath.ifBlank { null },
+            responsesPath = responsesPath.ifBlank { null },
+            messagesPath = messagesPath.ifBlank { null },
+            modelsPath = modelsPath.ifBlank { null }
         )
     }
 
@@ -408,6 +428,10 @@ class AiProviderEditViewModel(
             baseUrl = baseUrl,
             apiKey = apiKey,
             modelsUrl = modelsUrl.ifBlank { null },
+            chatPath = chatPath.ifBlank { "/chat/completions" },
+            responsesPath = responsesPath.ifBlank { "/responses" },
+            messagesPath = messagesPath.ifBlank { "/v1/messages" },
+            modelsPath = modelsPath.ifBlank { null },
             customHeaders = customHeaders.toCustomHeaderMap()
         )
     }

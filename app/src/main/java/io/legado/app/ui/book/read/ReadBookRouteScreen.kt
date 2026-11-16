@@ -66,6 +66,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import org.koin.androidx.compose.koinViewModel
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
@@ -170,7 +171,8 @@ fun ReadBookRouteScreen(
         bookAuthor: String?,
         chapterIndex: Int?,
         chapterTitle: String?,
-    ) -> Unit = { _, _, _, _, _ -> },
+        skillId: String?,
+    ) -> Unit = { _, _, _, _, _, _ -> },
     onOpenReadAloudSubPage: (ReadAloudSubPage) -> Unit = {},
     onOpenTtsEnginesAndVoices: () -> Unit = {},
     onOpenTtsCache: () -> Unit = {},
@@ -186,6 +188,9 @@ fun ReadBookRouteScreen(
     val readPreferences by viewModel.readPreferences.collectAsStateWithLifecycle()
     val markingState by viewModel.markingState.collectAsStateWithLifecycle()
     val readerRenderState by readerSessionViewModel.uiState.collectAsStateWithLifecycle()
+    // AI 悬浮小窗独立持有技能列表，避免把 AI 职责塞进阅读页 ViewModel。
+    val aiQuickViewModel: AiQuickAccessViewModel = koinViewModel()
+    val aiQuickSkills by aiQuickViewModel.skills.collectAsStateWithLifecycle()
     val readerPageWindow = readerRenderState.pageWindow
     val readerPaginationError = readerRenderState.paginationError
     val readerBackground = readerRenderState.background
@@ -427,6 +432,7 @@ fun ReadBookRouteScreen(
                                     effect.bookAuthor,
                                     effect.chapterIndex,
                                     effect.chapterTitle,
+                                    null,
                                 )
                             }
                             is ReadBookEffect.OpenReadAloudSubPage -> {
@@ -866,6 +872,28 @@ fun ReadBookRouteScreen(
                 onIntent = viewModel::onIntent,
                 seekState = viewModel.seekState,
             )
+            // AI 悬浮小窗：右下角，与底部中央的听书/阅读胶囊错开；菜单或搜索结果与菜单互斥时隐藏。
+            AnimatedVisibility(
+                visible = !state.menuVisible && !state.isShowingSearchResult && state.activeDialog == null,
+            ) {
+                AiQuickFab(
+                    skills = aiQuickSkills,
+                    onOpenChat = {
+                        onOpenAiChat(
+                            state.book?.bookUrl, state.book?.name, state.book?.author,
+                            state.durChapterIndex.takeIf { state.book != null },
+                            state.chapterName, null,
+                        )
+                    },
+                    onOpenSkill = { skillId ->
+                        onOpenAiChat(
+                            state.book?.bookUrl, state.book?.name, state.book?.author,
+                            state.durChapterIndex.takeIf { state.book != null },
+                            state.chapterName, skillId,
+                        )
+                    },
+                )
+            }
             AnimatedVisibility(
                 visible = state.translationStatus == TranslationChapterStatus.Thinking,
                 enter = fadeIn(tween(180)) + scaleIn(tween(220), initialScale = 0.88f),

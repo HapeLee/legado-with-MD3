@@ -802,6 +802,7 @@ fun MainActivity.mainEntryProvider(
         }
         AiChatRouteScreen(
             readingContext = readingContext,
+            initialSkillId = route.initialSkillId,
             onBackClick = { onNavigateBack() },
             onOpenBookInfo = { book ->
                 onNavigateToRoute(
@@ -1054,7 +1055,7 @@ fun MainActivity.mainEntryProvider(
                 onOpenVoiceCasting = { bookUrl ->
                     onNavigateToRoute(MainRouteBookVoiceCasting(bookUrl))
                 },
-                onOpenAiChat = { bookUrl, bookName, bookAuthor, chapterIndex, chapterTitle ->
+                onOpenAiChat = { bookUrl, bookName, bookAuthor, chapterIndex, chapterTitle, skillId ->
                     onNavigateToRoute(
                         MainRouteAiChat(
                             bookUrl = bookUrl,
@@ -1062,6 +1063,7 @@ fun MainActivity.mainEntryProvider(
                             bookAuthor = bookAuthor,
                             chapterIndex = chapterIndex,
                             chapterTitle = chapterTitle,
+                            initialSkillId = skillId,
                         )
                     )
                 },

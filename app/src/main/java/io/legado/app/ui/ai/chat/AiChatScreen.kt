@@ -109,12 +109,18 @@ import java.util.concurrent.TimeUnit
 @Composable
 fun AiChatRouteScreen(
     readingContext: AiReadingContext? = null,
+    initialSkillId: String? = null,
     onBackClick: () -> Unit,
     onOpenBookInfo: (AiChatBookResultUi) -> Unit,
     viewModel: AiChatViewModel = koinViewModel()
 ) {
     LaunchedEffect(readingContext) {
         viewModel.onIntent(AiChatIntent.SetReadingContext(readingContext))
+    }
+    LaunchedEffect(initialSkillId) {
+        if (initialSkillId != null) {
+            viewModel.onIntent(AiChatIntent.ApplySkill(initialSkillId))
+        }
     }
     AiChatScreen(
         state = viewModel.uiState.collectAsStateWithLifecycle().value,

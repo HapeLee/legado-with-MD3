@@ -13,11 +13,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import kotlinx.coroutines.flow.distinctUntilChanged
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
@@ -32,17 +35,32 @@ fun InputSettingItem(
     value: String,
     defaultValue: String? = "",
     description: String? = null,
-    onConfirm: (String) -> Unit
+    onConfirm: (String) -> Unit,
+    /**
+     * 可选的实时回写：文本内容每次变化都会回调，供"确认式"输入之外的保存流程（如供应商编辑页的
+     * 全局保存按钮）拿到最新文本。不传时行为与原来完全一致——只在点确认/键盘动作时提交。
+     */
+    onValueChange: ((String) -> Unit)? = null
 ) {
     // 1. 状态统一提升到外部，两套引擎共用
     var expanded by remember { mutableStateOf(false) }
     val state = rememberTextFieldState(initialText = value)
+    val currentOnValueChange by rememberUpdatedState(onValueChange)
 
     LaunchedEffect(expanded) {
         if (expanded) {
             state.edit {
                 replace(0, length, value)
             }
+        }
+    }
+
+    // 仅在配置了实时回写时监听文本框内容；distinctUntilChanged 避免重复提交同一内容。
+    if (onValueChange != null) {
+        LaunchedEffect(Unit) {
+            snapshotFlow { state.text.toString() }
+                .distinctUntilChanged()
+                .collect { text -> currentOnValueChange?.invoke(text) }
         }
     }
 

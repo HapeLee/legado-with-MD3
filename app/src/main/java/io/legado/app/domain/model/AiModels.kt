@@ -177,7 +177,16 @@ data class AiProviderConfig(
     val messagesPath: String = "/v1/messages",
     val modelsPath: String? = null,
     val customHeaders: Map<String, String> = emptyMap()
-)
+) {
+    /**
+     * 把端点路径拼到 baseUrl 后。统一去掉 baseUrl 末尾的 '/'，并给缺少前导 '/' 的路径补上，
+     * 避免 "https://x/v1/" + "/chat/completions" 拼出 ".../v1//chat/completions" 这种错乱 URL。
+     */
+    fun endpointUrl(path: String): String {
+        val normalizedPath = if (path.startsWith("/")) path else "/$path"
+        return baseUrl.trimEnd('/') + normalizedPath
+    }
+}
 
 @Keep
 data class AiModelConfig(
@@ -233,7 +242,12 @@ data class AiProviderDraft(
      * User-defined request headers. Sent as-is on every chat/models request and override the
      * protocol handler's built-in headers with the same name (e.g. `x-opencode-session`).
      */
-    val customHeaders: Map<String, String> = emptyMap()
+    val customHeaders: Map<String, String> = emptyMap(),
+    /** Custom endpoint paths. Blank means "use the protocol default". */
+    val chatPath: String? = null,
+    val responsesPath: String? = null,
+    val messagesPath: String? = null,
+    val modelsPath: String? = null
 )
 
 @Keep

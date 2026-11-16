@@ -71,8 +71,21 @@ class AiChatViewModel(
             is AiChatIntent.DeleteConversation -> deleteConversation(intent.id)
             is AiChatIntent.RenameConversation -> renameConversation(intent.id, intent.title)
             is AiChatIntent.SetReadingContext -> _uiState.update { it.copy(readingContext = intent.context) }
+            is AiChatIntent.ApplySkill -> applySkill(intent.skillId)
         }
     }
+
+    /** 从阅读页技能悬浮窗进入：把技能正文作为首条消息发给 AI，立即按该技能开工。 */
+    private fun applySkill(skillId: String) {
+        // 重组会重复下发同一 intent，用 applying 标志确保只自动发送一次。
+        if (!appliedSkillIds.add(skillId)) return
+        viewModelScope.launch {
+            val skill = aiProfileGateway.listSkills().firstOrNull { it.id == skillId } ?: return@launch
+            sendMessage(skill.content.ifBlank { skill.name })
+        }
+    }
+
+    private val appliedSkillIds = mutableSetOf<String>()
 
     // ---- Conversation lifecycle ----
 

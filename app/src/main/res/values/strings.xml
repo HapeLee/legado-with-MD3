@@ -2382,6 +2382,9 @@
     <string name="ai_tool_group_source">Book sources</string>
     <string name="ai_tool_group_source_desc">List, read, create and debug sources; fetch page HTML</string>
     <string name="ai_chat">AI Chat</string>
+    <string name="ai_quick_fab">Open AI quick panel</string>
+    <string name="ai_quick_panel_title">Ask AI</string>
+    <string name="ai_quick_skills">Skills</string>
     <string name="ai_recent_chats">Recent Chats</string>
     <string name="ai_new_chat">New Chat</string>
     <string name="ai_replying">AI is replying…</string>
@@ -2456,6 +2459,12 @@
     <string name="ai_save_model">Save Model</string>
     <string name="ai_advanced">Advanced</string>
     <string name="ai_models_url_summary">Optional. Leave blank to use the protocol default models endpoint.</string>
+    <string name="ai_endpoint_paths">Endpoint Paths</string>
+    <string name="ai_endpoint_paths_summary">Optional. Customize API paths appended to the base URL; leave blank to use the protocol default.</string>
+    <string name="ai_chat_path">Chat Completions Path</string>
+    <string name="ai_responses_path">Responses Path</string>
+    <string name="ai_messages_path">Messages Path</string>
+    <string name="ai_models_path">Models Path</string>
     <string name="ai_custom_headers">Request Headers</string>
     <string name="ai_custom_headers_summary">Optional. Extra HTTP headers sent with every request; same-name entries override built-in headers.</string>
     <string name="ai_custom_headers_count">%1$d configured</string>
