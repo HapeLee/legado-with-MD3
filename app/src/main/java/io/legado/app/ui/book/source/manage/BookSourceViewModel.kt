@@ -316,7 +316,7 @@ class BookSourceViewModel(
             }
 
             BookSourceIntent.CancelCheck -> _effects.tryEmit(BookSourceEffect.CancelCheck)
-            is BookSourceIntent.Import -> importSources(intent.text)
+            is BookSourceIntent.Import -> importSources(intent.input)
             is BookSourceIntent.Export -> exportSources(intent.uri, intent.ids)
             is BookSourceIntent.Upload -> uploadSources(intent.ids)
             is BookSourceIntent.ToggleImportItem -> updateImportItems { items ->
@@ -526,53 +526,39 @@ class BookSourceViewModel(
         }
     }
 
+    /**
+     * 读取一份导入数据。`reader` 由调用方负责关闭；`sourceUrls` 清单会继续远程拉取并递归解析。
+     */
     private suspend fun parseImportSources(reader: Reader): List<BookSource> {
-        val jsonReader = JsonReader(reader).apply {
-            strictness = Strictness.LENIENT
+        val document = try {
+            parseBookSourceImport(reader)
+        } catch (e: BookSourceImportFormatException) {
+            // 解析异常来自 Gson，原文是英文；统一换成可本地化的格式错误提示。
+            throw IllegalStateException(
+                application.getString(io.legado.app.R.string.invalid_format), e
+            )
         }
-        val sources = when (jsonReader.peek()) {
-            JsonToken.BEGIN_ARRAY -> {
-                val list = ArrayList<BookSource>()
-                jsonReader.beginArray()
-                while (jsonReader.hasNext()) {
-                    val source: BookSource? = GSON.fromJson(jsonReader, BookSource::class.java)
-                    if (source != null) {
-                        list.add(source)
-                    }
-                }
-                jsonReader.endArray()
-                list
-            }
-
-            JsonToken.BEGIN_OBJECT -> {
-                val objectValue = JsonParser.parseReader(jsonReader).asJsonObject
-                val sourceUrls = objectValue.get("sourceUrls")?.takeIf { it.isJsonArray }?.asJsonArray
-                if (sourceUrls != null) {
-                    sourceUrls.flatMap { element ->
-                        val url = element.asString
-                        okHttpClient.newCallResponseBody {
-                            if (url.endsWith("#requestWithoutUA")) {
-                                url(url.substringBeforeLast("#requestWithoutUA"))
-                                header(AppConst.UA_NAME, "null")
-                            } else {
-                                url(url)
-                            }
-                        }.decompressed().byteStream().bufferedReader().use { streamReader ->
-                            parseImportSources(streamReader)
-                        }
-                    }
-                } else {
-                    listOfNotNull(GSON.fromJson(objectValue, BookSource::class.java))
-                }
-            }
-
-            else -> error(application.getString(io.legado.app.R.string.invalid_format))
+        val sources = when (document) {
+            is BookSourceImportDocument.Sources -> document.sources
+            is BookSourceImportDocument.RemoteUrls -> document.urls.flatMap { readRemoteSources(it) }
         }
         require(sources.all { it.bookSourceUrl.isNotBlank() }) {
             application.getString(io.legado.app.R.string.book_source_invalid_source)
         }
         return sources
     }
+
+    private suspend fun readRemoteSources(sourceUrl: String): List<BookSource> =
+        okHttpClient.newCallResponseBody {
+            if (sourceUrl.endsWith("#requestWithoutUA")) {
+                url(sourceUrl.substringBeforeLast("#requestWithoutUA"))
+                header(AppConst.UA_NAME, "null")
+            } else {
+                url(sourceUrl)
+            }
+        }.decompressed().byteStream().bufferedReader().use { streamReader ->
+            parseImportSources(streamReader)
+        }
 
     private fun updateImportItems(transform: (List<ImportItemWrapper<BookSource>>) -> List<ImportItemWrapper<BookSource>>) {
         val state = importState.value as? BaseImportUiState.Success<BookSource> ?: return
@@ -694,6 +680,76 @@ class BookSourceViewModel(
         }
     }
 
+}
+
+/** 导入数据的顶层形态。 */
+internal sealed interface BookSourceImportDocument {
+    /** 顶层就是书源数据：书源数组，或单个书源对象。 */
+    data class Sources(val sources: List<BookSource>) : BookSourceImportDocument
+
+    /** 顶层对象只声明了要远程拉取的地址清单。 */
+    data class RemoteUrls(val urls: List<String>) : BookSourceImportDocument
+}
+
+/** 导入数据不是可识别的书源 JSON，调用方负责翻译成本地化文案。 */
+internal class BookSourceImportFormatException(cause: Throwable? = null) :
+    Exception(cause?.message, cause)
+
+/**
+ * 流式读取一份导入 JSON。
+ *
+ * 顶层数组逐元素反序列化：既不保留整份文本，也不建整棵 JsonElement 树，只留下解析出的书源对象。
+ * 顶层对象（单个书源 / `sourceUrls` 清单）体积很小，直接建树判断形态。
+ */
+internal fun parseBookSourceImport(reader: Reader): BookSourceImportDocument {
+    val jsonReader = JsonReader(reader).apply {
+        strictness = Strictness.LENIENT
+    }
+    return try {
+        when (jsonReader.peek()) {
+            JsonToken.BEGIN_ARRAY -> BookSourceImportDocument.Sources(
+                readSourceArray(jsonReader)
+            )
+
+            JsonToken.BEGIN_OBJECT -> readSourceObject(jsonReader)
+            else -> throw BookSourceImportFormatException()
+        }
+    } catch (e: BookSourceImportFormatException) {
+        throw e
+    } catch (e: Exception) {
+        // EOF、语法错误、字段类型不符都属于「文件本身不可用」。
+        throw BookSourceImportFormatException(e)
+    }
+}
+
+private fun readSourceArray(jsonReader: JsonReader): List<BookSource> {
+    val sources = ArrayList<BookSource>()
+    jsonReader.beginArray()
+    while (jsonReader.hasNext()) {
+        // reader 版的 fromJson 只消费一个值，不校验其后的文档内容；
+        // 数组后面残留其他内容会被忽略，用于兼容手工拼接的导入文件。
+        val source: BookSource? = GSON.fromJson(jsonReader, BookSource::class.java)
+        if (source != null) sources.add(source)
+    }
+    jsonReader.endArray()
+    return sources
+}
+
+private fun readSourceObject(jsonReader: JsonReader): BookSourceImportDocument {
+    val objectValue = JsonParser.parseReader(jsonReader).asJsonObject
+    val sourceUrls = objectValue.get("sourceUrls")
+    if (sourceUrls == null) {
+        return BookSourceImportDocument.Sources(
+            listOfNotNull(GSON.fromJson(objectValue, BookSource::class.java))
+        )
+    }
+    if (!sourceUrls.isJsonArray) throw BookSourceImportFormatException()
+    return BookSourceImportDocument.RemoteUrls(
+        sourceUrls.asJsonArray.map { element ->
+            if (!element.isJsonPrimitive) throw BookSourceImportFormatException()
+            element.asString
+        }
+    )
 }
 
 internal fun reorderBookSources(

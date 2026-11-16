@@ -99,7 +99,11 @@ sealed interface BookSourceIntent {
 
     data class UpdateCheckOptions(val options: BookSourceCheckOptionsUi) : BookSourceIntent
     data object CancelCheck : BookSourceIntent
-    data class Import(val text: String) : BookSourceIntent
+    /**
+     * 导入书源。[input] 支持三种形态：书源 JSON 文本、在线地址（http/https）、
+     * 本地文件 URI（content://、file://）。
+     */
+    data class Import(val input: String) : BookSourceIntent
     data class Export(val uri: Uri, val ids: Set<String>) : BookSourceIntent
     data class Upload(val ids: Set<String>) : BookSourceIntent
     data class ToggleImportItem(val index: Int) : BookSourceIntent

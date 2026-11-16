@@ -169,7 +169,6 @@ fun BookSourceScreen(
     onSearchSource: (String, String) -> Unit,
     onDebugSource: (String) -> Unit,
 ) {
-    val context = LocalContext.current
     val rules = state.items
     val selectedIds = state.selectedIds
     val listState = rememberLazyListState()
