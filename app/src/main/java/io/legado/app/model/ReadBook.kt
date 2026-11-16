@@ -37,6 +37,7 @@ import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.isLocalManga
 import io.legado.app.help.book.isLocalModified
 import io.legado.app.help.book.isLocalTxt
+import io.legado.app.utils.StringUtils
 import io.legado.app.help.book.isMarkdown
 import io.legado.app.help.book.isPdf
 import io.legado.app.help.book.isSameNameAuthor
@@ -522,6 +523,18 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 chineseConverterType = readSettingsGateway.currentSettings.chineseConverterType,
             )
             val processed = processor.getContent(book, chapter, content, includeTitle = false, paragraphIndent = null, includePresentation = true)
+            // 后台逐章渲染本地书时顺带把章节字数落库（EPUB/MOBI/TXT 通用），供目录显示。
+            if (readSettingsGateway.currentSettings.tocCountWords) {
+                val readableLength = processed.textList
+                    .sumOf { it.length.toLong() }
+                    .coerceAtMost(Int.MAX_VALUE.toLong())
+                    .toInt()
+                val wc = StringUtils.wordCountFormat(readableLength)
+                if (chapter.wordCount != wc) {
+                    chapter.wordCount = wc
+                    withContext(IO) { appDb.bookChapterDao.update(chapter) }
+                }
+            }
             wholeBookPageCoordinator.updateChapterContent(
                 chapterIndex = chapter.index,
                 actualLength = processed.textList
