@@ -120,17 +120,51 @@ object DefaultAiSkills {
         # 书源编写
 
         ## 何时使用
-        用户说「给这个网站写个书源」「这个源搜索不准，帮我改」「能不能做个源」时。
+        用户说「给这个网站写个书源」「这个源搜索不准 / 目录或正文抓不到，帮我改」「能不能做个源」时。
+        目标不是写一份看起来对的 JSON，而是交付一个**用真实网址逐段验证过**的可用书源。
 
-        ## 流程
-        1. 先 list_book_sources 查同站是否已有源。有就走 update_book_source，没有才 create_book_source。
-        2. 用 fetch_web_page 抓真实页面源码，确认选择器真能命中。搜索页要抓带关键词的完整 URL。
-        3. 按下面的模板组装 JSON，字段名不能改。
-        4. create_book_source 传完整 JSON。
-        5. 用 search_with_book_source 拿真实关键词验证。返回空列表就是 searchUrl 或 ruleSearch 错了。
-        6. 还失败就 debug_book_source，target 用 search，看日志判断是请求失败还是解析为空。
+        ## 核心原则（务必遵守）
+        - 选择器只能来自真实抓到的页面，绝不凭印象或模板编造。没抓到页面就先抓；抓不到就明确告诉用户站点可能反爬 / 需登录，不要硬写。
+        - 写完必须逐段验证：搜索 → 详情 → 目录 → 正文，四段都通过才算完成。只验证搜索不算完成。
+        - 不要臆造章节内容或书籍数据；验证结果是什么就如实汇报。
 
-        ## 最小模板
+        ## 决策表：先看清楚要做什么
+        | 用户诉求 | 动作 |
+        |---|---|
+        | 同站已有源、只是某段失效 | get_book_source 读出现有源 → 定位坏掉的 rule → update_book_source 只改那几个字段 |
+        | 全新站点 | fetch_web_page 抓页面 → 推导规则 → create_book_source → 逐段验证 |
+        | 源需要登录 / Cookie | 在源里配 cookie / 登录 UI，fetch_web_page 传 sourceUrl 复用该源的 header 与 Cookie |
+
+        ## 标准流程
+        1. 查存量：list_book_sources 按站点名 / 域名查。命中就走「改源」路径，没有才新建。
+        2. 抓真实页面（关键，不能跳）：
+           - 先抓搜索页。用站点真实的搜索 URL，把关键词替换进去，例如 `https://站点/search?q=斗破苍穹`。
+           - 拿到一条结果的详情链接后再抓详情页；从详情页拿目录链接抓目录页；从目录拿章节链接抓正文页。
+           - 页面是 JS 动态渲染、抓到的 HTML 里没有目标数据时，给 fetch_web_page 传 useWebView=true 再抓一次。
+           - 站点需要登录 / 防盗链 / 反爬时，fetch_web_page 传 sourceUrl 复用该源的 header、Cookie 和限速。
+           - 内容超长被截断时把 maxChars 调大（最大 60000）。抓到 body 后，按下面的语法从真实结构推导选择器。
+        3. 按模板组装完整 JSON，字段名一个都不能改。
+        4. 写入：新建用 create_book_source，改源用 update_book_source（只提交要变的字段，会深合并，bookSourceUrl 不可改）。
+        5. 逐段验证（每段都必须跑）：
+           - search_with_book_source 传真实关键词 → 返回书籍列表即搜索通过；空列表先查 searchUrl / ruleSearch。
+           - debug_book_source 的 target 依次用 info（传详情 URL）、toc（传目录 URL）、content（传正文 URL）逐段验证；每段看日志区分「请求失败」还是「解析为空」。
+           - 请求失败：查 URL、header、Cookie、限速；解析为空：查选择器、规则标志。
+        6. 全部通过后再向用户汇报，附上验证用的关键词和结果数量。任一段失败就回到第 2 步修正。
+
+        ## 规则语法（阅读 / Legado 规则）
+        - URL 模板：{{key}} 是搜索关键词，{{page}} 是页码，必须原样保留；把站点真实参数填进 URL。
+        - 取值写在 @ 后：@text 文本、@href 链接、@src 图片地址、@html 内层 HTML。
+        - 规则标志（写在 {{...}} 或字段值里，区分选择器类型，缺标志会被当 JS 执行）：
+          - @@ 默认规则，可省略
+          - @XPath: XPath 规则；直接以 `//` 开头可省略标志
+          - @Json: JSONPath 规则；直接以美元符加点开头可省略标志
+          - : 开头（如 `:正则`）是正则规则，只用于书籍列表和目录列表
+        - bookList / chapterList 先用 CSS、XPath 或 JSONPath 定位到「每一条」，其余字段都相对这一条解析。
+        - 需要计算、拼接、拼接绝对地址时用 @js: 前缀写 JS，返回值必须是字符串；相对链接要拼成绝对 URL。
+        - 站点返回 JSON 时整段用 @Json: 或 JSONPath（美元符加点开头），不要用 CSS。
+        - 分页：searchUrl / 目录 URL 里用 {{page}}，并在规则里给出下一页判断（需要时用 @js:）。
+
+        ## 最小模板（CSS 版；据真实页面改成 XPath / JSONPath）
         {
           "bookSourceUrl": "https://example.com",
           "bookSourceName": "示例站",
@@ -160,22 +194,31 @@ object DefaultAiSkills {
             "content": "#content@html"
           }
         }
+        需要「发现 / 排行」时再补 ruleExplore（结构类似 ruleSearch）。
 
-        ## 规则语法
-        - {{key}} 是关键词，{{page}} 是页码，必须原样留在 URL 里。
-        - 选择器在 @ 前，取值方式在 @ 后：@text 取文本，@href 取链接，@src 取图片地址，@html 取内层 HTML。
-        - bookList、chapterList 先定位到每一条，其余字段都相对这一条解析。
-        - 需要计算或拼接时用 @js: 前缀写 JS，返回值必须是字符串。
+        ## 反模式（这些做法会导致源不可用）
+        - 不抓页面就照模板编选择器 —— 十有八九命中不到，用户拿到就是坏源。
+        - 只验证搜索就交付 —— 目录、正文常常另有反爬或不同结构。
+        - 相对链接不拼绝对地址 —— 详情页 / 章节链接会 404。
+        - JSON 接口用 CSS 选择器，或把 @js: / @Json: 标志写错 —— 解析必然为空。
+        - 改源时整份覆盖 —— 会冲掉用户其它自定义字段，务必用 update_book_source 深合并。
 
         ## 约束
         - bookSourceUrl 只填站点根地址，不带路径和参数。
-        - 不要凭印象编选择器。没抓到页面就先抓，抓不到就直说站点可能反爬。
-        - 改源只提交要变的字段，别整份覆盖，update_book_source 会深合并。
-        - 每次改完都要跑一次 search_with_book_source，没验证过不算完成。
+        - create_book_source / update_book_source 需要用户确认，属正常流程。
+        - debug_book_source 用的是全局调试会话，可能挤掉用户正在进行的 UI 调试；验证完尽快结束，不要长时间占用。
+        - 每次改完都要跑验证，没验证过不算完成。
     """.trimIndent()
 
-    /** 内置技能版本。新增技能时 +1，App 启动按版本补齐。 */
-    const val VERSION = 2
+    /** 内置技能版本。新增技能或升级内置技能正文时 +1，App 启动按版本补齐。 */
+    const val VERSION = 3
+
+    /**
+     * 需要强制刷新正文的内置技能 id（版本升级时）。
+     * 只对「当前确实存在」的技能刷新，绝不重新插入用户已删除的，避免复活。
+     * 今后升级某个内置技能正文时，把它加进这里并升 VERSION。
+     */
+    val contentUpgradeIds: Set<String> = setOf("builtin.book_source")
 
     /** VERSION 1 发布的技能 id：迁移时视为已处理，避免把用户删掉的又塞回去。 */
     val legacyIds: Set<String> = setOf(

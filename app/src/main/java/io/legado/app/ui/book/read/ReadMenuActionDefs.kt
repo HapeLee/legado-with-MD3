@@ -6,7 +6,6 @@ import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.automirrored.filled.Toc
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Brightness6
@@ -256,11 +255,6 @@ internal fun readMenuButtonInfos(context: Context): List<ReadMenuButtonInfo> = l
         context.getString(R.string.ai_chat),
     ),
     ReadMenuButtonInfo(
-        "ai_summary",
-        Icons.Default.AutoAwesome,
-        context.getString(R.string.ai_chapter_summary),
-    ),
-    ReadMenuButtonInfo(
         "ai_rewrite",
         Icons.Default.Edit,
         context.getString(R.string.ai_text_rewrite),
@@ -480,9 +474,6 @@ internal fun buildReadMenuActionDefs(
         },
         def("ai_chat") {
             onIntent(ReadBookIntent.OpenAiChat)
-        },
-        def("ai_summary") {
-            onIntent(ReadBookIntent.OpenChapterSummary)
         },
         def("ai_rewrite") {
             onIntent(ReadBookIntent.OpenAiCurrentChapterRewrite)

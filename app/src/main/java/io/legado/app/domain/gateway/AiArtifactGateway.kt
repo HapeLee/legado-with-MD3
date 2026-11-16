@@ -5,6 +5,8 @@ import kotlinx.coroutines.flow.Flow
 
 interface AiArtifactGateway {
     fun observeBookArtifacts(bookUrl: String, taskType: String): Flow<List<AiArtifact>>
+    /** 全部已成功产物，按更新时间倒序，供工作区列表展示。 */
+    fun observeAllArtifacts(): Flow<List<AiArtifact>>
     suspend fun getCachedArtifact(
         bookUrl: String,
         chapterIndex: Int?,

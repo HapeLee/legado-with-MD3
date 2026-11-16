@@ -371,8 +371,13 @@ class App : Application(), SingletonImageLoader.Factory {
             } else {
                 emptySet()
             }
-            DefaultAiSkills.all()
+            val defaults = DefaultAiSkills.all()
+            defaults
                 .filterNot { it.id in existing || it.id in legacyDone }
+                .forEach { gateway.saveSkill(it) }
+            // 升级内置技能正文：只刷新当前仍存在的目标技能，不复活用户主动删除的技能。
+            defaults
+                .filter { it.id in DefaultAiSkills.contentUpgradeIds && it.id in existing }
                 .forEach { gateway.saveSkill(it) }
         }
         AppConfigStore.putInt(PreferKey.aiSkillsSeedVersion, DefaultAiSkills.VERSION)

@@ -5,6 +5,9 @@ import kotlinx.coroutines.delay
 import kotlin.math.min
 import kotlin.random.Random
 
+/** 可重试的 HTTP 状态码：限流、超时与常见临时服务端错误。500 不在其中，避免重试永久性错误。 */
+internal val DEFAULT_RETRYABLE_STATUS_CODES: Set<Int> = setOf(408, 429, 500, 502, 503, 504)
+
 /**
  * Round-robin key rotator for providers with multiple API keys.
  * Keys are comma-separated in the provider's apiKey field.
@@ -47,7 +50,7 @@ internal suspend fun <T> retryWithBackoff(
     maxAttempts: Int = 3,
     baseDelayMs: Long = 1_000,
     maxDelayMs: Long = 30_000,
-    retryableStatusCodes: Set<Int> = setOf(429, 502, 503),
+    retryableStatusCodes: Set<Int> = DEFAULT_RETRYABLE_STATUS_CODES,
     keyRotator: KeyRotator? = null,
     onRetry: (suspend (attempt: Int, delayMs: Long, error: Exception) -> Unit)? = null,
     block: suspend () -> T

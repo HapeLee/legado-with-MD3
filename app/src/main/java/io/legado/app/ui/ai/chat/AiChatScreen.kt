@@ -8,6 +8,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,6 +40,7 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
@@ -47,6 +49,7 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.SnackbarHost
@@ -77,6 +80,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import android.content.ClipData
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -84,6 +88,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.data.entities.AiArtifact
+import io.legado.app.domain.model.AiErrorKind
 import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.ui.ai.AiReasoningModeButton
@@ -96,6 +102,7 @@ import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.text.AppText
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
@@ -144,6 +151,7 @@ fun AiChatScreen(
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val clipboard = LocalClipboard.current
+    val context = LocalContext.current
     var draft by rememberSaveable { mutableStateOf("") }
     val listState = rememberLazyListState()
     val density = LocalDensity.current
@@ -203,6 +211,16 @@ fun AiChatScreen(
                     )
                     if (result == SnackbarResult.ActionPerformed) {
                         errorDialogMessage = effect.message
+                    }
+                }
+                is AiChatEffect.ShowAiError -> {
+                    val friendly = context.getString(aiErrorResId(effect.kind))
+                    val result = snackbarHostState.showSnackbar(
+                        message = friendly,
+                        actionLabel = snackbarActionLabel
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        errorDialogMessage = effect.raw.ifBlank { friendly }
                     }
                 }
             }
@@ -573,6 +591,11 @@ fun AiChatScreen(
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             MediumTonalButton(
+                                onClick = { onIntent(AiChatIntent.ToggleWorkspace) },
+                                icon = Icons.Default.Folder,
+                                contentDescription = stringResource(R.string.ai_workspace)
+                            )
+                            MediumTonalButton(
                                 onClick = { scope.launch { drawerState.open() } },
                                 icon = Icons.Default.Menu,
                                 contentDescription = stringResource(R.string.ai_recent_chats)
@@ -589,6 +612,13 @@ fun AiChatScreen(
         }
     }
 
+    if (state.workspaceOpen) {
+        AiWorkspaceSheet(
+            artifacts = state.workspaceArtifacts,
+            onDismiss = { onIntent(AiChatIntent.CloseWorkspace) }
+        )
+    }
+
     AppAlertDialog(
         show = errorDialogMessage != null,
         onDismissRequest = { errorDialogMessage = null },
@@ -597,6 +627,87 @@ fun AiChatScreen(
         confirmText = stringResource(R.string.ok),
         onConfirm = { errorDialogMessage = null }
     )
+}
+
+/** AI 工作区：展示 AI 通过工具保存下来的产物（书签、笔记、人物档案等），可点开看全文。 */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AiWorkspaceSheet(
+    artifacts: ImmutableList<AiArtifact>,
+    onDismiss: () -> Unit
+) {
+    var expandedId by remember { mutableStateOf<String?>(null) }
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+        ) {
+            AppText(
+                text = stringResource(R.string.ai_workspace),
+                style = LegadoTheme.typography.titleMediumEmphasized
+            )
+            Spacer(Modifier.height(8.dp))
+            if (artifacts.isEmpty()) {
+                AppText(
+                    text = stringResource(R.string.ai_workspace_empty),
+                    style = LegadoTheme.typography.bodyMedium,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 24.dp)
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 420.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(artifacts, key = { it.id }) { artifact ->
+                        val expanded = expandedId == artifact.id
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(LegadoTheme.colorScheme.surfaceContainerLow)
+                                .clickable { expandedId = if (expanded) null else artifact.id }
+                                .padding(12.dp)
+                        ) {
+                            AppText(
+                                text = artifact.taskType,
+                                style = LegadoTheme.typography.labelMediumEmphasized,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            if (artifact.bookUrl.isNotBlank()) {
+                                AppText(
+                                    text = artifact.bookUrl,
+                                    style = LegadoTheme.typography.labelSmall,
+                                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            val output = artifact.output.orEmpty()
+                            if (expanded) {
+                                Spacer(Modifier.height(8.dp))
+                                AppText(
+                                    text = output.ifBlank { stringResource(R.string.ai_workspace_no_content) },
+                                    style = LegadoTheme.typography.bodyMedium
+                                )
+                            } else {
+                                AppText(
+                                    text = output.replace(Regex("\\s+"), " ").take(80),
+                                    style = LegadoTheme.typography.bodySmall,
+                                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+    }
 }
 
 @Composable
@@ -1043,11 +1154,24 @@ private fun AiChatEffectHandler(
     effects: Flow<AiChatEffect>,
     snackbarHostState: SnackbarHostState
 ) {
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         effects.collectLatest { effect ->
             when (effect) {
                 is AiChatEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
+                is AiChatEffect.ShowAiError -> snackbarHostState.showSnackbar(
+                    context.getString(aiErrorResId(effect.kind))
+                )
             }
         }
     }
+}
+
+/** 错误类型到本地化文案的映射。 */
+private fun aiErrorResId(kind: AiErrorKind): Int = when (kind) {
+    AiErrorKind.RATE_LIMIT -> R.string.ai_error_rate_limit
+    AiErrorKind.AUTH -> R.string.ai_error_auth
+    AiErrorKind.SERVER -> R.string.ai_error_server
+    AiErrorKind.NETWORK -> R.string.ai_error_network
+    AiErrorKind.UNKNOWN -> R.string.ai_error_generic
 }

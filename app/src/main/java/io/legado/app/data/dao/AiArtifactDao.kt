@@ -13,6 +13,9 @@ interface AiArtifactDao {
     @Query("select * from ai_artifacts where bookUrl = :bookUrl and taskType = :taskType order by chapterIndex, updatedAt desc")
     fun observeBookArtifacts(bookUrl: String, taskType: String): Flow<List<AiArtifact>>
 
+    @Query("select * from ai_artifacts where status = ${AiArtifact.STATUS_SUCCESS} order by updatedAt desc limit 500")
+    fun observeAllArtifacts(): Flow<List<AiArtifact>>
+
     @Query(
         """
         select * from ai_artifacts

@@ -1,6 +1,8 @@
 package io.legado.app.ui.ai.chat
 
 import androidx.compose.runtime.Stable
+import io.legado.app.data.entities.AiArtifact
+import io.legado.app.domain.model.AiErrorKind
 import io.legado.app.domain.model.AiMessagePart
 import io.legado.app.domain.model.AiReasoningLevel
 import kotlinx.collections.immutable.ImmutableList
@@ -15,7 +17,9 @@ data class AiChatUiState(
     val isSending: Boolean = false,
     val streamingMessage: AiChatMessageUi? = null,
     val pendingToolConfirmation: AiToolConfirmationUi? = null,
-    val readingContext: AiReadingContext? = null
+    val readingContext: AiReadingContext? = null,
+    val workspaceOpen: Boolean = false,
+    val workspaceArtifacts: ImmutableList<AiArtifact> = persistentListOf()
 )
 
 @Stable
@@ -86,8 +90,13 @@ sealed interface AiChatIntent {
     data class SetReadingContext(val context: AiReadingContext?) : AiChatIntent
     /** 从阅读页技能悬浮窗进入：加载指定技能内容并作为首条消息自动开聊。 */
     data class ApplySkill(val skillId: String) : AiChatIntent
+    data object ToggleWorkspace : AiChatIntent
+    data object CloseWorkspace : AiChatIntent
 }
 
 sealed interface AiChatEffect {
     data class ShowMessage(val message: String) : AiChatEffect
+
+    /** 失败提示：kind 决定本地化文案，raw 保留原始错误供「详情」查看。 */
+    data class ShowAiError(val kind: AiErrorKind, val raw: String) : AiChatEffect
 }

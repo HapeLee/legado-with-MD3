@@ -13,6 +13,10 @@ class AiArtifactRepository(
         return aiArtifactDao.observeBookArtifacts(bookUrl, taskType)
     }
 
+    override fun observeAllArtifacts(): Flow<List<AiArtifact>> {
+        return aiArtifactDao.observeAllArtifacts()
+    }
+
     override suspend fun getCachedArtifact(
         bookUrl: String,
         chapterIndex: Int?,

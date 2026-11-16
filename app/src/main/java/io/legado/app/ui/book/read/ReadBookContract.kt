@@ -544,7 +544,6 @@ data class ReadBookButtonConfigItem(
 /** 共享图标池：顶栏、浮动图标、底栏共用的那批通用按钮。完整池见 `ReadMenuActionIds`。 */
 internal val ReadBookButtonIds = listOf(
     "ai_chat",
-    "ai_summary",
     "ai_rewrite",
     "more_actions",
     "search",

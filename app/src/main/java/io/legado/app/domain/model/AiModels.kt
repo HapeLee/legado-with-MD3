@@ -464,6 +464,50 @@ class AiHttpException(
     message: String
 ) : Exception(message)
 
+/** 面向用户的 AI 失败分类，供 UI 选择本地化提示文案。 */
+enum class AiErrorKind {
+    RATE_LIMIT,      // 429 / 限流
+    AUTH,            // 401 / 403 密钥或权限
+    SERVER,          // 5xx / 服务端或网关临时故障
+    NETWORK,         // 连接中断 / 超时
+    UNKNOWN
+}
+
+/**
+ * 把任意请求异常归类。优先用结构化的 [AiHttpException.statusCode]；
+ * 流式响应内部的错误以普通 Exception 抛出，只能从报文文本识别，故做保守的关键词匹配。
+ */
+fun Throwable.aiErrorKind(): AiErrorKind {
+    if (this is AiHttpException) {
+        return when (statusCode) {
+            429 -> AiErrorKind.RATE_LIMIT
+            401, 403 -> AiErrorKind.AUTH
+            in 500..599 -> AiErrorKind.SERVER
+            else -> AiErrorKind.UNKNOWN
+        }
+    }
+    val text = message.orEmpty()
+    if ("429" in text || text.contains("rate limit", ignoreCase = true) ||
+        text.contains("too many requests", ignoreCase = true) || "限流" in text
+    ) {
+        return AiErrorKind.RATE_LIMIT
+    }
+    if ("401" in text || "403" in text || text.contains("unauthorized", ignoreCase = true) ||
+        text.contains("api key", ignoreCase = true) || text.contains("forbidden", ignoreCase = true)
+    ) {
+        return AiErrorKind.AUTH
+    }
+    if (Regex("\\b5\\d{2}\\b").containsMatchIn(text) || text.contains("server error", ignoreCase = true)) {
+        return AiErrorKind.SERVER
+    }
+    if (text.contains("timeout", ignoreCase = true) || text.contains("stream interrupted", ignoreCase = true) ||
+        text.contains("failed to connect", ignoreCase = true) || text.contains("eof", ignoreCase = true)
+    ) {
+        return AiErrorKind.NETWORK
+    }
+    return AiErrorKind.UNKNOWN
+}
+
 @Keep
 data class AiAvailableModel(
     val id: String,

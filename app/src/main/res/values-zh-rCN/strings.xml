@@ -2438,6 +2438,14 @@
     <string name="ai_tool_group_source">书源</string>
     <string name="ai_tool_group_source_desc">列出、读取、新建、调试书源，抓网页源码</string>
     <string name="ai_chat">AI 对话</string>
+    <string name="ai_error_rate_limit">请求过于频繁，已自动重试仍被限流。请稍后再试，或更换供应商 / API Key。</string>
+    <string name="ai_error_auth">认证失败，请检查供应商的 API Key 与权限设置。</string>
+    <string name="ai_error_server">AI 服务暂时不可用，请稍后重试。</string>
+    <string name="ai_error_network">连接中断或超时，请检查网络后重试。</string>
+    <string name="ai_error_generic">AI 请求失败，点击「详情」查看具体信息。</string>
+    <string name="ai_workspace">工作区</string>
+    <string name="ai_workspace_empty">还没有保存的内容。你让 AI 保存的笔记、摘要、档案会出现在这里。</string>
+    <string name="ai_workspace_no_content">无内容</string>
     <string name="ai_quick_fab">打开 AI 快捷面板</string>
     <string name="ai_quick_panel_title">问 AI</string>
     <string name="ai_quick_skills">技能</string>

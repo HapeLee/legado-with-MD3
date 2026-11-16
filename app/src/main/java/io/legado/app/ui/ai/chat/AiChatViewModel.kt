@@ -3,6 +3,7 @@ package io.legado.app.ui.ai.chat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.JsonObject
+import io.legado.app.domain.gateway.AiArtifactGateway
 import io.legado.app.domain.gateway.AiChatGateway
 import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.model.AiMessagePart
@@ -11,6 +12,7 @@ import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.AiTaskType
 import io.legado.app.domain.model.AiToolApprovalState
+import io.legado.app.domain.model.aiErrorKind
 import io.legado.app.domain.model.reasoningContent
 import io.legado.app.domain.model.textContent
 import io.legado.app.domain.model.toolParts
@@ -37,6 +39,7 @@ import kotlinx.coroutines.launch
 class AiChatViewModel(
     private val aiChatGateway: AiChatGateway,
     private val aiProfileGateway: AiProfileGateway,
+    private val aiArtifactGateway: AiArtifactGateway,
     private val generationUseCase: AiChatGenerationUseCase
 ) : ViewModel() {
 
@@ -55,6 +58,15 @@ class AiChatViewModel(
     init {
         observeConversations()
         observeCurrentMessages()
+        observeArtifacts()
+    }
+
+    private fun observeArtifacts() {
+        viewModelScope.launch {
+            aiArtifactGateway.observeAllArtifacts().collect { artifacts ->
+                _uiState.update { it.copy(workspaceArtifacts = artifacts.toImmutableList()) }
+            }
+        }
     }
 
     fun onIntent(intent: AiChatIntent) {
@@ -72,6 +84,8 @@ class AiChatViewModel(
             is AiChatIntent.RenameConversation -> renameConversation(intent.id, intent.title)
             is AiChatIntent.SetReadingContext -> _uiState.update { it.copy(readingContext = intent.context) }
             is AiChatIntent.ApplySkill -> applySkill(intent.skillId)
+            AiChatIntent.ToggleWorkspace -> _uiState.update { it.copy(workspaceOpen = !it.workspaceOpen) }
+            AiChatIntent.CloseWorkspace -> _uiState.update { it.copy(workspaceOpen = false) }
         }
     }
 
@@ -299,24 +313,19 @@ class AiChatViewModel(
         }
     }
 
-    private fun generateConversationTitle(conversationId: String, userContent: String, assistantContent: String) {
-        viewModelScope.launch {
-            try {
-                val state = _uiState.value
-                val shortTitle = generationUseCase.generateTitle(
-                    userContent = userContent,
-                    assistantContent = assistantContent,
-                    reasoningLevel = state.reasoningLevel,
-                    conversationId = conversationId
-                )
-                if (shortTitle.isNotBlank()) {
-                    aiChatGateway.updateConversationTitle(conversationId, shortTitle)
-                }
-            } catch (_: Exception) {
-                // Fallback to truncated user message
-                aiChatGateway.updateConversationTitle(conversationId, userContent.take(24))
-            }
-        }
+    private suspend fun generateConversationTitle(conversationId: String, userContent: String) {
+        // 标题直接取自第一条问题，不再额外请求 AI：复杂任务下那次请求常被限流，
+        // 导致标题一直停在默认值。去掉 Markdown 前缀并按句读截断，保证标题稳定可读。
+        val title = userContent
+            .lineSequence()
+            .map { it.trim() }
+            .firstOrNull { it.isNotBlank() }
+            ?.removePrefix("#")
+            ?.trim()
+            ?.take(40)
+            ?.ifBlank { null }
+            ?: userContent.take(24)
+        aiChatGateway.updateConversationTitle(conversationId, title)
     }
 
     private fun regenerateMessage(messageId: String) {
@@ -363,14 +372,14 @@ class AiChatViewModel(
                     throw e
                 } catch (e: Exception) {
                     failureMessage = "Stream interrupted: ${e.message ?: "unknown error"}"
-                    _effects.tryEmit(AiChatEffect.ShowMessage(failureMessage))
+                    _effects.tryEmit(AiChatEffect.ShowAiError(e.aiErrorKind(), e.message ?: failureMessage))
                 }
             } catch (e: CancellationException) {
                 wasCancelled = true
                 throw e
             } catch (e: Exception) {
                 failureMessage = e.message ?: "AI chat failed"
-                _effects.tryEmit(AiChatEffect.ShowMessage(failureMessage))
+                _effects.tryEmit(AiChatEffect.ShowAiError(e.aiErrorKind(), failureMessage))
             } finally {
                 val assistantContent = when {
                     waitingForToolConfirmation -> null
@@ -468,14 +477,14 @@ class AiChatViewModel(
                     throw e
                 } catch (e: Exception) {
                     failureMessage = "Stream interrupted: ${e.message ?: "unknown error"}"
-                    _effects.tryEmit(AiChatEffect.ShowMessage(failureMessage))
+                    _effects.tryEmit(AiChatEffect.ShowAiError(e.aiErrorKind(), e.message ?: failureMessage))
                 }
             } catch (e: CancellationException) {
                 wasCancelled = true
                 throw e
             } catch (e: Exception) {
                 failureMessage = e.message ?: "AI chat failed"
-                _effects.tryEmit(AiChatEffect.ShowMessage(failureMessage))
+                _effects.tryEmit(AiChatEffect.ShowAiError(e.aiErrorKind(), failureMessage))
             } finally {
                 val assistantContent = when {
                     waitingForToolConfirmation -> null
@@ -500,7 +509,7 @@ class AiChatViewModel(
                     }
                     // Generate AI title for first conversation
                     if (historySnapshot.none { it.role == AiMessageRole.ASSISTANT }) {
-                        generateConversationTitle(conversationIdForMsg, content, assistantContent)
+                        generateConversationTitle(conversationIdForMsg, content)
                     }
                 }
                 _uiState.update {
