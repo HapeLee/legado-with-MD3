@@ -941,7 +941,7 @@ class AiToolRepository(
                 "status" to response.code(),
                 "url" to response.url,
                 "length" to body.length,
-                "truncated" to body.length > maxChars,
+                "truncated" to (body.length > maxChars),
                 "body" to if (body.length > maxChars) body.take(maxChars) else body
             )
         )
