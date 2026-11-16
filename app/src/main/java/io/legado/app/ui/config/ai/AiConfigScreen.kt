@@ -2,6 +2,7 @@ package io.legado.app.ui.config.ai
 
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -9,6 +10,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SnackbarHost
@@ -29,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.AiSkillProfile
+import io.legado.app.domain.model.AiToolGroup
 import io.legado.app.feature.settings.search.SearchableSetting
 import io.legado.app.feature.settings.search.SearchableSettingsList
 import io.legado.app.ui.theme.adaptiveContentPadding
@@ -217,6 +220,37 @@ fun AiConfigScreen(
                     }
                 }
             }
+
+            item {
+                SplicedColumnGroup(title = stringResource(R.string.ai_tool_groups)) {
+                    Text(
+                        text = stringResource(R.string.ai_tool_groups_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                    AiToolGroup.values().forEach { group ->
+                        val enabled = group.key !in state.disabledToolGroups
+                        ClickableSettingItem(
+                            title = stringResource(group.titleRes()),
+                            description = stringResource(group.descriptionRes()),
+                            trailingContent = {
+                                Switch(
+                                    checked = enabled,
+                                    onCheckedChange = { checked ->
+                                        onIntent(
+                                            AiConfigIntent.SetToolGroupEnabled(group.key, checked)
+                                        )
+                                    }
+                                )
+                            },
+                            onClick = {
+                                onIntent(AiConfigIntent.SetToolGroupEnabled(group.key, !enabled))
+                            }
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -324,4 +358,22 @@ fun AiConfigScreen(
             }
         }
     }
+}
+
+private fun AiToolGroup.titleRes(): Int = when (this) {
+    AiToolGroup.Reading -> R.string.ai_tool_group_reading
+    AiToolGroup.Knowledge -> R.string.ai_tool_group_knowledge
+    AiToolGroup.Writeback -> R.string.ai_tool_group_writeback
+    AiToolGroup.Memory -> R.string.ai_tool_group_memory
+    AiToolGroup.Skill -> R.string.ai_tool_group_skill
+    AiToolGroup.BookSource -> R.string.ai_tool_group_source
+}
+
+private fun AiToolGroup.descriptionRes(): Int = when (this) {
+    AiToolGroup.Reading -> R.string.ai_tool_group_reading_desc
+    AiToolGroup.Knowledge -> R.string.ai_tool_group_knowledge_desc
+    AiToolGroup.Writeback -> R.string.ai_tool_group_writeback_desc
+    AiToolGroup.Memory -> R.string.ai_tool_group_memory_desc
+    AiToolGroup.Skill -> R.string.ai_tool_group_skill_desc
+    AiToolGroup.BookSource -> R.string.ai_tool_group_source_desc
 }

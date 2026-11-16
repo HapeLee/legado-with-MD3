@@ -6,7 +6,9 @@ import io.legado.app.R
 import io.legado.app.data.entities.AiSkillProfile
 import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.model.AiImageModels
+import io.legado.app.domain.model.AiToolGroup
 import io.legado.app.domain.model.AiTaskType
+import io.legado.app.help.config.AiToolGroupSettings
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +29,8 @@ class AiConfigViewModel(
     val effects = _effects.asSharedFlow()
 
     init {
+        _uiState.update { it.copy(disabledToolGroups = loadDisabledToolGroups()) }
+
         viewModelScope.launch {
             combine(
                 aiProfileGateway.observeProviders(),
@@ -122,6 +126,8 @@ class AiConfigViewModel(
             is AiConfigIntent.SaveSkill -> saveSkill(intent.skill)
             is AiConfigIntent.DeleteSkill -> deleteSkill(intent.skillId)
             is AiConfigIntent.SetSkillEnabled -> setSkillEnabled(intent.skillId, intent.enabled)
+            is AiConfigIntent.SetToolGroupEnabled ->
+                setToolGroupEnabled(intent.groupKey, intent.enabled)
         }
     }
 
@@ -166,6 +172,24 @@ class AiConfigViewModel(
                     AiConfigEffect.ShowMessage(error.message ?: "Failed to update skill")
                 )
             }
+        }
+    }
+
+    private fun loadDisabledToolGroups(): Set<String> = runCatching {
+        AiToolGroupSettings.disabledGroups().mapTo(mutableSetOf()) { it.key }
+    }.getOrDefault(emptySet())
+
+    private fun setToolGroupEnabled(groupKey: String, enabled: Boolean) {
+        val group = AiToolGroup.fromKey(groupKey) ?: return
+        AiToolGroupSettings.setEnabled(group, enabled)
+        _uiState.update {
+            it.copy(
+                disabledToolGroups = if (enabled) {
+                    it.disabledToolGroups - groupKey
+                } else {
+                    it.disabledToolGroups + groupKey
+                }
+            )
         }
     }
 

@@ -23,10 +23,12 @@ import io.legado.app.domain.gateway.AiToolGateway
 import io.legado.app.domain.gateway.BookKnowledgeGateway
 import io.legado.app.domain.gateway.PrivateAccessGateway
 import io.legado.app.domain.model.AiToolCall
+import io.legado.app.domain.model.AiToolGroup
 import io.legado.app.domain.model.AiToolDefinition
 import io.legado.app.domain.model.AiToolResult
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
+import io.legado.app.help.config.AiToolGroupSettings
 import io.legado.app.help.source.exploreKinds
 import io.legado.app.model.Debug
 import io.legado.app.model.analyzeRule.AnalyzeUrl
@@ -79,7 +81,11 @@ class AiToolRepository(
         return book.isReadable()
     }
 
-    override fun availableTools(): List<AiToolDefinition> = tools
+    override fun availableTools(): List<AiToolDefinition> {
+        val disabled = AiToolGroupSettings.disabledGroups()
+        if (disabled.isEmpty()) return tools
+        return tools.filterNot { tool -> toolGroupOf(tool.name)?.let { it in disabled } == true }
+    }
 
     override fun requiresConfirmation(toolName: String): Boolean {
         return toolName in confirmationRequiredTools
@@ -1261,6 +1267,42 @@ class AiToolRepository(
         const val TOOL_FETCH_WEB_PAGE = "fetch_web_page"
         const val TOOL_SEARCH_WITH_BOOK_SOURCE = "search_with_book_source"
         const val TOOL_DEBUG_BOOK_SOURCE = "debug_book_source"
+
+        /** 每个工具归属的分组；分组开关按这个表过滤 tools，未登记的工具视为常开。 */
+        private val toolGroups = mapOf(
+            TOOL_SEARCH_BOOKS to AiToolGroup.Reading,
+            TOOL_GET_BOOK_DETAIL to AiToolGroup.Reading,
+            TOOL_LIST_BOOK_CHAPTERS to AiToolGroup.Reading,
+            TOOL_GET_CHAPTER_CONTENT to AiToolGroup.Reading,
+            TOOL_GET_CHAPTER_WINDOW to AiToolGroup.Reading,
+            TOOL_SEARCH_CHAPTER_CONTENT to AiToolGroup.Reading,
+            TOOL_SEARCH_BOOKMARKS to AiToolGroup.Reading,
+            TOOL_GET_READING_STATS to AiToolGroup.Reading,
+            TOOL_GET_AI_ARTIFACTS to AiToolGroup.Knowledge,
+            TOOL_SEARCH_BOOK_CHARACTERS to AiToolGroup.Knowledge,
+            TOOL_GET_CHARACTER_PROFILE to AiToolGroup.Knowledge,
+            TOOL_SEARCH_BOOK_KNOWLEDGE to AiToolGroup.Knowledge,
+            TOOL_GET_BOOK_OUTLINE to AiToolGroup.Knowledge,
+            TOOL_SAVE_AI_ARTIFACT to AiToolGroup.Writeback,
+            TOOL_SAVE_BOOK_CHARACTER_PROFILE to AiToolGroup.Writeback,
+            TOOL_SAVE_BOOK_CHARACTER_EVENT to AiToolGroup.Writeback,
+            TOOL_SAVE_BOOK_CHARACTER_RELATION to AiToolGroup.Writeback,
+            TOOL_SAVE_BOOK_KNOWLEDGE_ENTRY to AiToolGroup.Writeback,
+            TOOL_SAVE_BOOK_OUTLINE_NODE to AiToolGroup.Writeback,
+            TOOL_SAVE_MEMORY to AiToolGroup.Memory,
+            TOOL_RECALL_MEMORY to AiToolGroup.Memory,
+            TOOL_DELETE_MEMORY to AiToolGroup.Memory,
+            TOOL_LOAD_SKILL to AiToolGroup.Skill,
+            TOOL_LIST_BOOK_SOURCES to AiToolGroup.BookSource,
+            TOOL_GET_BOOK_SOURCE to AiToolGroup.BookSource,
+            TOOL_CREATE_BOOK_SOURCE to AiToolGroup.BookSource,
+            TOOL_UPDATE_BOOK_SOURCE to AiToolGroup.BookSource,
+            TOOL_FETCH_WEB_PAGE to AiToolGroup.BookSource,
+            TOOL_SEARCH_WITH_BOOK_SOURCE to AiToolGroup.BookSource,
+            TOOL_DEBUG_BOOK_SOURCE to AiToolGroup.BookSource,
+        )
+
+        private fun toolGroupOf(toolName: String): AiToolGroup? = toolGroups[toolName]
 
         private val confirmationRequiredTools = setOf(
             TOOL_SAVE_AI_ARTIFACT,

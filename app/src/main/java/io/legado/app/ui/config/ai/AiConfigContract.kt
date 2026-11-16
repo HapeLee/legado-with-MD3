@@ -15,7 +15,9 @@ data class AiConfigUiState(
     val providerCount: Int = 0,
     val modelCount: Int = 0,
     val presetCount: Int = 0,
-    val skillCount: Int = 0
+    val skillCount: Int = 0,
+    /** 被用户关闭的工具分组 key；空集合表示全部开启。 */
+    val disabledToolGroups: Set<String> = emptySet()
 )
 
 @Stable
@@ -76,6 +78,7 @@ sealed interface AiConfigIntent {
     data class SaveSkill(val skill: AiSkillProfile) : AiConfigIntent
     data class DeleteSkill(val skillId: String) : AiConfigIntent
     data class SetSkillEnabled(val skillId: String, val enabled: Boolean) : AiConfigIntent
+    data class SetToolGroupEnabled(val groupKey: String, val enabled: Boolean) : AiConfigIntent
 }
 
 sealed interface AiConfigEffect {
