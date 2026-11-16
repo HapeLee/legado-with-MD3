@@ -214,6 +214,7 @@ object SettingsSearchCatalog {
         SettingsSearchItem("ai.translation_config", SettingsSearchPage.Ai, R.string.translation_config, groupIndex = 2, groupTitleRes = R.string.ai_tasks),
         SettingsSearchItem("ai.ai_chapter_summary", SettingsSearchPage.Ai, R.string.ai_chapter_summary, groupIndex = 2, groupTitleRes = R.string.ai_tasks),
         SettingsSearchItem("ai.ai_prompt_config", SettingsSearchPage.Ai, R.string.ai_prompt_config, groupIndex = 2, groupTitleRes = R.string.ai_tasks, descriptionRes = R.string.ai_prompt_config_desc),
+        SettingsSearchItem("ai.ai_new_skill", SettingsSearchPage.Ai, R.string.ai_new_skill, groupIndex = 3, groupTitleRes = R.string.ai_skills),
         SettingsSearchItem("translation.llm_provider", SettingsSearchPage.Translation, R.string.llm_provider, groupIndex = 0, groupTitleRes = R.string.translation_provider),
         SettingsSearchItem("translation.llm_target_language", SettingsSearchPage.Translation, R.string.llm_target_language, groupIndex = 1, groupTitleRes = R.string.translation_options),
         SettingsSearchItem("translation.llm_max_chars_per_chunk", SettingsSearchPage.Translation, R.string.llm_max_chars_per_chunk, groupIndex = 1, groupTitleRes = R.string.translation_options),
