@@ -116,6 +116,76 @@ object DefaultAiSkills {
         - 一段里找不到符合标准的句子就直说，不要为了凑数硬挑。
     """.trimIndent()
 
+    private val BOOK_SOURCE = """
+        # 书源编写
+
+        ## 何时使用
+        用户说「给这个网站写个书源」「这个源搜索不准，帮我改」「能不能做个源」时。
+
+        ## 流程
+        1. 先 list_book_sources 查同站是否已有源。有就走 update_book_source，没有才 create_book_source。
+        2. 用 fetch_web_page 抓真实页面源码，确认选择器真能命中。搜索页要抓带关键词的完整 URL。
+        3. 按下面的模板组装 JSON，字段名不能改。
+        4. create_book_source 传完整 JSON。
+        5. 用 search_with_book_source 拿真实关键词验证。返回空列表就是 searchUrl 或 ruleSearch 错了。
+        6. 还失败就 debug_book_source，target 用 search，看日志判断是请求失败还是解析为空。
+
+        ## 最小模板
+        {
+          "bookSourceUrl": "https://example.com",
+          "bookSourceName": "示例站",
+          "bookSourceGroup": "自建",
+          "bookSourceType": 0,
+          "enabled": true,
+          "searchUrl": "/search?q={{key}}&page={{page}}",
+          "ruleSearch": {
+            "bookList": ".result-item",
+            "name": "h3@text",
+            "author": ".author@text",
+            "bookUrl": "h3 a@href",
+            "intro": ".intro@text"
+          },
+          "ruleBookInfo": {
+            "name": "h1@text",
+            "author": ".author@text",
+            "intro": ".intro@text",
+            "coverUrl": ".cover img@src"
+          },
+          "ruleToc": {
+            "chapterList": ".chapter-list li",
+            "chapterName": "a@text",
+            "chapterUrl": "a@href"
+          },
+          "ruleContent": {
+            "content": "#content@html"
+          }
+        }
+
+        ## 规则语法
+        - {{key}} 是关键词，{{page}} 是页码，必须原样留在 URL 里。
+        - 选择器在 @ 前，取值方式在 @ 后：@text 取文本，@href 取链接，@src 取图片地址，@html 取内层 HTML。
+        - bookList、chapterList 先定位到每一条，其余字段都相对这一条解析。
+        - 需要计算或拼接时用 @js: 前缀写 JS，返回值必须是字符串。
+
+        ## 约束
+        - bookSourceUrl 只填站点根地址，不带路径和参数。
+        - 不要凭印象编选择器。没抓到页面就先抓，抓不到就直说站点可能反爬。
+        - 改源只提交要变的字段，别整份覆盖，update_book_source 会深合并。
+        - 每次改完都要跑一次 search_with_book_source，没验证过不算完成。
+    """.trimIndent()
+
+    /** 内置技能版本。新增技能时 +1，App 启动按版本补齐。 */
+    const val VERSION = 2
+
+    /** VERSION 1 发布的技能 id：迁移时视为已处理，避免把用户删掉的又塞回去。 */
+    val legacyIds: Set<String> = setOf(
+        "builtin.chapter_brief",
+        "builtin.recap",
+        "builtin.character_map",
+        "builtin.foreshadow",
+        "builtin.quotes",
+    )
+
     fun all(): List<AiSkillProfile> = listOf(
         AiSkillProfile(
             id = "builtin.chapter_brief",
@@ -151,6 +221,13 @@ object DefaultAiSkills {
             description = "逐字摘录可独立成立的句子，可选存入摘录库",
             content = QUOTES,
             sortNumber = 4,
+        ),
+        AiSkillProfile(
+            id = "builtin.book_source",
+            name = "书源编写",
+            description = "照着目标站点写或改书源，写完用真实关键词验证规则是否生效",
+            content = BOOK_SOURCE,
+            sortNumber = 5,
         ),
     )
 }

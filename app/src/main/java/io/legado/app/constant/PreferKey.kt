@@ -4,6 +4,7 @@ package io.legado.app.constant
 object PreferKey {
     const val language = "language"
     const val aiSkillsSeeded = "aiSkillsSeeded"
+    const val aiSkillsSeedVersion = "aiSkillsSeedVersion"
     const val fontScale = "fontScale"
     const val appFontPath = "appFontPath"
     const val appTheme = "app_theme"

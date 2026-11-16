@@ -351,19 +351,31 @@ class App : Application(), SingletonImageLoader.Factory {
         )
     }
 
-    /** 首次启动导入内置 AI Skill；用户删空后不会再次写入。 */
+    /**
+     * 导入内置 AI Skill。
+     *
+     * 用版本号推动而不是一次性布尔：新增内置技能时老用户也能拿到。
+     * 老版本只记了 [PreferKey.aiSkillsSeeded] 这个布尔值，迁移时把当年的那批 id
+     * 当成已处理，否则用户当初主动删掉的内置技能会在升级时又冒出来。
+     */
     private suspend fun seedDefaultAiSkills() {
-        if (AppConfigStore.getBoolean(PreferKey.aiSkillsSeeded) == true) return
+        val seededVersion = AppConfigStore.getInt(PreferKey.aiSkillsSeedVersion) ?: 0
+        if (seededVersion >= DefaultAiSkills.VERSION) return
         runCatching {
             val gateway = get<AiProfileGateway>()
-            // 逐个按 id 补齐，不整体判空：用户可能已经手建过同名技能，
-            // 那种情况下仍应拿到其余内置技能。
             val existing = gateway.listSkills().mapTo(mutableSetOf()) { it.id }
+            val legacyDone = if (seededVersion == 0 &&
+                AppConfigStore.getBoolean(PreferKey.aiSkillsSeeded) == true
+            ) {
+                DefaultAiSkills.legacyIds
+            } else {
+                emptySet()
+            }
             DefaultAiSkills.all()
-                .filterNot { it.id in existing }
+                .filterNot { it.id in existing || it.id in legacyDone }
                 .forEach { gateway.saveSkill(it) }
         }
-        AppConfigStore.putBoolean(PreferKey.aiSkillsSeeded, true)
+        AppConfigStore.putInt(PreferKey.aiSkillsSeedVersion, DefaultAiSkills.VERSION)
     }
 
     private fun initRhino() {
