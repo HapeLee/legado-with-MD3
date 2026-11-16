@@ -210,14 +210,12 @@ fun AiConfigScreen(
                             onClick = { editingSkill = skill.toProfile() }
                         )
                     }
-                    SearchableSetting("ai.ai_new_skill") {
-                        ClickableSettingItem(
-                            title = stringResource(R.string.ai_new_skill),
-                            onClick = {
-                                editingSkill = AiSkillProfile(id = "", name = "", content = "")
-                            }
-                        )
-                    }
+                    ClickableSettingItem(
+                        title = stringResource(R.string.ai_new_skill),
+                        onClick = {
+                            editingSkill = AiSkillProfile(id = "", name = "", content = "")
+                        }
+                    )
                 }
             }
 
