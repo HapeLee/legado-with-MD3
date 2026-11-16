@@ -28,6 +28,7 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
+import io.legado.app.data.entities.DefaultAiSkills
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.data.entities.RssSource
 import io.legado.app.data.entities.rule.BookInfoRule
@@ -37,6 +38,7 @@ import io.legado.app.data.entities.rule.SearchRule
 import io.legado.app.di.appDatabaseModule
 import io.legado.app.di.appModule
 import io.legado.app.di.mangaEngineModule
+import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.gateway.AppLocaleGateway
 import io.legado.app.domain.gateway.AppShellSettingsGateway
 import io.legado.app.domain.gateway.BackupSettingsGateway
@@ -224,6 +226,7 @@ class App : Application(), SingletonImageLoader.Factory {
             DispatchersMonitor.init()
             URL.setURLStreamHandlerFactory(ObsoleteUrlFactory(okHttpClient))
             launch { installGmsTlsProvider(appCtx) }
+            launch { seedDefaultAiSkills() }
             //初始化封面
             BookCover.toString()
             //清除过期数据
@@ -346,6 +349,18 @@ class App : Application(), SingletonImageLoader.Factory {
                 webChannel
             )
         )
+    }
+
+    /** 首次启动导入内置 AI Skill；用户删空后不会再次写入。 */
+    private suspend fun seedDefaultAiSkills() {
+        if (AppConfigStore.getBoolean(PreferKey.aiSkillsSeeded) == true) return
+        runCatching {
+            val gateway = get<AiProfileGateway>()
+            if (gateway.listSkills().isEmpty()) {
+                DefaultAiSkills.all().forEach { gateway.saveSkill(it) }
+            }
+        }
+        AppConfigStore.putBoolean(PreferKey.aiSkillsSeeded, true)
     }
 
     private fun initRhino() {
