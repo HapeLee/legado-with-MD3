@@ -1,4 +1,4 @@
-name: Build APK for User
+name: Build APK for User (Release 小包)
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
       branch:
         description: '要构建的分支'
         required: true
-        default: 'trae/solo-agent-vhkVM3'
+        default: 'main'
       product:
         description: '产品变体：appCore 基础版无本地引擎，appComic 漫画增强版内置本地 OCR/擦除/气泡检测'
         required: true
@@ -45,6 +45,19 @@ jobs:
       - name: Prepare pinned UI forks
         uses: ./.github/actions/prepare-ui-forks
 
+      # release 默认没有签名配置，这里生成一个临时 debug keystore 供 release 复用，保证能直接安装
+      - name: Generate debug keystore for release signing
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -v \
+              -keystore "$HOME/.android/debug.keystore" \
+              -storepass android -keypass android \
+              -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          ls -l "$HOME/.android/debug.keystore"
+
       - name: Clear 18PlusList.txt
         run: |
           echo "清空18PlusList.txt"
@@ -54,38 +67,53 @@ jobs:
         run: |
           sed -i '/maven.aliyun.com/d' settings.gradle
 
-      - name: Build Debug APK
+      # 关键改动 1：Debug -> Release（启用 R8 + 资源压缩），并开启 ABI 拆分
+      - name: Build Release APK
         run: |
           chmod +x gradlew
-          # appCore -> AppCore：Gradle 变体任务名是驼峰形式
           PRODUCT_CAP=$(echo "$PRODUCT" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')
-          ./gradlew assemble${PRODUCT_CAP}Debug -PenableAbiSplits=false --no-daemon --no-configuration-cache
+          ./gradlew assemble${PRODUCT_CAP}Release \
+            -PenableAbiSplits=true \
+            -PRELEASE_STORE_FILE="$HOME/.android/debug.keystore" \
+            -PRELEASE_STORE_PASSWORD=android \
+            -PRELEASE_KEY_ALIAS=androiddebugkey \
+            -PRELEASE_KEY_PASSWORD=android \
+            --no-daemon --no-configuration-cache
         env:
           COMMIT_NUMBER: ${{ github.run_number }}
-          APP_VERSION_NAME: debug-${{ github.run_number }}
+          APP_VERSION_NAME: 1.0.${{ github.run_number }}
 
+      # 关键改动 2：产物路径 debug -> release，且现在会有 3 个 ABI 包
       - name: Check Build Output
         run: |
-          APK_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk/${{ env.PRODUCT }}/debug"
+          APK_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk/${{ env.PRODUCT }}/release"
           echo "检查 APK 输出目录: $APK_PATH"
           ls -la "$APK_PATH" || true
           APK_COUNT=$(find "$APK_PATH" -maxdepth 1 -name "*.apk" | wc -l | tr -d ' ')
-          if [ "$APK_COUNT" -ne 1 ]; then
-            echo "预期生成 1 个 universal APK，实际生成 $APK_COUNT 个！"
+          if [ "$APK_COUNT" -lt 3 ]; then
+            echo "预期生成 3 个 APK（arm64-v8a / armeabi-v7a / universal），实际生成 $APK_COUNT 个！"
             exit 1
           fi
 
       - name: Rename APK Files
         run: |
-          APK_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk/${{ env.PRODUCT }}/debug"
+          APK_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk/${{ env.PRODUCT }}/release"
           cd "$APK_PATH"
-          mv -- *.apk "legado-debug-${GITHUB_RUN_NUMBER}-${PRODUCT_TAG}-universal.apk"
+          for abi in arm64-v8a armeabi-v7a universal; do
+            src=$(find . -maxdepth 1 -name "*-${abi}-release.apk" | head -1)
+            if [ -n "$src" ]; then
+              mv -- "$src" "legado-release-${GITHUB_RUN_NUMBER}-${PRODUCT_TAG}-${abi}.apk"
+            else
+              echo "缺少 ${abi} 的 APK！"
+              exit 1
+            fi
+          done
           ls -la
 
       - name: Create ZIP Archive
         run: |
-          APK_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk/${{ env.PRODUCT }}/debug"
-          ZIP_NAME="legado-debug-apks-${GITHUB_RUN_NUMBER}-${PRODUCT_TAG}.zip"
+          APK_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk/${{ env.PRODUCT }}/release"
+          ZIP_NAME="legado-release-apks-${GITHUB_RUN_NUMBER}-${PRODUCT_TAG}.zip"
           cd "$APK_PATH"
           zip "$GITHUB_WORKSPACE/$ZIP_NAME" *.apk
           echo "ZIP 文件已创建: $ZIP_NAME"
@@ -94,11 +122,11 @@ jobs:
       - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: legado-apks-${{ env.PRODUCT_TAG }}-${{ github.run_number }}
-          path: app/build/outputs/apk/${{ env.PRODUCT }}/debug/*.apk
+          name: legado-release-apks-${{ env.PRODUCT_TAG }}-${{ github.run_number }}
+          path: app/build/outputs/apk/${{ env.PRODUCT }}/release/*.apk
 
       - name: Upload ZIP Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: legado-apks-zip-${{ env.PRODUCT_TAG }}-${{ github.run_number }}
-          path: legado-debug-apks-*.zip
+          name: legado-release-apks-zip-${{ env.PRODUCT_TAG }}-${{ github.run_number }}
+          path: legado-release-apks-*.zip
