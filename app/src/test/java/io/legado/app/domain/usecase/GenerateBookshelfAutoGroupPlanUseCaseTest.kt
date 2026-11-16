@@ -2,6 +2,7 @@ package io.legado.app.domain.usecase
 
 import io.legado.app.data.entities.AiModelProfile
 import io.legado.app.data.entities.AiProviderProfile
+import io.legado.app.data.entities.AiSkillProfile
 import io.legado.app.data.entities.AiTaskPreset
 import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.gateway.AiStreamEvent
@@ -452,5 +453,10 @@ class GenerateBookshelfAutoGroupPlanUseCaseTest {
         ): AiTaskPresetConfig = error("unused")
         override suspend fun deleteProvider(providerId: String) = Unit
         override suspend fun deleteModel(modelId: String) = Unit
+        override fun observeSkills(): Flow<List<AiSkillProfile>> = emptyFlow()
+        override suspend fun listSkills(): List<AiSkillProfile> = emptyList()
+        override suspend fun saveSkill(skill: AiSkillProfile): AiSkillProfile = skill
+        override suspend fun deleteSkill(id: String) = Unit
+        override suspend fun setSkillEnabled(id: String, enabled: Boolean) = Unit
     }
 }
