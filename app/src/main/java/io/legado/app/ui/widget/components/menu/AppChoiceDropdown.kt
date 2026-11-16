@@ -1,5 +1,7 @@
 package io.legado.app.ui.widget.components.menu
 
+import android.annotation.SuppressLint
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.DropdownMenu
@@ -456,6 +458,7 @@ private fun MochiChoice(
 }
 
 /** COUI 原生菜单：触点由 [couiMenuAnchor] 观察，[Menu] 用它定位弹层。 */
+@SuppressLint("NewApi") // coui 胶囊渲染器按运行时能力判断，lint 只看得到 API 34 签名
 @Composable
 private fun CouiChoice(
     options: ImmutableList<AppChoiceOption>,

@@ -22,7 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -82,7 +82,7 @@ fun AiConfigScreen(
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val snackbarHostState = remember { SnackbarHostState() }
-    val context = LocalContext.current
+    val resources = LocalResources.current
     var showModelSheet by remember { mutableStateOf(false) }
     var editingSkill by remember { mutableStateOf<AiSkillProfile?>(null) }
 
@@ -91,7 +91,7 @@ fun AiConfigScreen(
             when (effect) {
                 is AiConfigEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
                 is AiConfigEffect.ShowMessageRes ->
-                    snackbarHostState.showSnackbar(context.getString(effect.resId))
+                    snackbarHostState.showSnackbar(resources.getString(effect.resId))
             }
         }
     }

@@ -1,5 +1,7 @@
 package io.legado.app.ui.widget.components.menu
 
+import android.annotation.SuppressLint
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -241,6 +243,7 @@ private fun MochiActions(
 }
 
 /** COUI 原生命令菜单：分组用 `dividerBefore`，勾选与子菜单由 [CouiMenuItem] 直接表达。 */
+@SuppressLint("NewApi") // coui 胶囊渲染器按运行时能力判断，lint 只看得到 API 34 签名
 @Composable
 private fun CouiActions(
     groups: ImmutableList<AppActionGroup>,
