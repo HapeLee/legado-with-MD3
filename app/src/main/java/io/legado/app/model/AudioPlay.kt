@@ -267,6 +267,8 @@ object AudioPlay : CoroutineScope by MainScope() {
     }
 
     fun stop() {
+        coroutineContext.cancelChildren()
+        upLoading(false)
         if (AudioPlayService.isRun) {
             context.startService<AudioPlayService> {
                 action = IntentAction.stop
