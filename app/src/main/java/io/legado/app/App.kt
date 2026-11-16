@@ -356,9 +356,12 @@ class App : Application(), SingletonImageLoader.Factory {
         if (AppConfigStore.getBoolean(PreferKey.aiSkillsSeeded) == true) return
         runCatching {
             val gateway = get<AiProfileGateway>()
-            if (gateway.listSkills().isEmpty()) {
-                DefaultAiSkills.all().forEach { gateway.saveSkill(it) }
-            }
+            // 逐个按 id 补齐，不整体判空：用户可能已经手建过同名技能，
+            // 那种情况下仍应拿到其余内置技能。
+            val existing = gateway.listSkills().mapTo(mutableSetOf()) { it.id }
+            DefaultAiSkills.all()
+                .filterNot { it.id in existing }
+                .forEach { gateway.saveSkill(it) }
         }
         AppConfigStore.putBoolean(PreferKey.aiSkillsSeeded, true)
     }
