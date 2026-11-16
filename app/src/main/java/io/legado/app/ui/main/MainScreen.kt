@@ -682,6 +682,7 @@ fun MainScreen(
                                 onNavigateToLocalImport = onNavigateToLocalImport,
                                 onNavigateToCache = onNavigateToCache,
                                 onNavigateToSettings = onOpenSettings,
+                                onNavigateToChat = onNavigateToChat,
                                 sharedTransitionScope = sharedTransitionScope,
                                 animatedVisibilityScope = animatedVisibilityScope,
                             )

@@ -55,6 +55,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CloudDownload
@@ -183,6 +184,7 @@ fun BookshelfRouteScreen(
     onNavigateToLocalImport: () -> Unit,
     onNavigateToCache: (Long) -> Unit,
     onNavigateToSettings: () -> Unit = {},
+    onNavigateToChat: () -> Unit = {},
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
@@ -217,6 +219,7 @@ fun BookshelfRouteScreen(
         onNavigateToLocalImport = onNavigateToLocalImport,
         onNavigateToCache = onNavigateToCache,
         onNavigateToSettings = onNavigateToSettings,
+        onNavigateToChat = onNavigateToChat,
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope,
     )
@@ -243,6 +246,7 @@ fun BookshelfScreen(
     onNavigateToCache: (Long) -> Unit,
     // 私密功能需要本地密码，未设置时引导去设置页
     onNavigateToSettings: () -> Unit = {},
+    onNavigateToChat: () -> Unit = {},
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
@@ -621,6 +625,13 @@ fun BookshelfScreen(
                 onClearSearch = { onIntent(BookshelfIntent.SetSearchKey("")) },
                 onExitEditMode = exitEditMode,
                 actions = {
+                    AnimatedVisibility(visible = !isEditMode) {
+                        TopBarActionButton(
+                            onClick = onNavigateToChat,
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = stringResource(R.string.ai_chat)
+                        )
+                    }
                     AnimatedVisibility(visible = isEditMode) {
                         TopBarActionButton(
                             onClick = { onIntent(BookshelfIntent.SelectAllVisible) },
