@@ -382,7 +382,6 @@
     <string name="book_source_export_failed">導出失敗：%1$s</string>
     <string name="book_source_upload_success">上傳成功：%1$s</string>
     <string name="book_source_upload_failed">上傳失敗：%1$s</string>
-    <string name="check_select_source">校驗所選</string>
     <string name="progress_show">%1$s      進度 %2$d/%3$d</string>
     <string name="tts_fix">請安裝並選擇中文 TTS!</string>
     <string name="tts_init_failed">TTS 初始化失敗!</string>
@@ -1105,12 +1104,14 @@
 
     <!-- check source config string -->
     <string name="check_source_config">校验设置</string>
-    <string name="check_source_item">校验项目</string>
     <string name="check_source_timeout">单个书源校验超时(秒)</string>
+    <string name="check_source_thread_count">校验并发数（1-64）</string>
+    <string name="check_source_quick_mode">快速完整校验模式</string>
+    <string name="domain">域名</string>
+    <string name="write_source_comment">写入源注释</string>
     <string name="timeout">超时</string>
     <string name="seconds">秒</string>
     <string name="less_than">小于</string>
-    <string name="check_source_config_summary">校验超时: %1$s秒\n校验项目:%2$s</string>
     <string name="record_debug_log">记录调试日志</string>
     <string name="sub_dir">子文件夹</string>
     <string name="general">全局</string>

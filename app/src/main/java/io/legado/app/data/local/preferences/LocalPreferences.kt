@@ -73,6 +73,10 @@ object LocalPreferencesKeys {
 
     // Book source check options
     val CHECK_SOURCE_TIMEOUT = longPreferencesKey("checkSourceTimeout")
+    val CHECK_SOURCE_THREAD_COUNT = intPreferencesKey("checkSourceThreadCount")
+    val CHECK_SOURCE_WRITE_COMMENT = booleanPreferencesKey("writeSourceComment")
+    val CHECK_SOURCE_QUICK_MODE = booleanPreferencesKey("checkSourceQuickMode")
+    val CHECK_SOURCE_DOMAIN = booleanPreferencesKey("checkDomain")
     val CHECK_SOURCE_SEARCH = booleanPreferencesKey("checkSearch")
     val CHECK_SOURCE_DISCOVERY = booleanPreferencesKey("checkDiscovery")
     val CHECK_SOURCE_INFO = booleanPreferencesKey("checkInfo")

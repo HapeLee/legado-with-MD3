@@ -140,6 +140,18 @@ class BookSourceRepository(private val bookSourceDao: BookSourceDao) {
         bookSourceDao.update(*sources)
     }
 
+    /**
+     * 只写回校验产出的分组、注释与响应时间，避免整行更新覆盖并发编辑（启用开关、排序等）。
+     */
+    suspend fun updateCheckResult(source: BookSource) = withContext(Dispatchers.IO) {
+        bookSourceDao.updateCheckResult(
+            bookSourceUrl = source.bookSourceUrl,
+            group = source.bookSourceGroup,
+            comment = source.bookSourceComment,
+            respondTime = source.respondTime,
+        )
+    }
+
     suspend fun updateOrder(sources: List<BookSourcePart>) = withContext(Dispatchers.IO) {
         bookSourceDao.upOrder(sources)
     }

@@ -234,6 +234,10 @@ class BookSourceViewModel(
             ) else null,
             checkOptions = BookSourceCheckOptionsUi(
                 timeoutSeconds = settings.timeoutMillis / 1000,
+                threadCount = settings.threadCount,
+                writeSourceComment = settings.writeSourceComment,
+                quickMode = settings.quickMode,
+                checkDomain = settings.checkDomain,
                 checkSearch = settings.checkSearch,
                 checkDiscovery = settings.checkDiscovery,
                 checkInfo = settings.checkInfo,
@@ -684,12 +688,16 @@ internal fun reorderBookSources(
 
 private fun BookSourceCheckOptionsUi.toSettings() = CheckSourceSettings(
     timeoutMillis = timeoutSeconds * 1000,
+    threadCount = threadCount,
+    writeSourceComment = writeSourceComment,
+    quickMode = quickMode,
+    checkDomain = checkDomain,
     checkSearch = checkSearch,
     checkDiscovery = checkDiscovery,
     checkInfo = checkInfo,
     checkCategory = checkCategory,
     checkContent = checkContent,
-)
+).normalized()
 
 private fun BookSourceCheckResult.displayMessage(application: Application): String {
     val errorDetail = detail ?: application.getString(io.legado.app.R.string.unknown_error)

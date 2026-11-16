@@ -187,10 +187,6 @@
             android:title="@string/source_edit_text_max_line" />
 
         <io.legado.app.lib.prefs.Preference
-            android:key="checkSource"
-            android:title="@string/check_source_config" />
-
-        <io.legado.app.lib.prefs.Preference
             android:key="uploadRule"
             android:summary="@string/direct_link_upload_rule_summary"
             android:title="@string/direct_link_upload_rule" />

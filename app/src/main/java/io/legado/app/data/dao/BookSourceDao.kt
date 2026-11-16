@@ -336,6 +336,23 @@ interface BookSourceDao {
     @Query("update book_sources set enabled = :enable where bookSourceUrl = :bookSourceUrl")
     fun enable(bookSourceUrl: String, enable: Boolean)
 
+    /**
+     * 校验结果只写回分组/注释/响应时间三列，避免整行 `@Update` 覆盖校验期间的并发编辑。
+     */
+    @Query(
+        """update book_sources
+        set bookSourceGroup = :group,
+            bookSourceComment = :comment,
+            respondTime = :respondTime
+        where bookSourceUrl = :bookSourceUrl"""
+    )
+    fun updateCheckResult(
+        bookSourceUrl: String,
+        group: String?,
+        comment: String?,
+        respondTime: Long,
+    )
+
     @Transaction
     fun enable(enable: Boolean, bookSources: List<BookSourcePart>) {
         for (bs in bookSources) {

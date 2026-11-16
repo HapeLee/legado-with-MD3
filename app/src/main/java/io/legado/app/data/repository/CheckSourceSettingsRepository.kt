@@ -19,26 +19,44 @@ class CheckSourceSettingsRepository : CheckSourceSettingsGateway {
         .distinctUntilChanged()
 
     override suspend fun update(settings: CheckSourceSettings) {
-        require(settings.timeoutMillis > 0L)
-        require(settings.checkSearch || settings.checkDiscovery)
+        // 归一化而不是抛异常：设置页的滑块可以到边界值，UI 路径上的崩溃不可接受。
+        val normalized = settings.normalized()
         AppConfigStore.putAllAndAwait(
             mapOf(
-                LocalPreferencesKeys.CHECK_SOURCE_TIMEOUT.name to settings.timeoutMillis,
-                LocalPreferencesKeys.CHECK_SOURCE_SEARCH.name to settings.checkSearch,
-                LocalPreferencesKeys.CHECK_SOURCE_DISCOVERY.name to settings.checkDiscovery,
-                LocalPreferencesKeys.CHECK_SOURCE_INFO.name to settings.checkInfo,
-                LocalPreferencesKeys.CHECK_SOURCE_CATEGORY.name to settings.checkCategory,
-                LocalPreferencesKeys.CHECK_SOURCE_CONTENT.name to settings.checkContent,
+                LocalPreferencesKeys.CHECK_SOURCE_TIMEOUT.name to normalized.timeoutMillis,
+                LocalPreferencesKeys.CHECK_SOURCE_THREAD_COUNT.name to normalized.threadCount,
+                LocalPreferencesKeys.CHECK_SOURCE_WRITE_COMMENT.name to
+                    normalized.writeSourceComment,
+                LocalPreferencesKeys.CHECK_SOURCE_QUICK_MODE.name to normalized.quickMode,
+                LocalPreferencesKeys.CHECK_SOURCE_DOMAIN.name to normalized.checkDomain,
+                LocalPreferencesKeys.CHECK_SOURCE_SEARCH.name to normalized.checkSearch,
+                LocalPreferencesKeys.CHECK_SOURCE_DISCOVERY.name to normalized.checkDiscovery,
+                LocalPreferencesKeys.CHECK_SOURCE_INFO.name to normalized.checkInfo,
+                LocalPreferencesKeys.CHECK_SOURCE_CATEGORY.name to normalized.checkCategory,
+                LocalPreferencesKeys.CHECK_SOURCE_CONTENT.name to normalized.checkContent,
             )
         )
     }
 }
 
 private fun Preferences.toSettings() = CheckSourceSettings(
-    timeoutMillis = compatDsValue(LocalPreferencesKeys.CHECK_SOURCE_TIMEOUT, 180_000L),
+    timeoutMillis = compatDsValue(
+        LocalPreferencesKeys.CHECK_SOURCE_TIMEOUT,
+        CheckSourceSettings.DEFAULT_TIMEOUT_MILLIS,
+    ),
+    threadCount = compatDsValue(
+        LocalPreferencesKeys.CHECK_SOURCE_THREAD_COUNT,
+        CheckSourceSettings.DEFAULT_THREAD_COUNT,
+    ),
+    writeSourceComment = compatDsValue(
+        LocalPreferencesKeys.CHECK_SOURCE_WRITE_COMMENT,
+        true,
+    ),
+    quickMode = compatDsValue(LocalPreferencesKeys.CHECK_SOURCE_QUICK_MODE, false),
+    checkDomain = compatDsValue(LocalPreferencesKeys.CHECK_SOURCE_DOMAIN, false),
     checkSearch = compatDsValue(LocalPreferencesKeys.CHECK_SOURCE_SEARCH, true),
     checkDiscovery = compatDsValue(LocalPreferencesKeys.CHECK_SOURCE_DISCOVERY, true),
     checkInfo = compatDsValue(LocalPreferencesKeys.CHECK_SOURCE_INFO, true),
     checkCategory = compatDsValue(LocalPreferencesKeys.CHECK_SOURCE_CATEGORY, true),
     checkContent = compatDsValue(LocalPreferencesKeys.CHECK_SOURCE_CONTENT, true),
-)
+).normalized()

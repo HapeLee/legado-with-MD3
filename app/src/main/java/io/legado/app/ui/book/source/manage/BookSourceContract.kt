@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import io.legado.app.data.entities.BookSource
+import io.legado.app.domain.gateway.CheckSourceSettings
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.ImportStatus
 import io.legado.app.ui.widget.components.list.InteractionState
@@ -31,7 +32,11 @@ data class BookSourceItemUi(
 
 @Immutable
 data class BookSourceCheckOptionsUi(
-    val timeoutSeconds: Long = 180,
+    val timeoutSeconds: Long = CheckSourceSettings.DEFAULT_TIMEOUT_MILLIS / 1000,
+    val threadCount: Int = CheckSourceSettings.DEFAULT_THREAD_COUNT,
+    val writeSourceComment: Boolean = true,
+    val quickMode: Boolean = false,
+    val checkDomain: Boolean = false,
     val checkSearch: Boolean = true,
     val checkDiscovery: Boolean = true,
     val checkInfo: Boolean = true,

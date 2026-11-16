@@ -111,6 +111,7 @@ object WebBook {
         ruleData: RuleDataInterface = RuleData(),
         key: String? = null,
         isSearch: Boolean = false,
+        shouldBreak: ((size: Int) -> Boolean)? = null,
     ): ArrayList<SearchBook> {
         val analyzeUrl = AnalyzeUrl(
             mUrl = url,
@@ -140,7 +141,8 @@ object WebBook {
             analyzeUrl = analyzeUrl,
             baseUrl = res.url,
             body = res.body,
-            isSearch = isSearch
+            isSearch = isSearch,
+            shouldBreak = shouldBreak
         )
     }
 

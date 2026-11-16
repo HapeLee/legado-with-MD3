@@ -9,8 +9,8 @@ import io.legado.app.domain.gateway.BookSourceCheckFailure
 import io.legado.app.domain.gateway.BookSourceCheckResult
 import io.legado.app.domain.gateway.BookSourceCheckState
 import io.legado.app.domain.gateway.BookSourceCheckStatus
+import io.legado.app.domain.gateway.CheckSourceSettings
 import io.legado.app.domain.gateway.CheckSourceSettingsGateway
-import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.exception.ContentEmptyException
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.exception.TocEmptyException
@@ -25,20 +25,25 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withTimeout
 import org.mozilla.javascript.WrappedException
+import java.net.InetSocketAddress
+import java.net.Socket
+import java.net.URI
 import java.util.concurrent.Executors
 import kotlin.coroutines.coroutineContext
 
 class BookSourceCheckRepository(
     private val bookSourceRepository: BookSourceRepository,
     private val settingsGateway: CheckSourceSettingsGateway,
-    private val downloadCacheSettingsGateway: DownloadCacheSettingsGateway,
 ) : BookSourceCheckGateway {
     private val _state = MutableStateFlow(BookSourceCheckState())
     override val state = _state.asStateFlow()
+
     override suspend fun check(sourceIds: Set<String>, keyword: String) {
         if (sourceIds.isEmpty() || _state.value.isRunning) return
+        val settings = settingsGateway.currentSettings
         _state.value = BookSourceCheckState(
             isRunning = true,
             total = sourceIds.size,
@@ -46,15 +51,14 @@ class BookSourceCheckRepository(
                 BookSourceCheckResult(BookSourceCheckStatus.Pending)
             },
         )
-        val dispatcher = Executors.newFixedThreadPool(
-            downloadCacheSettingsGateway.currentSettings.threadCount.coerceAtLeast(1)
-        ).asCoroutineDispatcher()
+        val dispatcher = Executors.newFixedThreadPool(settings.threadCount)
+            .asCoroutineDispatcher()
         var completedNormally = false
         try {
             coroutineScope {
                 sourceIds.map { id ->
                     async(dispatcher) {
-                        runCatching { checkOne(id, keyword.ifBlank { "我的" }) }
+                        runCatching { checkOne(id, keyword, settings) }
                             .onFailure { error ->
                                 coroutineContext.ensureActive()
                                 updateResult(
@@ -95,7 +99,11 @@ class BookSourceCheckRepository(
         }
     }
 
-    private suspend fun checkOne(sourceId: String, keyword: String) {
+    private suspend fun checkOne(
+        sourceId: String,
+        keyword: String,
+        settings: CheckSourceSettings,
+    ) {
         val source = bookSourceRepository.getBookSource(sourceId)
         if (source == null) {
             updateResult(
@@ -113,24 +121,19 @@ class BookSourceCheckRepository(
             BookSourceCheckStatus.Running,
         )
         val result = runCatching {
-            withTimeout(settingsGateway.currentSettings.timeoutMillis) {
-                checkSource(source, keyword)
+            withTimeout(settings.timeoutMillis) {
+                checkSource(source, keyword, settings)
             }
         }
         result.onSuccess {
             source.respondTime = System.currentTimeMillis() - startedAt
         }.onFailure { error ->
             coroutineContext.ensureActive()
-            when (error) {
-                is TimeoutCancellationException -> source.addGroup("校验超时")
-                is ScriptException, is WrappedException -> source.addGroup("js失效")
-                !is NoStackTraceException -> source.addGroup("网站失效")
-            }
-            source.addErrorComment(error)
-            source.respondTime =
-                settingsGateway.currentSettings.timeoutMillis + System.currentTimeMillis() - startedAt
+            checkFailureGroup(error)?.let { source.addGroup(it) }
+            if (settings.writeSourceComment) source.addErrorComment(error)
+            source.respondTime = settings.timeoutMillis + System.currentTimeMillis() - startedAt
         }
-        val saveResult = runCatching { bookSourceRepository.updateSources(source) }
+        val saveResult = runCatching { bookSourceRepository.updateCheckResult(source) }
         coroutineContext.ensureActive()
         when {
             result.isFailure -> updateResult(
@@ -176,45 +179,127 @@ class BookSourceCheckRepository(
                 currentSourceName = name.ifBlank { state.currentSourceName },
                 results = state.results + (
                     id to BookSourceCheckResult(status, failure, detail)
-                ),
+                    ),
             )
         }
     }
 
-    private suspend fun checkSource(source: BookSource, keyword: String) {
-        val settings = settingsGateway.currentSettings
-        source.removeInvalidGroups()
-        source.removeErrorComment()
-        if (settings.checkSearch) {
-            val word = source.getCheckKeyword(keyword)
-            if (source.searchUrl.isNullOrBlank()) source.addGroup("搜索链接规则为空")
-            else {
-                source.removeGroup("搜索链接规则为空")
-                val books = WebBook.searchBookAwait(source, word)
-                if (books.isEmpty()) source.addGroup("搜索失效")
-                else {
-                    source.removeGroup("搜索失效"); checkBook(books.first().toBook(), source, true)
-                }
-            }
-        }
-        if (settings.checkDiscovery && !source.exploreUrl.isNullOrBlank()) {
-            val url = source.exploreKinds().firstOrNull { !it.url.isNullOrBlank() }?.url
-            if (url.isNullOrBlank()) source.addGroup("发现规则为空")
-            else {
-                source.removeGroup("发现规则为空")
-                val books = WebBook.exploreBookAwait(source, url)
-                if (books.isEmpty()) source.addGroup("发现失效")
-                else {
-                    source.removeGroup("发现失效"); checkBook(books.first().toBook(), source, false)
-                }
-            }
+    private suspend fun checkSource(
+        source: BookSource,
+        keyword: String,
+        settings: CheckSourceSettings,
+    ) {
+        source.updateGroups { removeInvalidGroups() }
+        if (settings.writeSourceComment) source.updateGroups { removeErrorComment() }
+        if (settings.checkDomain) checkDomainReachable(source)
+        if (settings.quickMode) {
+            checkBranchesConcurrently(source, keyword, settings)
+        } else {
+            checkSearchBranch(source, keyword, settings)
+            checkDiscoveryBranch(source, settings)
         }
         source.getInvalidGroupNames().takeIf { it.isNotBlank() }
             ?.let { throw NoStackTraceException(it) }
     }
 
-    private suspend fun checkBook(book: Book, source: BookSource, searchBook: Boolean) {
-        val settings = settingsGateway.currentSettings
+    /**
+     * 快速模式：搜索与发现并发执行，任一分支失败即整体判失败。
+     */
+    private suspend fun checkBranchesConcurrently(
+        source: BookSource,
+        keyword: String,
+        settings: CheckSourceSettings,
+    ) = supervisorScope {
+        listOf(
+            async { runCatching { checkSearchBranch(source, keyword, settings) } },
+            async { runCatching { checkDiscoveryBranch(source, settings) } },
+        ).awaitAll().firstNotNullOfOrNull { it.exceptionOrNull() }?.let { throw it }
+    }
+
+    /**
+     * 校验源地址端口连通性，避免对已下线的域名跑完整规则。
+     */
+    private suspend fun checkDomainReachable(source: BookSource) {
+        val domain = source.bookSourceUrl
+        if (!domain.startsWith("http", ignoreCase = true)) {
+            throw NoStackTraceException("源地址不是http链接")
+        }
+        if (isDomainReachable(domain)) {
+            source.removeGroupSafe(GROUP_DOMAIN_INVALID)
+        } else {
+            source.addGroupSafe(GROUP_DOMAIN_INVALID)
+            throw NoStackTraceException("源地址不可访问")
+        }
+    }
+
+    private suspend fun isDomainReachable(domain: String): Boolean {
+        val reachable = runCatching {
+            withTimeout(DOMAIN_PROBE_TIMEOUT_MILLIS) {
+                val uri = URI(domain.substringBefore("#"))
+                val host = uri.host ?: return@withTimeout false
+                val port = resolveProbePort(uri.scheme, uri.port)
+                Socket().use { socket ->
+                    socket.connect(
+                        InetSocketAddress(host, port),
+                        DOMAIN_PROBE_CONNECT_TIMEOUT_MILLIS,
+                    )
+                    true
+                }
+            }
+        }.getOrDefault(false)
+        // 取消时不能把源判成域名失效
+        coroutineContext.ensureActive()
+        return reachable
+    }
+
+    private suspend fun checkSearchBranch(
+        source: BookSource,
+        keyword: String,
+        settings: CheckSourceSettings,
+    ) {
+        if (!settings.checkSearch) return
+        val word = source.getCheckKeyword(keyword)
+        if (source.searchUrl.isNullOrBlank()) {
+            source.addGroupSafe(GROUP_SEARCH_URL_EMPTY)
+            return
+        }
+        source.removeGroupSafe(GROUP_SEARCH_URL_EMPTY)
+        // 拿到第一条就停：批量校验只需要判定可用性，不必解析整页结果
+        val books = WebBook.searchBookAwait(source, word, shouldBreak = { it > 0 })
+        if (books.isEmpty()) {
+            source.addGroupSafe(GROUP_SEARCH_INVALID)
+            return
+        }
+        source.removeGroupSafe(GROUP_SEARCH_INVALID)
+        checkBook(books.first().toBook(), source, true, settings)
+    }
+
+    private suspend fun checkDiscoveryBranch(
+        source: BookSource,
+        settings: CheckSourceSettings,
+    ) {
+        if (!settings.checkDiscovery || source.exploreUrl.isNullOrBlank()) return
+        val url = source.exploreKinds().firstOrNull { !it.url.isNullOrBlank() }?.url
+        if (url.isNullOrBlank()) {
+            source.addGroupSafe(GROUP_DISCOVERY_URL_EMPTY)
+            return
+        }
+        source.removeGroupSafe(GROUP_DISCOVERY_URL_EMPTY)
+        val books = WebBook.exploreBookAwait(source, url, shouldBreak = { it > 0 })
+        if (books.isEmpty()) {
+            source.addGroupSafe(GROUP_DISCOVERY_INVALID)
+            return
+        }
+        source.removeGroupSafe(GROUP_DISCOVERY_INVALID)
+        checkBook(books.first().toBook(), source, false, settings)
+    }
+
+    private suspend fun checkBook(
+        book: Book,
+        source: BookSource,
+        searchBook: Boolean,
+        settings: CheckSourceSettings,
+    ) {
         runCatching {
             if (!settings.checkInfo) return
             if (book.tocUrl.isBlank()) WebBook.getBookInfoAwait(source, book)
@@ -230,18 +315,70 @@ class BookSourceCheckRepository(
                 false
             )
         }.onFailure { error ->
-            val type = if (searchBook) "搜索" else "发现"
-            when (error) {
-                is ContentEmptyException -> source.addGroup("${type}正文失效")
-                is TocEmptyException -> source.addGroup("${type}目录失效")
-                else -> throw error
-            }
+            val type = if (searchBook) TYPE_SEARCH else TYPE_DISCOVERY
+            bookFailureGroup(type, error)?.let { source.addGroupSafe(it) } ?: throw error
         }.onSuccess {
-            val type = if (searchBook) "搜索" else "发现"
-            source.removeGroup("${type}目录失效")
-            source.removeGroup("${type}正文失效")
+            val type = if (searchBook) TYPE_SEARCH else TYPE_DISCOVERY
+            source.removeGroupSafe("${type}目录失效")
+            source.removeGroupSafe("${type}正文失效")
         }
     }
+
+    /**
+     * 快速模式下两个分支并发改写同一个源的分组与注释，字符串字段的读改写必须串行。
+     */
+    private inline fun BookSource.updateGroups(block: BookSource.() -> Unit) {
+        synchronized(this) { block() }
+    }
+
+    private fun BookSource.addGroupSafe(group: String) {
+        updateGroups { addGroup(group) }
+    }
+
+    private fun BookSource.removeGroupSafe(group: String) {
+        updateGroups { removeGroup(group) }
+    }
+}
+
+internal const val TYPE_SEARCH = "搜索"
+internal const val TYPE_DISCOVERY = "发现"
+internal const val GROUP_TIMEOUT = "校验超时"
+internal const val GROUP_JS_INVALID = "js失效"
+internal const val GROUP_SITE_INVALID = "网站失效"
+internal const val GROUP_DOMAIN_INVALID = "域名失效"
+internal const val GROUP_SEARCH_INVALID = "${TYPE_SEARCH}失效"
+internal const val GROUP_DISCOVERY_INVALID = "${TYPE_DISCOVERY}失效"
+internal const val GROUP_SEARCH_URL_EMPTY = "${TYPE_SEARCH}链接规则为空"
+internal const val GROUP_DISCOVERY_URL_EMPTY = "${TYPE_DISCOVERY}规则为空"
+
+private const val DOMAIN_PROBE_TIMEOUT_MILLIS = 2_000L
+private const val DOMAIN_PROBE_CONNECT_TIMEOUT_MILLIS = 1_600
+
+/**
+ * 域名探测端口：显式端口优先，否则按 scheme 取默认端口。
+ * 必须识别 https，否则 443-only 的站点会被误判成「域名失效」。
+ */
+internal fun resolveProbePort(scheme: String?, port: Int): Int =
+    port.takeIf { it > 0 } ?: if (scheme.equals("https", ignoreCase = true)) 443 else 80
+
+/**
+ * 单个书源校验失败后的分组判定。`null` 表示不额外标记分组
+ * （`NoStackTraceException` 已经携带具体失效分组）。
+ */
+internal fun checkFailureGroup(error: Throwable): String? = when (error) {
+    is TimeoutCancellationException -> GROUP_TIMEOUT
+    is ScriptException, is WrappedException -> GROUP_JS_INVALID
+    !is NoStackTraceException -> GROUP_SITE_INVALID
+    else -> null
+}
+
+/**
+ * 详情/目录/正文校验失败后的分组判定。`null` 表示向上抛出，交给外层归类。
+ */
+internal fun bookFailureGroup(type: String, error: Throwable): String? = when (error) {
+    is ContentEmptyException -> "${type}正文失效"
+    is TocEmptyException -> "${type}目录失效"
+    else -> null
 }
 
 private fun Throwable?.displayMessage(): String? =
