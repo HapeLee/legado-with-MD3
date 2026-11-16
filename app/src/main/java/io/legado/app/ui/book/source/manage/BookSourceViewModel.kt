@@ -7,6 +7,9 @@ import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.JsonParser
+import com.google.gson.Strictness
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonToken
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppPattern
 import io.legado.app.data.entities.BookSource
@@ -24,21 +27,18 @@ import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.http.decompressed
 import io.legado.app.help.http.newCallResponseBody
 import io.legado.app.help.http.okHttpClient
-import io.legado.app.help.http.text
 import io.legado.app.help.source.SourceHelp
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.ImportItemWrapper
 import io.legado.app.ui.widget.components.importComponents.ImportStatus
 import io.legado.app.utils.GSON
 import io.legado.app.utils.NetworkUtils
-import io.legado.app.utils.fromJsonArray
-import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.inputStream
 import io.legado.app.utils.isAbsUrl
-import io.legado.app.utils.isJsonArray
-import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.isUri
 import io.legado.app.utils.splitNotBlank
+import java.io.Reader
+import java.io.StringReader
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
@@ -464,26 +464,42 @@ class BookSourceViewModel(
         importState.value = BaseImportUiState.Loading
         launch {
             runCatching {
-                val text = if (input.isAbsUrl()) {
-                    okHttpClient.newCallResponseBody {
-                        if (input.endsWith("#requestWithoutUA")) {
-                            url(input.substringBeforeLast("#requestWithoutUA")); header(
-                                AppConst.UA_NAME,
-                                "null"
-                            )
-                        } else url(input)
-                    }.decompressed().text("utf-8")
-                } else if (input.isUri()) {
-                    input.toUri().inputStream(application).getOrThrow()
-                        .bufferedReader()
-                        .use { it.readText() }
-                } else input
-                val sources = parseImportSources(text)
+                val sources = when {
+                    input.isAbsUrl() -> {
+                        okHttpClient.newCallResponseBody {
+                            if (input.endsWith("#requestWithoutUA")) {
+                                url(input.substringBeforeLast("#requestWithoutUA"))
+                                header(AppConst.UA_NAME, "null")
+                            } else {
+                                url(input)
+                            }
+                        }.decompressed().byteStream().bufferedReader().use { reader ->
+                            parseImportSources(reader)
+                        }
+                    }
+
+                    input.isUri() -> {
+                        input.toUri().inputStream(application).getOrThrow()
+                            .bufferedReader()
+                            .use { reader ->
+                                parseImportSources(reader)
+                            }
+                    }
+
+                    else -> StringReader(input).use { reader ->
+                        parseImportSources(reader)
+                    }
+                }
+                val existingSources = if (sources.size <= 1) {
+                    sources.associate { it.bookSourceUrl to repository.getBookSource(it.bookSourceUrl) }
+                } else {
+                    repository.getAll().associateBy { it.bookSourceUrl }
+                }
                 val settings = otherSettingsGateway.currentSettings
                 BaseImportUiState.Success(
                     source = input,
                     items = sources.map { source ->
-                        val old = repository.getBookSource(source.bookSourceUrl)
+                        val old = existingSources[source.bookSourceUrl]
                         val status = when {
                             old == null -> ImportStatus.New
                             source.lastUpdateTime > old.lastUpdateTime -> ImportStatus.Update
@@ -510,26 +526,44 @@ class BookSourceViewModel(
         }
     }
 
-    private suspend fun parseImportSources(text: String): List<BookSource> {
-        val sources = when {
-            text.isJsonArray() -> GSON.fromJsonArray<BookSource>(text).getOrThrow()
-            text.isJsonObject() -> {
-                val objectValue = JsonParser.parseString(text).asJsonObject
-                val sourceUrls = objectValue.getAsJsonArray("sourceUrls")
+    private suspend fun parseImportSources(reader: Reader): List<BookSource> {
+        val jsonReader = JsonReader(reader).apply {
+            strictness = Strictness.LENIENT
+        }
+        val sources = when (jsonReader.peek()) {
+            JsonToken.BEGIN_ARRAY -> {
+                val list = ArrayList<BookSource>()
+                jsonReader.beginArray()
+                while (jsonReader.hasNext()) {
+                    val source: BookSource? = GSON.fromJson(jsonReader, BookSource::class.java)
+                    if (source != null) {
+                        list.add(source)
+                    }
+                }
+                jsonReader.endArray()
+                list
+            }
+
+            JsonToken.BEGIN_OBJECT -> {
+                val objectValue = JsonParser.parseReader(jsonReader).asJsonObject
+                val sourceUrls = objectValue.get("sourceUrls")?.takeIf { it.isJsonArray }?.asJsonArray
                 if (sourceUrls != null) {
                     sourceUrls.flatMap { element ->
                         val url = element.asString
-                        val sourceText = okHttpClient.newCallResponseBody {
+                        okHttpClient.newCallResponseBody {
                             if (url.endsWith("#requestWithoutUA")) {
-                                url(url.substringBeforeLast("#requestWithoutUA")); header(
-                                    AppConst.UA_NAME,
-                                    "null"
-                                )
-                            } else url(url)
-                        }.decompressed().text("utf-8")
-                        parseImportSources(sourceText)
+                                url(url.substringBeforeLast("#requestWithoutUA"))
+                                header(AppConst.UA_NAME, "null")
+                            } else {
+                                url(url)
+                            }
+                        }.decompressed().byteStream().bufferedReader().use { streamReader ->
+                            parseImportSources(streamReader)
+                        }
                     }
-                } else listOf(GSON.fromJsonObject<BookSource>(text).getOrThrow())
+                } else {
+                    listOfNotNull(GSON.fromJson(objectValue, BookSource::class.java))
+                }
             }
 
             else -> error(application.getString(io.legado.app.R.string.invalid_format))
