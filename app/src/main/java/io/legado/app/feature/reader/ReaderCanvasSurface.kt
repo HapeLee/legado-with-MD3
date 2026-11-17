@@ -2891,8 +2891,8 @@ private fun ReaderPageCanvas(
         textElements.map { it.style }.distinct()
             .associateWith(ReaderAndroidPaintFactory::create)
     }
-    // 可以整段画的正文段落划分。与命中、朗读状态无关，只跟排版元素有关。
-    val textDrawRuns = remember(page.elements) { buildMergedTextRuns(page.elements) }
+    // 建页时按真实字体核对整段 advance；命中、朗读状态变化不重复测量。
+    val textDrawRuns = remember(page.elements, paints) { buildMergedTextRuns(page.elements, paints) }
     // 整段绘制时临时承载字距的画笔，避免改动 [paints] 里共用的画笔。
     val mergedRunPaint = remember { Paint() }
     val solidBackground = solidPageBackground(background, backgroundImage, backgroundImageAlpha)
