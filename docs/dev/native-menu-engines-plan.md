@@ -1574,6 +1574,34 @@ enum class AppMenuAnchor { Row, Icon }   // 决定 Miuix 用 Preference 还是 I
    TalkBack 语义、低版本 COUI 回退、Android 12~13 下动态取色回退到 GR 色板的观感；
    第四十九轮的 9 个漫画 / insets 既有单测失败、`lint-baseline.xml` 19 条旧条目、
    阶段 D 清理、搜索按钮样式差异仍未处理。
+   **第五十二轮（替换净化列表项菜单换成原生行）**：用户对比「替换净化」与「书源管理」后
+   发现前者的列表项菜单不是各引擎原生 item。根因是两页走了不同通道：替换净化把 3 条命令
+   塞进 `SelectionItemCard.dropdownContent`（`ColumnScope.(onDismiss) -> Unit` 任意内容插槽），
+   卡片只能把**弹层容器**收编到 `AppAnchoredPanel(externalTrigger = true)`，行仍是自绘
+   `RoundDropdownMenuItem`（四套自绘实现）；书源管理把 ⋮ 放进 `trailingAction` 槽 +
+   `AppActionMenu(anchor = Row)`，条目是数据，库才能画自己的行。
+   - `ReplaceRuleScreen` 列表项：删掉 `dropdownContent` 与 3 处 `RoundDropdownMenuItem` /
+     `dismiss()`，改 `trailingAction = { ReplaceRuleItemMenu(...) }`；新增私有
+     `ReplaceRuleItemMenu`，3 条命令走稳定 ID（`to_top` / `to_bottom` / `delete`）+
+     `when(id)` 分派，`delete` 标 `destructive = true`（Material 红字、COUI 染图标、
+     Mochi 原生危险色；Miuix 无机型通道）。
+   - 形状与 `BookSourceItemMenu` 同构：`anchor = AppMenuAnchor.Row`、
+     `title = a11y_more_actions_for(规则名)`、trigger 为
+     `SmallPlainButton(onClick = null, icon = MoreVert, contentDescription = ...)`；
+     ⋮ 的位置 / 外观 / 无障碍名称不变（卡片顺序是开关 → 编辑 → `trailingAction` → `dropdownContent`），
+     三处副作用逐条保留：两个 `onIntent` 点击时求值，删除仍只打开 `showDeleteRuleDialog` 确认框。
+   - 已知边界：Material 分支仍是项目自绘行（M3 没有库原生 item）；文案先在 `@Composable`
+     作用域求值（`remember` 的 lambda 不是 `@Composable`，字符串模板里插 `stringResource`
+     会编译失败）。
+   - 契约：新增 `ReplaceRuleItemMenuContractTest` 4 例（结构 / 常量声明与分派 / 删除走
+     `destructive` 且不跳过确认框 / 卡片插槽仍保留）；`SelectionItemCardMenuContractTest`
+     的调用点棘轮 6 → 5，KDoc 记录下调原因。
+   验证：双变体 `:app:compileAppCoreDebugKotlin` / `:app:compileAppComicDebugKotlin`
+   `BUILD SUCCESSFUL`；`testAppCoreDebugUnitTest --tests 'io.legado.app.ui.widget.components.menu.*'`
+   通过（新契约 `tests="4" failures="0"`）；`verifyConfigArchitecture` 随任务通过；
+   `git diff --check` 干净、3 个改动文件 0 诊断；计数仍 **4 / 0**（本页无 `RoundDropdownMenu(`）。
+   ⚠️ 未复核：四引擎展开态外观与弹层落点、Material 下删除项新增的红字、TalkBack；
+   `testAppComicDebugUnitTest` / lint / assemble 未跑。
 3. ~~逐个把 18 个 `TopBarOverflowMenu` 页面从 `externalTrigger = true` 切到主入口~~
    **（2026-11-11 第十五轮实测：这条已基本完成）** 16 个列表页已改传 `menuGroups`
    走 `TopBarActionMenu`；`dropDownMenuContent` 只剩 `RssSourceScreen` 1 处（刻意保留，

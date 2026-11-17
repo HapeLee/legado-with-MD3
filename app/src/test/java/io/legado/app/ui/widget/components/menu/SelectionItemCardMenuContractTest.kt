@@ -10,11 +10,15 @@ import java.io.File
  *
  * 这是三入口迁移里唯一一处**组件 API**：`SelectionItemCard` / `SelectionItemCardContent` /
  * `ReorderableSelectionItem` 三个对外函数都暴露同一个 `ColumnScope.(onDismiss) -> Unit`
- * 插槽，6 个业务调用点各自传菜单项并自己决定是否 `dismiss()`。
+ * 插槽，业务调用点各自传菜单项并自己决定是否 `dismiss()`。
  *
  * 盘点结论：插槽签名与 `AppAnchoredPanel.content` 同构，因此只把卡片内部的弹层分派收编到
- * `externalTrigger` 兼容路径，公共 API 与 6 个调用点零改动；菜单项的 dismiss 仍由调用点
+ * `externalTrigger` 兼容路径，公共 API 与调用点零改动；菜单项的 dismiss 仍由调用点
  * 持有，入口的 `onExpandedChange(false)` 等价于旧 `showMenu = false`。
+ *
+ * **第五十二轮下调 6 → 5**：`ReplaceRuleScreen` 的列表项菜单已改用 `trailingAction` 槽 +
+ * `AppActionMenu(anchor = Row)`（见 `ReplaceRuleItemMenuContractTest`），因为 `dropdownContent`
+ * 只能收编弹层容器、行仍是自绘的 `RoundDropdownMenuItem`，拿不到各引擎原生行。
  *
  * 静态断言不证明四引擎弹层落点（玻璃锚点由 `MochiOverlaysAndBarsTest` 覆盖）与 TalkBack。
  */
@@ -59,9 +63,9 @@ class SelectionItemCardMenuContractTest {
         )
     }
 
-    /** 6 个业务调用点仍传 `dropdownContent`，且每项都使用传入的关闭回调。 */
+    /** 5 个业务调用点仍传 `dropdownContent`，且每项都使用传入的关闭回调。 */
     @Test
-    fun sixCallersKeepPassingDropdownContentAndDismissCallback() {
+    fun fiveCallersKeepPassingDropdownContentAndDismissCallback() {
         CALLERS.forEach { path ->
             val source = codeOf(path)
             assertTrue("$path 未传 dropdownContent", source.contains("dropdownContent = {"))
@@ -113,7 +117,6 @@ class SelectionItemCardMenuContractTest {
             "io/legado/app/ui/widget/components/changeSource/ChangeSourceSheet.kt",
             "io/legado/app/ui/rss/subscription/RuleSubScreen.kt",
             "io/legado/app/ui/rss/favorites/RssFavoritesScreen.kt",
-            "io/legado/app/ui/replace/ReplaceRuleScreen.kt",
             "io/legado/app/ui/main/bookshelf/autoGroup/AiAutoGroupSheet.kt",
             "io/legado/app/ui/book/read/sheet/ChangeChapterSourceSheet.kt",
         )

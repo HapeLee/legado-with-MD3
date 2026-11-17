@@ -47,15 +47,18 @@ import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.DraggableSelectionHandler
 import io.legado.app.ui.widget.components.GroupManageBottomSheet
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.menu.AppAction
 import io.legado.app.ui.widget.components.menu.AppActionGroup
+import io.legado.app.ui.widget.components.menu.AppActionMenu
+import io.legado.app.ui.widget.components.menu.AppMenuAnchor
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import kotlinx.collections.immutable.persistentListOf
@@ -449,10 +452,6 @@ fun ReplaceRuleScreen(
                             ui.name
                         ),
                         editContentDescription = stringResource(R.string.a11y_edit_named, ui.name),
-                        moreContentDescription = stringResource(
-                            R.string.a11y_more_actions_for,
-                            ui.name
-                        ),
                         onClickEdit = {
                             onNavigateToEdit(
                                 ReplaceEditRoute(
@@ -461,30 +460,22 @@ fun ReplaceRuleScreen(
                                 )
                             )
                         },
-                        modifier = Modifier,
-                        dropdownContent = { dismiss ->
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.move_to_top),
-                                onClick = {
+                        trailingAction = {
+                            ReplaceRuleItemMenu(
+                                moreContentDescription = stringResource(
+                                    R.string.a11y_more_actions_for,
+                                    ui.name
+                                ),
+                                onMoveToTop = {
                                     onIntent(ReplaceRuleIntent.ToTop(ui.toEntity()))
-                                    dismiss()
-                                }
-                            )
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.move_to_bottom),
-                                onClick = {
+                                },
+                                onMoveToBottom = {
                                     onIntent(ReplaceRuleIntent.ToBottom(ui.toEntity()))
-                                    dismiss()
-                                }
+                                },
+                                onDelete = { showDeleteRuleDialog = ui.toEntity() },
                             )
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.delete),
-                                onClick = {
-                                    showDeleteRuleDialog = ui.toEntity()
-                                    dismiss()
-                                }
-                            )
-                        }
+                        },
+                        modifier = Modifier,
                     )
                 }
             }
@@ -505,3 +496,63 @@ fun ReplaceRuleScreen(
     }
 
 }
+
+/**
+ * 替换净化列表项的「更多」菜单。
+ *
+ * 条目以数据形式交给 [AppActionMenu]（`anchor = Row`），由入口按引擎渲染原生行：
+ * COUI `CouiMenuItem`、Miuix `DropdownItem`（HyperOS 4 玻璃行）、Mochi `MochiItem`；
+ * Material 没有库原生 item，仍是项目自绘行。
+ *
+ * ⋮ 的渲染所有权留在调用点（`trailingAction` 槽），因此**不能**改回
+ * `SelectionItemCard.dropdownContent`：那个插槽只收编弹层容器，行仍是自绘的
+ * `RoundDropdownMenuItem`，拿不到原生效果。
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun ReplaceRuleItemMenu(
+    moreContentDescription: String,
+    onMoveToTop: () -> Unit,
+    onMoveToBottom: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    // `remember` / `buildList` 的 lambda 不是 @Composable，文案必须先在这里求值。
+    val toTopLabel = stringResource(R.string.move_to_top)
+    val toBottomLabel = stringResource(R.string.move_to_bottom)
+    val deleteLabel = stringResource(R.string.delete)
+    val groups = remember(toTopLabel, toBottomLabel, deleteLabel) {
+        persistentListOf(
+            AppActionGroup(
+                id = "replace_rule_actions",
+                actions = persistentListOf(
+                    AppAction(id = RULE_ACTION_TO_TOP, label = toTopLabel),
+                    AppAction(id = RULE_ACTION_TO_BOTTOM, label = toBottomLabel),
+                    // 删除是危险命令：Material / COUI / Mochi 各有落色通道（Miuix 无）。
+                    AppAction(id = RULE_ACTION_DELETE, label = deleteLabel, destructive = true),
+                ),
+            ),
+        )
+    }
+    AppActionMenu(
+        groups = groups,
+        onAction = { id ->
+            when (id) {
+                RULE_ACTION_TO_TOP -> onMoveToTop()
+                RULE_ACTION_TO_BOTTOM -> onMoveToBottom()
+                RULE_ACTION_DELETE -> onDelete()
+            }
+        },
+        anchor = AppMenuAnchor.Row,
+        title = moreContentDescription,
+    ) {
+        SmallPlainButton(
+            onClick = null,
+            icon = AppIcons.MoreVert,
+            contentDescription = moreContentDescription,
+        )
+    }
+}
+
+private const val RULE_ACTION_TO_TOP = "to_top"
+private const val RULE_ACTION_TO_BOTTOM = "to_bottom"
+private const val RULE_ACTION_DELETE = "delete"
