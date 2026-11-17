@@ -3138,6 +3138,8 @@
     <string name="cast_bgm_pool">背景音乐池</string>
     <string name="bgm_assign">背景音乐分配</string>
     <string name="bgm_assign_summary">在正文段首显示配乐胶囊，朗读时按场景播放背景音乐；胶囊只作视觉提示，朗读不会念出</string>
+    <string name="read_aloud_chapter_title">朗读章节标题</string>
+    <string name="read_aloud_chapter_title_summary">每章开头先念标题；关闭后从正文开始读，只有卷名没有正文的章节仍会念标题。与正文是否显示标题互不影响，修改后从下一章开始生效</string>
     <string name="cast_bgm_track">曲目</string>
     <string name="cast_bgm_scene_title">场景配乐</string>
     <string name="cast_bgm_scene_follow">跟随池随机播放</string>

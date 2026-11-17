@@ -28,6 +28,7 @@ fun ReadAloudSettingsUiState.asReadBookUiState(): ReadBookUiState = ReadBookUiSt
     useMultiSpeaker = useMultiSpeaker,
     multiRoleCast = multiRoleCast,
     bgmAssign = bgmAssign,
+    readChapterTitle = readChapterTitle,
     readAloudContentSplitMode = readAloudContentSplitMode,
     readAloudContentSplitSymbols = readAloudContentSplitSymbols.toImmutableSet(),
     preDownloadNum = preDownloadNum,

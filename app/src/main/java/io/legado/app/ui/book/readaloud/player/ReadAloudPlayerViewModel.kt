@@ -176,6 +176,9 @@ class ReadAloudPlayerViewModel(
                 ReadAloudConfigOption.BgmAssign ->
                     readAloudSettingsGateway.update { it.copy(bgmAssign = selected) }
 
+                ReadAloudConfigOption.ReadChapterTitle ->
+                    readAloudSettingsGateway.update { it.copy(readChapterTitle = selected) }
+
                 ReadAloudConfigOption.ContentSplit -> {
                     val (mode, symbols) = ReadAloudContentSplitSetting.decode(value)
                     readAloudSettingsGateway.update {
@@ -326,6 +329,7 @@ private fun toReadAloudSettingsUiState(
     useMultiSpeaker = aloud.useMultiSpeaker,
     multiRoleCast = aloud.multiRoleCast,
     bgmAssign = aloud.bgmAssign,
+    readChapterTitle = aloud.readChapterTitle,
     readAloudContentSplitMode = aloud.contentSplitMode,
     readAloudContentSplitSymbols = aloud.contentSplitSymbols,
     preDownloadNum = read.preDownloadNum,

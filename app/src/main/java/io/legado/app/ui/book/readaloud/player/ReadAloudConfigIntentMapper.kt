@@ -123,6 +123,9 @@ internal fun ReadAloudPlayerViewModel.applyReadBookConfigIntent(
         is ReadBookIntent.SetBgmAssign ->
             onConfigIntent(ReadAloudConfigOption.BgmAssign, selected = intent.value)
 
+        is ReadBookIntent.SetReadChapterTitle ->
+            onConfigIntent(ReadAloudConfigOption.ReadChapterTitle, selected = intent.value)
+
         is ReadBookIntent.SetReadAloudContentSplitMode ->
             onConfigIntent(ReadAloudConfigOption.ContentSplit, value = intent.value)
 

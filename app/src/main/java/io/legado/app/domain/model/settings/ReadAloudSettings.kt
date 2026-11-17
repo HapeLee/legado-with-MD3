@@ -101,6 +101,14 @@ data class ReadAloudSettings(
      * 胶囊只是视觉 span——不向 semanticContent 注入任何字符，所以 TTS 念不到它。
      */
     val bgmAssign: Boolean = false,
+    /**
+     * 每章开头是否把章节标题也念出来。
+     *
+     * 与阅读器的 `TitleMode == 隐藏` 完全独立：正文要不要显示标题管的是渲染，这里管的是
+     * 送进引擎的队列里有没有标题这一 cue。只有卷名没有正文的章节不受它影响（标题是唯一内容）。
+     * 修改后从下一次章节准备开始生效，不会打断正在读的这一章。
+     */
+    val readChapterTitle: Boolean = true,
     val defaultInterface: String = "classic",
     val contentSelectSpeakMode: Int = 0,
     val audioPreDownloadNum: Int = 10,

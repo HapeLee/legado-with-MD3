@@ -72,6 +72,13 @@ class ReadAloudSettingsMappingTest {
     }
 
     @Test
+    fun `朗读章节标题默认开启`() {
+        val settings = emptyMap<String, Any?>().toTestPreferences().toReadAloudSettings()
+
+        assertEquals(true, settings.readChapterTitle)
+    }
+
+    @Test
     fun `朗读分析推理级别默认关闭`() {
         val settings = emptyMap<String, Any?>().toTestPreferences().toReadAloudSettings()
 
@@ -125,6 +132,7 @@ private fun readAloudMappingSamples(): List<ReadAloudSettings> {
         base.copy(finishCurrentChapterAfterTimer = true),
         base.copy(ttsFollowSys = false),
         base.copy(useMultiSpeaker = false),
+        base.copy(readChapterTitle = false),
     )
 }
 
@@ -161,6 +169,7 @@ private fun ReadAloudSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.useMultiSpeaker to useMultiSpeaker,
     PreferKey.multiRoleCast to multiRoleCast,
     PreferKey.bgmAssign to bgmAssign,
+    PreferKey.readAloudChapterTitle to readChapterTitle,
     PreferKey.defaultReadAloudInterface to defaultInterface,
     PreferKey.contentSelectSpeakMod to contentSelectSpeakMode,
     PreferKey.audioPreDownloadNum to audioPreDownloadNum,

@@ -40,6 +40,7 @@ import io.legado.app.constant.NotificationId
 import io.legado.app.constant.PreferKey
 import io.legado.app.constant.Status
 import io.legado.app.domain.gateway.PlaybackCapsuleGateway
+import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.PlaybackCapsuleSource
 import io.legado.app.domain.model.PlaybackTimer
@@ -55,6 +56,7 @@ import io.legado.app.domain.model.readaloud.SpeechAnalysisMode
 import io.legado.app.domain.model.readaloud.SpeechPlanItem
 import io.legado.app.domain.model.readaloud.SpeechVoiceSelection
 import io.legado.app.domain.model.readaloud.resolveReadAloudStartPosition
+import io.legado.app.domain.model.readaloud.shouldSpeakChapterTitle
 import io.legado.app.domain.model.settings.ReadAloudContentSplitMode
 import io.legado.app.domain.model.settings.ReadAloudTimerMode
 import io.legado.app.domain.usecase.BuildSpeechPlanUseCase
@@ -204,6 +206,9 @@ abstract class BaseReadAloudService : BaseService(),
 
     private val sessionStore: ReadAloudSessionStore by lazy {
         get(ReadAloudSessionStore::class.java)
+    }
+    private val readAloudSettingsGateway: ReadAloudSettingsGateway by lazy {
+        get(ReadAloudSettingsGateway::class.java)
     }
     protected val bookSession get() = ReadAloud.bookSession
 
@@ -548,9 +553,13 @@ abstract class BaseReadAloudService : BaseService(),
                 }
             }
             // 只有卷名的章节没有正文坐标，从历史进度恢复时也从卷名开始读。
-            val shouldReadChapterTitle =
-                (preparedParagraphs.isEmpty() || (startsAtChapterBeginning && !moveToLast)) &&
-                    preparedChapter.title.isNotBlank()
+            val shouldReadChapterTitle = shouldSpeakChapterTitle(
+                readTitleEnabled = readAloudSettingsGateway.currentSettings.readChapterTitle,
+                title = preparedChapter.title,
+                hasReadableParagraphs = preparedParagraphs.isNotEmpty(),
+                startsAtChapterBeginning = startsAtChapterBeginning,
+                moveToLast = moveToLast,
+            )
             if (shouldReadChapterTitle) {
                 if (usePreparedPlaybackQueue) {
                     preparedPlaybackQueue =

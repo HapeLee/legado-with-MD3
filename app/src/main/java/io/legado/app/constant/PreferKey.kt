@@ -309,6 +309,11 @@ object PreferKey {
     const val multiRoleCast = "multiRoleCast"
     /** 背景音乐分配：正文段首配乐胶囊 + 朗读时的独立配乐轨。 */
     const val bgmAssign = "bgmAssign"
+    /**
+     * 朗读章节标题：与正文「标题位置=隐藏」独立——关掉标题显示、标题仍可能被念出来，
+     * 所以朗读侧单独给一个开关。
+     */
+    const val readAloudChapterTitle = "readAloudChapterTitle"
     const val themePref = "themePref"
     const val bookshelfSortOrder = "bookshelfSortOrder"
     const val showBottomView = "showBottomView"

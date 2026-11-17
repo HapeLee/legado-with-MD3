@@ -1406,9 +1406,9 @@ class ReadBookViewModel(
             is ReadBookIntent.SetSpeechAnalysisReasoningLevel -> readAloudDelegate.setSpeechAnalysisReasoningLevel(intent.value)
             is ReadBookIntent.SetUseMultiSpeaker ->
                 readAloudDelegate.setUseMultiSpeaker(intent.value)
-            is ReadBookIntent.SetMultiRoleCast ->
-                readAloudDelegate.setMultiRoleCast(intent.value)
+            is ReadBookIntent.SetMultiRoleCast -> readAloudDelegate.setMultiRoleCast(intent.value)
             is ReadBookIntent.SetBgmAssign -> readAloudDelegate.setBgmAssign(intent.value)
+            is ReadBookIntent.SetReadChapterTitle -> readAloudDelegate.setReadChapterTitle(intent.value)
             is ReadBookIntent.SetBgmVolume -> readAloudDelegate.setBgmVolume(intent.value)
             is ReadBookIntent.ConfirmRoleCast -> readAloudCastDelegate.confirm(intent)
             is ReadBookIntent.CreateRoleCast -> readAloudCastDelegate.create(intent)

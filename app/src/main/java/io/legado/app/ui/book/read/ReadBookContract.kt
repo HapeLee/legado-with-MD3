@@ -355,6 +355,8 @@ data class ReadBookUiState(
     val multiRoleCast: Boolean = false,
     /** 背景音乐分配开关（正文段首配乐胶囊 + 朗读时的独立配乐轨）。 */
     val bgmAssign: Boolean = false,
+    /** 每章开头是否朗读章节标题；与正文标题是否显示（`titleMode`）无关。 */
+    val readChapterTitle: Boolean = true,
     /** 背景音乐总音量（0f–1f），与曲目自身音量、段内音量相乘。 */
     val bgmVolume: Float = 1f,
     val defaultReadAloudInterface: String = ReadAloudSettingsRepository.DEFAULT_INTERFACE_CLASSIC,
@@ -1015,6 +1017,9 @@ sealed interface ReadBookIntent {
 
     /** 背景音乐分配开关：正文段首渲染配乐胶囊，朗读时按场景换 BGM。 */
     data class SetBgmAssign(val value: Boolean) : ReadBookIntent
+
+    /** 朗读章节标题开关：只影响朗读队列，不改正文渲染（正文标题仍由 `titleMode` 决定）。 */
+    data class SetReadChapterTitle(val value: Boolean) : ReadBookIntent
 
     /** 背景音乐总音量（0f–1f）：与曲目音量、段内音量相乘，朗读设置里那根滑杆。 */
     data class SetBgmVolume(val value: Float) : ReadBookIntent

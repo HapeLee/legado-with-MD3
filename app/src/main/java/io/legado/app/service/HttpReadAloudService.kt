@@ -52,6 +52,7 @@ import io.legado.app.domain.model.readaloud.SpeechEngineRoute
 import io.legado.app.domain.model.readaloud.SpeechRoleType
 import io.legado.app.domain.model.readaloud.SpeechVoiceRouter
 import io.legado.app.domain.model.readaloud.SystemTtsVoiceConfig
+import io.legado.app.domain.model.readaloud.shouldSpeakChapterTitle
 import io.legado.app.domain.model.settings.ReadAloudContentSplitMode
 import io.legado.app.domain.model.settings.ReadAloudSettings
 import io.legado.app.exception.NoStackTraceException
@@ -1080,15 +1081,25 @@ class HttpReadAloudService : BaseReadAloudService(),
             paragraphs = readAloudChapter.canonicalSpeechParagraphs(splitByPage, splitPolicy),
             splitPolicy = splitPolicy,
         )
-        val queue = runCatching { buildPlaybackQueue(book.bookUrl, plan).withChapterTitle(displayTitle) }
-            .getOrDefault(ReadAloudPlaybackQueue.Empty)
+        // 与实时朗读共用同一条标题判定：预合成文件名与播放队列必须逐句对齐，
+        // 否则开关关掉后播放端少一条 cue，整章文件下标会错位
+        val paragraphs = readAloudChapter.readAloudParagraphs(splitByPage, splitPolicy)
+        val speakTitle = shouldSpeakChapterTitle(
+            readTitleEnabled = readAloudSettings.readChapterTitle,
+            title = displayTitle,
+            hasReadableParagraphs = paragraphs.isNotEmpty(),
+            startsAtChapterBeginning = true,
+        )
+        val queue = runCatching {
+            buildPlaybackQueue(book.bookUrl, plan)
+                .let { if (speakTitle) it.withChapterTitle(displayTitle) else it }
+        }.getOrDefault(ReadAloudPlaybackQueue.Empty)
         val contentList = if (!queue.isEmpty) {
             queue.cues.map { it.text }
         } else {
             // 与实时朗读同一份单元集合：不发声段不进列表，预合成文件名才会与播放时对上
-            listOf(displayTitle.trim()).filter { it.isNotEmpty() } +
-                    readAloudChapter.readAloudParagraphs(splitByPage, splitPolicy)
-                        .map { it.text }
+            val titleUnits = if (speakTitle) listOf(displayTitle.trim()).filter { it.isNotEmpty() } else emptyList()
+            titleUnits + paragraphs.map { it.text }
         }
         return PreDownloadChapter(displayTitle, queue, contentList)
     }

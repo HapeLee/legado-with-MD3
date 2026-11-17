@@ -138,6 +138,7 @@ class ReadAloudDelegate(
                         // 漏填这一项会出现「开关显示关、正文胶囊却还是开」：
                         // 胶囊读的是 ReadConfig.bgmAssign（持久值），开关读的是这里的状态
                         bgmAssign = prefs.bgmAssign,
+                        readChapterTitle = prefs.readChapterTitle,
                         // 总音量存在配乐自己的 prefs 里（与配乐库/段内音量同一处），不在朗读设置模型中
                         bgmVolume = io.legado.app.help.readaloud.cast.BgmPoolStore.volume(),
                         defaultReadAloudInterface = prefs.defaultInterface,
@@ -623,6 +624,17 @@ class ReadAloudDelegate(
                 preserveReadAloudPosition = readsDurChapterAloud(),
             )
         }
+    }
+
+    /**
+     * 朗读章节标题开关：只决定章首那条标题 cue 要不要进朗读队列，与正文是否显示标题无关。
+     *
+     * 不重排当前章、也不重启服务：标题只在章首插入，中途重排/重启要么把用户拽回章首，
+     * 要么这一章早就念过标题了、改了也不会有任何可见变化。下一次章节准备自然生效。
+     */
+    fun setReadChapterTitle(value: Boolean) {
+        host.updateState { it.copy(readChapterTitle = value) }
+        updateSettings { it.copy(readChapterTitle = value) }
     }
 
     /**

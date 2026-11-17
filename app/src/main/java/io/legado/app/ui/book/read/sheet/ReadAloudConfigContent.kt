@@ -144,6 +144,15 @@ fun ReadAloudConfigContent(
                         ),
                         onValueChange = { onPlayerIntent(ReadAloudPlayerIntent.SetBgMode(it.toInt())) },
                     )
+                    // 与阅读器的「标题位置=隐藏」互不影响：那边管正文渲染，这边管朗读队列
+                    TinySwitchSettingItem(
+                        title = stringResource(R.string.read_aloud_chapter_title),
+                        description = stringResource(R.string.read_aloud_chapter_title_summary),
+                        checked = state.readChapterTitle,
+                        onCheckedChange = {
+                            onIntent(ReadBookIntent.SetReadChapterTitle(it))
+                        },
+                    )
                     TinySwitchSettingItem(
                         title = stringResource(R.string.show_read_aloud_capsule),
                         description = stringResource(R.string.show_read_aloud_capsule_summary),

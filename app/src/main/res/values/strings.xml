@@ -3136,6 +3136,8 @@
     <string name="multi_role_cast">Role casting</string>
     <string name="bgm_assign">Background music</string>
     <string name="bgm_assign_summary">Show a music capsule at paragraph starts and play background music per scene while reading; the capsule is visual only and is never spoken</string>
+    <string name="read_aloud_chapter_title">Read chapter titles</string>
+    <string name="read_aloud_chapter_title_summary">Read the chapter title before the body. When off, reading starts at the body; volume-only chapters still read their title. Independent of whether titles are shown in the text; takes effect from the next chapter</string>
     <string name="cast_bgm_scene_title">Scene music</string>
     <string name="cast_bgm_track">Music track</string>
     <string name="cast_bgm_scene_follow">Random from pool</string>
