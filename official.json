@@ -1,89 +1,89 @@
 {
-  "tag_name": "3.26.28",
-  "name": "Release 3.26.28",
-  "body": "### 下载哪个包\n\n- legado-3.26.28-core-*.apk：基础包，不含本地推理运行时；云端 OCR、AI 识图/翻译可用。\n- legado-3.26.28-comic-*.apk：漫画增强版，内置本地 OCR、擦字与气泡检测，体积明显更大。\n- 原 full 版用户：产品标记已从 full 改为 comic，应用内更新不会跨包升级，请手动下载一次 comic 包，之后恢复正常更新。\n\n### 更新内容\n\n* chore(release): 版本号 3.26.28\n* fix(a11y): 修复屏幕阅读器焦点缺失、重复朗读与勾选态不播报 (#2558)\n* feat(book): 封面换源支持图集自选与书源范围筛选\n* ci(release): 更新日志基线改用 describe 取最近正式版 tag\n* fix(read-record): 修复阅读总览自采样 native 闪退并恢复顶栏模糊\n* fix(reader): 修正整段绘制的字距几何与多字符元素合并 (#2606)\n* fix(ui): COUI 标签栏投影不再被渐隐层裁断，滚动分支保留 LazyRow\n\n**Full Changelog**: https://github.com/HapeLee/legado-with-MD3/compare/3.26.27...3.26.28",
+  "tag_name": "3.26.29",
+  "name": "Release 3.26.29",
+  "body": "### 下载哪个包\n\n- legado-3.26.29-core-*.apk：基础包，不含本地推理运行时；云端 OCR、AI 识图/翻译可用。\n- legado-3.26.29-comic-*.apk：漫画增强版，内置本地 OCR、擦字与气泡检测，体积明显更大。\n- 原 full 版用户：产品标记已从 full 改为 comic，应用内更新不会跨包升级，请手动下载一次 comic 包，之后恢复正常更新。\n\n### 更新内容\n\n* test(manga): 导出用例启动 Koin 设置网关\n* fix(manga): 本地漫画图片 URL 与归档路径改用规范形式\n* ci: Gradle 构建仅在依赖下载失败时自动重试\n* Update user agreement and software description in README\n* build(miuix): 升级 Miuix fork 到 v0.9.5-beta01 并对齐 Kotlin 2.4.21\n* fix(replace): 规则表写入统一失效净化缓存，修复改规则不生效\n* feat(read-aloud): 新增「朗读章节标题」开关，与正文标题显示解耦\n* feat(replace-rule): 列表项菜单改用声明式入口渲染各引擎原生行\n* chore(release): 版本号 3.26.29\n* build(coui): 升级 COUI fork 到 5527b0a\n* fix(reader): 整段合并绘制按 API 29 守卫 getTextRunAdvances，修复 lint 失败与 Android 8/9 隐患\n* fix(service): 修复 Web 服务因 dataSync 配额耗尽崩溃，改用 specialUse 前台类型\n* docs(reader): 说明 preserveBodyIndent 只控制虚拟缩进\n* test(reader): 锁定列表/引用不再叠加正文缩进\n* fix(reader): 列表与引用首行不再重复正文缩进\n* fix(reader): 保留整段绘制并校验原生字距几何，修复行尾裁字\n* fix(book): 段评气泡不再参与章节图片缓存判定 (#2593)\n* fix(book-source): 导入解析失败回落到本地化提示并补解析基线\n* fix(book-source): stream-parse large JSON imports to avoid OOM\n* fix(reader): 整段绘制按 minikin 量化字距并补回首字前半个字距\n* fix(book-source): 修复校验书源崩溃并补齐丢失的校验能力\n* feat: 为 EPUB/MOBI 本地书添加章节字数统计 (#2624)\n\n## What's Changed\n* feat: 为 EPUB/MOBI 本地书添加章节字数统计 by @serein-213 in https://github.com/HapeLee/legado-with-MD3/pull/2624\n\n## New Contributors\n* @serein-213 made their first contribution in https://github.com/HapeLee/legado-with-MD3/pull/2624\n\n**Full Changelog**: https://github.com/HapeLee/legado-with-MD3/compare/3.26.28...3.26.29",
   "prerelease": false,
-  "created_at": "2026-11-15T17:43:55Z",
+  "created_at": "2026-11-17T19:02:20Z",
   "assets": [
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.28/legado-3.26.28-comic-arm64-v8a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.29/legado-3.26.29-comic-arm64-v8a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-11-15T18:10:45Z",
+      "created_at": "2026-11-17T19:30:36Z",
       "download_count": 0,
-      "id": 751877723,
-      "name": "legado-3.26.28-comic-arm64-v8a.apk",
+      "id": 760350687,
+      "name": "legado-3.26.29-comic-arm64-v8a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/751877723"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/760350687"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.28/legado-3.26.28-comic-armeabi-v7a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.29/legado-3.26.29-comic-armeabi-v7a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-11-15T18:10:45Z",
+      "created_at": "2026-11-17T19:30:36Z",
       "download_count": 0,
-      "id": 751877727,
-      "name": "legado-3.26.28-comic-armeabi-v7a.apk",
+      "id": 760350686,
+      "name": "legado-3.26.29-comic-armeabi-v7a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/751877727"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/760350686"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.28/legado-3.26.28-comic-universal.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.29/legado-3.26.29-comic-universal.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-11-15T18:10:45Z",
+      "created_at": "2026-11-17T19:30:36Z",
       "download_count": 0,
-      "id": 751877719,
-      "name": "legado-3.26.28-comic-universal.apk",
+      "id": 760350685,
+      "name": "legado-3.26.29-comic-universal.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/751877719"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/760350685"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.28/legado-3.26.28-core-arm64-v8a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.29/legado-3.26.29-core-arm64-v8a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-11-15T18:10:45Z",
+      "created_at": "2026-11-17T19:30:36Z",
       "download_count": 0,
-      "id": 751877720,
-      "name": "legado-3.26.28-core-arm64-v8a.apk",
+      "id": 760350688,
+      "name": "legado-3.26.29-core-arm64-v8a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/751877720"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/760350688"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.28/legado-3.26.28-core-armeabi-v7a.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.29/legado-3.26.29-core-armeabi-v7a.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-11-15T18:10:45Z",
+      "created_at": "2026-11-17T19:30:36Z",
       "download_count": 0,
-      "id": 751877725,
-      "name": "legado-3.26.28-core-armeabi-v7a.apk",
+      "id": 760350678,
+      "name": "legado-3.26.29-core-armeabi-v7a.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/751877725"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/760350678"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.28/legado-3.26.28-core-universal.apk",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.29/legado-3.26.29-core-universal.apk",
       "content_type": "application/vnd.android.package-archive",
-      "created_at": "2026-11-15T18:10:45Z",
+      "created_at": "2026-11-17T19:30:36Z",
       "download_count": 0,
-      "id": 751877726,
-      "name": "legado-3.26.28-core-universal.apk",
+      "id": 760350683,
+      "name": "legado-3.26.29-core-universal.apk",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/751877726"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/760350683"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.28/mapping-comic.txt",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.29/mapping-comic.txt",
       "content_type": "text/plain",
-      "created_at": "2026-11-15T18:10:45Z",
+      "created_at": "2026-11-17T19:30:36Z",
       "download_count": 0,
-      "id": 751877721,
+      "id": 760350680,
       "name": "mapping-comic.txt",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/751877721"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/760350680"
     },
     {
-      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.28/mapping-core.txt",
+      "browser_download_url": "https://github.com/HapeLee/legado-with-MD3/releases/download/3.26.29/mapping-core.txt",
       "content_type": "text/plain",
-      "created_at": "2026-11-15T18:10:45Z",
+      "created_at": "2026-11-17T19:30:36Z",
       "download_count": 0,
-      "id": 751877724,
+      "id": 760350677,
       "name": "mapping-core.txt",
       "state": "uploaded",
-      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/751877724"
+      "url": "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/assets/760350677"
     }
   ]
 }
