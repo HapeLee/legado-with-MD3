@@ -210,8 +210,120 @@ object DefaultAiSkills {
         - 每次改完都要跑验证，没验证过不算完成。
     """.trimIndent()
 
+    private val LORE_CODEX = """
+        # 设定百科
+
+        ## 何时使用
+        用户问书里的世界观设定：「这个宗门/组织是什么」「某某功法/神器有什么用」「这个地名在哪」「XX 术语什么意思」「这个势力有什么规矩」。
+
+        ## 步骤
+        1. 先调用 search_book_knowledge 查已有设定条目，query 用用户问的关键词，type 可填 world_rule / location / faction / object / terminology。命中就直接采用，不重复读正文。
+        2. 没命中就用 search_chapter_content 在正文里按该关键词检索，取回相关章节片段；上下文不够时再用 get_chapter_window 精读那一章。
+        3. 用 get_reading_stats 确认当前章节序号。涉及「现在已经变成怎样」时只引用当前章之前的内容，避免剧透后文。
+        4. 按三段输出：
+        名称与类别：它是什么（功法 / 势力 / 地点 / 物品 / 制度）。
+        设定要点：3 到 5 条，只写文本有明确依据的规则、来历、能力或限制。
+        出场线索：首次出现的章节号，拿不准写「约第N章」。
+        5. 用户说「记到设定里」「存下来」时，调用 save_book_knowledge_entry，type 按类别选，title 用名称，keywordsJson 传字符串形式的 JSON 数组，例如 "[\"宗门\",\"功法\"]"。
+
+        ## 约束
+        - 只写文本里有依据的内容，推测必须标注「推测」，绝不编造能力或规则。
+        - keywordsJson、evidenceJson 这类参数是字符串形式的 JSON，不是数组，务必加引号并转义内部双引号。
+        - 后续章节才揭示的设定一律不提前透露；判断不了就只说当前已知的。
+        - 已有条目优先复用，不为同一设定重复建档。
+    """.trimIndent()
+
+    private val TIMELINE = """
+        # 剧情时间线
+
+        ## 何时使用
+        用户问「这本书的时间线」「按时间顺序讲讲发生的事」「XX 事件是什么时候发生的」「梳理一下剧情发展」。
+
+        ## 步骤
+        1. 先调用 get_book_outline 取大纲节点，可传当前 chapterIndex 限定范围，拿到全书 / 卷 / 章的结构。
+        2. 用 search_book_characters 列出主要人物，对关键人物调用 get_character_profile，并传 maxChapterIndex 为当前章节，只取已读部分的人物事件，避免剧透。
+        3. 需要补具体事件时用 search_chapter_content 按事件关键词检索，或 get_chapter_window 精读相邻章节确认先后。
+        4. 按故事内时间顺序（若有倒叙要说明）输出，每条一行：
+        时间或章节 ｜ 事件 ｜ 涉及人物 ｜ 影响
+        只列推动主线的大事件，控制在 10 到 15 条。
+        5. 用户说「存下来」时，用 save_book_outline_node（nodeType 用 arc 或 chapter，startChapterIndex / endChapterIndex 填覆盖范围）或 save_book_character_event 逐条保存。
+
+        ## 约束
+        - 只覆盖已读章节，当前章之后的事件一律不列，也不暗示。
+        - 故事内时间与章节顺序不一致（倒叙、插叙）时要显式说明。
+        - 顺序拿不准就按章节顺序排，并注明「时间顺序待确认」。
+        - 不把日常琐碎当大事件，只保留改变人物处境或主线走向的节点。
+    """.trimIndent()
+
+    private val READING_NOTES = """
+        # 读书笔记
+
+        ## 何时使用
+        用户说「做读书笔记」「把这几章整理成笔记」「记一下我的感想」「帮我沉淀一下读到的东西」。区别于「章节速览」：速览只要客观概括，笔记要带上要点、感悟和疑问，供长期积累。
+
+        ## 步骤
+        1. 取正文：用户指定范围就用 get_chapter_window 取前后若干章，否则用 get_chapter_content 取当前章。
+        2. 若用户在书里做过标注，用 search_bookmarks（传书名）取出书签 / 笔记作为重点参考。
+        3. 按四块输出：
+        核心要点：3 到 6 条，每条一句，只写关键信息。
+        我的理解：一两段写这段在讲什么、和前文如何关联。
+        精彩摘录：1 到 3 句原文，逐字引用并标注章节号。
+        疑问与猜想：读到这里产生的疑问或对后续的猜想，猜想要标注「猜想」。
+        4. 用户说「保存」「存进笔记」时，调用 save_ai_artifact，taskType 用 reading_note，output 填完整笔记，chapterIndex 填对应章节。
+
+        ## 约束
+        - 要点和摘录必须来自正文，感悟和猜想才可以是主观的，两者要分清。
+        - 摘录逐字引用，不改写、不合并。
+        - 不剧透当前章之后的内容，「我的理解」只基于已读部分。
+        - 不为了凑数硬写，某一块没有内容就写「暂无」。
+    """.trimIndent()
+
+    private val BOOK_DISCUSSION = """
+        # 剧情讨论
+
+        ## 何时使用
+        用户想就当前读到的内容和 AI 聊：「你觉得男主这么做对吗」「这个角色可信吗」「后面可能会怎样」「这段什么意思」「帮我解答这里的疑问」。
+
+        ## 步骤
+        1. 用 get_chapter_content 取当前章正文；需要上下文时用 get_chapter_window 取前后各一章。问题涉及具体人物 / 设定时，再用 search_chapter_content 检索相关片段，或 search_book_characters / search_book_knowledge 查已有档案。
+        2. 用 get_reading_stats 确认当前章节，确保讨论只基于用户已读到的位置。
+        3. 以「书友」口吻回应：
+        - 先给明确观点再给理由，理由要引用文本里的具体情节作依据。
+        - 涉及剧情预测时标注「以下是推测」，并说明依据了哪些已读线索。
+        - 用户问的是客观信息（人物关系、设定、前情）时直接给准确答案，不要只发表感想。
+        4. 发现用户记错情节时，温和指出并给出处章节。
+
+        ## 约束
+        - 绝不剧透用户当前章节之后的内容，包括结局、反转、人物命运。
+        - 观点与事实分开：推测标注「推测」，文本明确写的才当事实。
+        - 不做长篇说教，回应控制在 300 字以内，留空间继续讨论。
+        - 不替用户下结论，涉及价值判断时给角度而不是标准答案。
+    """.trimIndent()
+
+    private val READING_REPORT = """
+        # 阅读报告
+
+        ## 何时使用
+        用户问「我最近读了多少」「生成阅读报告」「这个月读书情况」「我的阅读统计」。
+
+        ## 步骤
+        1. 调用 get_reading_stats 取阅读统计、最近在读的书和每日阅读记录；用户指定周期时用 date 参数或按返回记录自行筛选。
+        2. 需要书名和进度时用 search_books（query 留空返回最近读的书）补充。
+        3. 按三块输出：
+        总览：周期内读了几天、累计阅读时长或章节数（以工具实际返回的字段为准，没有的不要编）、最近在读的书。
+        坚持情况：连续阅读天数、最活跃的一天。
+        在读书单：最近在读的 3 到 5 本，各附当前进度。
+        4. 所有数字以工具返回为准，缺失字段直接写「暂无统计」，不估算、不编造。
+
+        ## 约束
+        - 报告要简洁，用列表呈现，控制在 250 字以内。
+        - 结尾给一句基于真实数据的鼓励，不要空泛鸡汤。
+        - 不评价用户的阅读品味或阅读速度。
+        - 工具没返回的指标一律不写，更不能推算。
+    """.trimIndent()
+
     /** 内置技能版本。新增技能或升级内置技能正文时 +1，App 启动按版本补齐。 */
-    const val VERSION = 3
+    const val VERSION = 4
 
     /**
      * 需要强制刷新正文的内置技能 id（版本升级时）。
@@ -271,6 +383,41 @@ object DefaultAiSkills {
             description = "照着目标站点写或改书源，写完用真实关键词验证规则是否生效",
             content = BOOK_SOURCE,
             sortNumber = 5,
+        ),
+        AiSkillProfile(
+            id = "builtin.lore_codex",
+            name = "设定百科",
+            description = "查书里的世界观设定：功法、势力、地点、物品、术语，可存入世界书",
+            content = LORE_CODEX,
+            sortNumber = 6,
+        ),
+        AiSkillProfile(
+            id = "builtin.timeline",
+            name = "剧情时间线",
+            description = "按故事时间顺序梳理大事件，标出章节与涉及人物，只覆盖已读内容",
+            content = TIMELINE,
+            sortNumber = 7,
+        ),
+        AiSkillProfile(
+            id = "builtin.reading_notes",
+            name = "读书笔记",
+            description = "把要点、理解、摘录和疑问整理成可长期积累的读书笔记",
+            content = READING_NOTES,
+            sortNumber = 8,
+        ),
+        AiSkillProfile(
+            id = "builtin.book_discussion",
+            name = "剧情讨论",
+            description = "就当前章节答疑、讨论和剧情预测，只基于已读内容不剧透",
+            content = BOOK_DISCUSSION,
+            sortNumber = 9,
+        ),
+        AiSkillProfile(
+            id = "builtin.reading_report",
+            name = "阅读报告",
+            description = "按真实阅读统计生成本周或本月的阅读总览与在读书单",
+            content = READING_REPORT,
+            sortNumber = 10,
         ),
     )
 }
