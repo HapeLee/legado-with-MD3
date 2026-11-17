@@ -268,10 +268,19 @@ class BookRepository(
     ) {
         withContext(Dispatchers.IO) {
             appDb.runInTransaction {
+                // 目录重建会整表重插，先把已统计好的章节字数按 url 保留下来，
+                // 否则每次重载目录都会把 EPUB/MOBI 的章节字数清空。
+                val oldWordCounts = bookChapterDao.getChapterWordCounts(oldBookUrl)
+                    .associate { it.url to it.wordCount }
                 if (oldBookUrl != book.bookUrl) {
                     bookChapterDao.delByBook(oldBookUrl)
                 }
                 bookChapterDao.delByBook(book.bookUrl)
+                chapters.forEach { ch ->
+                    if (ch.wordCount.isNullOrEmpty()) {
+                        oldWordCounts[ch.url]?.let { ch.wordCount = it }
+                    }
+                }
                 bookChapterDao.insert(*chapters.toTypedArray())
                 bookDao.update(book)
             }

@@ -73,6 +73,8 @@ import io.legado.app.ui.book.read.pageestimate.PageEstimateMetrics
 import io.legado.app.ui.book.read.pageestimate.RoomExactChapterPageCountStore
 import io.legado.app.ui.book.read.pageestimate.WholeBookPageCoordinator
 import io.legado.app.ui.book.read.pageestimate.WholeBookPageState
+import io.legado.app.utils.HtmlFormatter
+import io.legado.app.utils.StringUtils
 import io.legado.app.utils.buildMainHandler
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.postEvent
@@ -522,6 +524,19 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 chineseConverterType = readSettingsGateway.currentSettings.chineseConverterType,
             )
             val processed = processor.getContent(book, chapter, content, includeTitle = false, paragraphIndent = null, includePresentation = true)
+            // 仅补缺失字数，保留 TXT/Markdown 导入时的计数口径。
+            if (readSettingsGateway.currentSettings.tocCountWords
+                && !chapter.isVolume
+                && chapter.wordCount.isNullOrEmpty()
+            ) {
+                val readableLength = HtmlFormatter.countReadableTextLength(content)
+                if (readableLength > 0) {
+                    val wordCount = StringUtils.wordCountFormat(readableLength)
+                    withContext(IO) {
+                        appDb.bookChapterDao.upWordCount(book.bookUrl, chapter.url, wordCount)
+                    }
+                }
+            }
             wholeBookPageCoordinator.updateChapterContent(
                 chapterIndex = chapter.index,
                 actualLength = processed.textList
