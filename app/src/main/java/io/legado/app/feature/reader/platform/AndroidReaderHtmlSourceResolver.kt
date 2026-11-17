@@ -114,7 +114,7 @@ class AndroidReaderHtmlSourceResolver(
                     if (listDepth > 0) maxOf(restMargin, listMargin) else restMargin, alignment, visibleDecorations,
                     preserveBodyIndent = !structural)
             } else if (preserveEmpty) {
-                // 空段在测量时直接落成 BlankLine，不读 preserveBodyIndent。
+                // 空段在测量时直接落成 BlankLine，preserveBodyIndent 与 decorations 都不参与排版。
                 paragraphs += ReaderHtmlParagraph(
                     listOf(ReaderChapterInlineSource.BlankLine(position)),
                     firstMargin,

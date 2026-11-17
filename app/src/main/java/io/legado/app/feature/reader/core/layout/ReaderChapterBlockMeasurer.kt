@@ -35,6 +35,13 @@ data class ReaderHtmlParagraph(
      * 标题、`pre`、引用、列表等块由 HTML 语义自己决定排版，测量时保持原样；
      * 普通 `<p>`/`<div>` 正文段则与纯文本段落共用 [ReaderChapterMeasureStyle.bodyIndentText]。
      * 作者显式写在正文里的缩进字符仍优先（测量时会识别并跳过虚拟缩进）。
+     *
+     * 这个开关只决定「是否补虚拟缩进」，不负责隐藏源文本里的缩进字符：
+     * - 旧 HTML 路径（`AndroidReaderHtmlSourceResolver`）的 items 直接来自解析后的 HTML，
+     *   不含阅读器注入的缩进，因此测量端也不需要 `hideBodyIndent`。
+     * - 纯文本 `ReaderChapterSourceBlock.Paragraph` 的段落文本由 `ContentProcessor` 注入
+     *   `bodyIndentText`，结构块再通过 `hideBodyIndent` 把这段注入前缀按零宽处理，
+     *   字符坐标仍保留给朗读、高亮和选区使用。
      */
     val preserveBodyIndent: Boolean = true,
     val rule: Boolean = false,
