@@ -524,15 +524,16 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 chineseConverterType = readSettingsGateway.currentSettings.chineseConverterType,
             )
             val processed = processor.getContent(book, chapter, content, includeTitle = false, paragraphIndent = null, includePresentation = true)
-            // 与正文缓存和维护重算使用同一原始正文计数口径，不受替换规则影响。
-            if (readSettingsGateway.currentSettings.tocCountWords && !chapter.isVolume) {
+            // 仅补缺失字数，保留 TXT/Markdown 导入时的计数口径。
+            if (readSettingsGateway.currentSettings.tocCountWords
+                && !chapter.isVolume
+                && chapter.wordCount.isNullOrEmpty()
+            ) {
                 val readableLength = HtmlFormatter.countReadableTextLength(content)
                 if (readableLength > 0) {
                     val wordCount = StringUtils.wordCountFormat(readableLength)
-                    if (chapter.wordCount != wordCount) {
-                        withContext(IO) {
-                            appDb.bookChapterDao.upWordCount(book.bookUrl, chapter.url, wordCount)
-                        }
+                    withContext(IO) {
+                        appDb.bookChapterDao.upWordCount(book.bookUrl, chapter.url, wordCount)
                     }
                 }
             }
