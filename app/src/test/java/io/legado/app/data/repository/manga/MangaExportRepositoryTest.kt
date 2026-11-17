@@ -6,9 +6,14 @@ import io.legado.app.constant.BookType
 import io.legado.app.data.AppDatabase
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
+import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.domain.model.manga.MangaExportFormat
+import io.legado.app.domain.model.settings.DownloadCacheSettings
+import io.legado.app.domain.model.settings.ReadSettings
 import io.legado.app.help.book.BookHelp
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
@@ -17,6 +22,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.koin.core.context.startKoin
+import org.koin.core.context.stopKoin
+import org.koin.dsl.module
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
@@ -43,6 +51,27 @@ class MangaExportRepositoryTest {
     fun setup() {
         val app = RuntimeEnvironment.getApplication()
         app.injectAsAppCtx()
+        // BookHelp.saveText / clearCache 通过 Koin 取设置网关（readGateway、cacheGateway），
+        // 缺图分支在 saveText 之后才会走到，所以这里必须先建好这两个依赖。
+        stopKoin()
+        startKoin {
+            modules(module {
+                single<ReadSettingsGateway> {
+                    object : ReadSettingsGateway {
+                        override val currentSettings = ReadSettings()
+                        override val settings = flowOf(currentSettings)
+                        override suspend fun update(transform: (ReadSettings) -> ReadSettings) = Unit
+                    }
+                }
+                single<DownloadCacheSettingsGateway> {
+                    object : DownloadCacheSettingsGateway {
+                        override val currentSettings = DownloadCacheSettings()
+                        override val settings = flowOf(currentSettings)
+                        override suspend fun update(transform: (DownloadCacheSettings) -> DownloadCacheSettings) = Unit
+                    }
+                }
+            })
+        }
         database = Room.inMemoryDatabaseBuilder(app, AppDatabase::class.java).allowMainThreadQueries().build()
         repository = MangaExportRepository(app, database)
         root = Files.createTempDirectory("manga-export-source").toFile()
@@ -58,6 +87,7 @@ class MangaExportRepositoryTest {
         database.close()
         root.deleteRecursively()
         destination.deleteRecursively()
+        stopKoin()
     }
 
     @Test
