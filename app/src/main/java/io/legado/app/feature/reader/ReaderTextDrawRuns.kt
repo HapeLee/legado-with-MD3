@@ -3,6 +3,7 @@ package io.legado.app.feature.reader
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.os.Build
+import androidx.annotation.ChecksSdkIntAtLeast
 import io.legado.app.feature.reader.core.model.ReaderElement
 import io.legado.app.feature.reader.core.model.ReaderTextStyle
 import java.util.IdentityHashMap
@@ -41,11 +42,20 @@ internal fun minikinLeadingHalfSpacingPx(gapPx: Float, linearText: Boolean, sdkI
     return if (sdkInt >= 30 || linearText) spacing / 2f else floor(spacing / 2f)
 }
 
+/**
+ * 整段合并依赖 `Paint#getTextRunAdvances(char[], …)`，该重载自 API 29 才公开
+ * （api-versions 记录 since="29"）。低于 Q 的设备不做合并，退回逐元素绘制：
+ * 几何与合并前一致，只是少一次绘制合并，不会出现 NoSuchMethodError / 隐藏 API 拦截。
+ */
+@ChecksSdkIntAtLeast(parameter = 0, api = 29)
+internal fun supportsMergedTextRuns(sdkInt: Int): Boolean = sdkInt >= 29
+
 /** 建页缓存时完成真实字体测量；逐帧绘制只读取已经验证的 run。 */
 internal fun buildMergedTextRuns(
     elements: List<ReaderElement>,
     paints: Map<ReaderTextStyle, Paint>,
 ): Map<ReaderElement.Text, ReaderTextDrawRun> {
+    if (!supportsMergedTextRuns(Build.VERSION.SDK_INT)) return emptyMap()
     val scratchPaint = Paint()
     return buildMergedTextRuns(elements, Build.VERSION.SDK_INT) { run, members ->
         scratchPaint.configureMergedRun(paints.getValue(run.style), run)

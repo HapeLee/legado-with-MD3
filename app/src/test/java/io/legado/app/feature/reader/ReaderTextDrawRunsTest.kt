@@ -64,6 +64,16 @@ class ReaderTextDrawRunsTest {
     }
 
     @Test
+    fun mergedRunsAreGatedToApi29WhereGetTextRunAdvancesExists() {
+        for (sdk in listOf(26, 27, 28)) {
+            assertFalse("sdk=$sdk", supportsMergedTextRuns(sdk))
+        }
+        for (sdk in listOf(29, 30, 35, 37)) {
+            assertTrue("sdk=$sdk", supportsMergedTextRuns(sdk))
+        }
+    }
+
+    @Test
     fun actualAdvancesMustMatchEveryPositionIncludingTheLastRightEdge() {
         val elements = row(listOf("甲", "乙", "丙"), 2f)
         val run = runs(elements).getValue(elements[0])
