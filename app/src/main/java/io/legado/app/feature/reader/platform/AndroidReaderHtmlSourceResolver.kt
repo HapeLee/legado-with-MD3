@@ -104,10 +104,13 @@ class AndroidReaderHtmlSourceResolver(
                     leadingOffsetPx = (listDepth + quoteDepth - 1) * baseTextSizePx * 1.2f) else value
             }
             val listMargin = (listDepth + quoteDepth) * baseTextSizePx * 1.2f
+            // 列表、引用段由 HTML 语义自己排版，不套阅读器正文段首缩进（与 Jsoup 呈现解析器同口径）。
+            val structural = listDepth > 0 || quoteDepth > 0
             if (paragraph.isNotEmpty()) {
                 paragraphs += ReaderHtmlParagraph(paragraph,
                     if (listDepth > 0) maxOf(firstMargin, listMargin) else firstMargin,
-                    if (listDepth > 0) maxOf(restMargin, listMargin) else restMargin, alignment, visibleDecorations)
+                    if (listDepth > 0) maxOf(restMargin, listMargin) else restMargin, alignment, visibleDecorations,
+                    preserveBodyIndent = !structural)
             } else if (preserveEmpty) {
                 paragraphs += ReaderHtmlParagraph(
                     listOf(ReaderChapterInlineSource.BlankLine(position)),
@@ -115,6 +118,7 @@ class AndroidReaderHtmlSourceResolver(
                     restMargin,
                     alignment,
                     decorations,
+                    preserveBodyIndent = !structural,
                 )
             }
             paragraph = mutableListOf()
