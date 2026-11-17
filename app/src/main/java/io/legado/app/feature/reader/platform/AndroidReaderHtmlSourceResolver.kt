@@ -104,7 +104,9 @@ class AndroidReaderHtmlSourceResolver(
                     leadingOffsetPx = (listDepth + quoteDepth - 1) * baseTextSizePx * 1.2f) else value
             }
             val listMargin = (listDepth + quoteDepth) * baseTextSizePx * 1.2f
-            // 列表、引用段由 HTML 语义自己排版，不套阅读器正文段首缩进（与 Jsoup 呈现解析器同口径）。
+            // 列表、引用段由 HTML 语义自己排版（BulletSpan/QuoteSpan 已经给出缩进），不再叠加阅读器
+            // 正文段首缩进，与 JsoupReaderPresentationParser 的列表/引用判定一致。标题、pre、表格在
+            // HtmlCompat 路径拿不到标签上下文，仍按普通正文段处理，这是已知的遗留差异。
             val structural = listDepth > 0 || quoteDepth > 0
             if (paragraph.isNotEmpty()) {
                 paragraphs += ReaderHtmlParagraph(paragraph,
@@ -112,13 +114,13 @@ class AndroidReaderHtmlSourceResolver(
                     if (listDepth > 0) maxOf(restMargin, listMargin) else restMargin, alignment, visibleDecorations,
                     preserveBodyIndent = !structural)
             } else if (preserveEmpty) {
+                // 空段在测量时直接落成 BlankLine，不读 preserveBodyIndent。
                 paragraphs += ReaderHtmlParagraph(
                     listOf(ReaderChapterInlineSource.BlankLine(position)),
                     firstMargin,
                     restMargin,
                     alignment,
                     decorations,
-                    preserveBodyIndent = !structural,
                 )
             }
             paragraph = mutableListOf()

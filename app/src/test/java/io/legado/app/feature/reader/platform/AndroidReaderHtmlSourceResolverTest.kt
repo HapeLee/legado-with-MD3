@@ -7,6 +7,8 @@ import io.legado.app.feature.reader.core.layout.ReaderChapterBlockMeasurer
 import io.legado.app.feature.reader.core.layout.ReaderChapterMeasureResult
 import io.legado.app.feature.reader.core.layout.ReaderChapterMeasureStyle
 import io.legado.app.feature.reader.core.layout.ReaderImageDimensions
+import io.legado.app.feature.reader.core.layout.ReaderMeasuredBlock
+import io.legado.app.feature.reader.core.layout.ReaderMeasuredInlineItem
 import io.legado.app.feature.reader.core.layout.ReaderPaginationConfig
 import io.legado.app.feature.reader.core.layout.ReaderPaginator
 import io.legado.app.feature.reader.core.layout.ReaderTextAlignment
@@ -184,6 +186,34 @@ class AndroidReaderHtmlSourceResolverTest {
         assertEquals(ReaderParagraphDecorationKind.BULLET, list.decorations.single().kind)
         assertTrue(quote.decorations.single().sizePx > 0f)
         assertTrue(list.decorations.single().sizePx > 0f)
+    }
+
+    /** 旧 HtmlCompat 路径同样不能给列表/引用叠加阅读器段首缩进（与 Jsoup 呈现解析器同口径）。 */
+    @Test fun structuralHtmlBlocksSkipReaderIndentWhileBodyKeepsIt() = runBlocking {
+        val html = "<p>正文</p><blockquote>引文</blockquote><ul><li>列表</li></ul>"
+        val source = ReaderChapterSourceParser.parse(
+            0, "", listOf("<usehtml>$html</usehtml>"), false, true,
+            AndroidReaderHtmlSemanticTextResolver,
+        )
+        val shaper = ReaderTextShaper { text ->
+            GlyphClusters(text.map(Char::toString), FloatArray(text.length) { 10f })
+        }
+        val measurer = ReaderChapterBlockMeasurer(
+            shaper, shaper, { null },
+            htmlSourceResolver = AndroidReaderHtmlSourceResolver(10f, 1f),
+        )
+        val style = ReaderChapterMeasureStyle(
+            ReaderTextStyle(0, 10f), ReaderTextStyle(0, 10f), 2,
+            ReaderTextAlignment.START, ReaderTextAlignment.START,
+        )
+        val indents = (measurer.measure(source, style) as ReaderChapterMeasureResult.Success)
+            .blocks.filterIsInstance<ReaderMeasuredBlock.InlineParagraph>()
+            .associate { block ->
+                block.items.filterIsInstance<ReaderMeasuredInlineItem.Text>()
+                    .joinToString("") { it.value } to block.indentCharacters
+            }
+
+        assertEquals(mapOf("正文" to 2, "引文" to 0, "列表" to 0), indents)
     }
 
     @Test fun nestedListItemKeepsSingleMarkerAtItsDepth() {
