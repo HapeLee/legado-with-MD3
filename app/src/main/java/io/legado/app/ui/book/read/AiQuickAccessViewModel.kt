@@ -19,6 +19,11 @@ class AiQuickAccessViewModel(
     private val aiProfileGateway: AiProfileGateway
 ) : ViewModel() {
 
+    companion object {
+        /** 书源编写是重型流程技能，放在悬浮球二级菜单里不合适，只在 AI 设置/工作区使用。 */
+        private const val BOOK_SOURCE_SKILL_ID = "builtin.book_source"
+    }
+
     private val _skills = MutableStateFlow<ImmutableList<AiQuickSkillUi>>(persistentListOf())
     val skills = _skills.asStateFlow()
 
@@ -26,7 +31,7 @@ class AiQuickAccessViewModel(
         viewModelScope.launch {
             aiProfileGateway.observeSkills().collect { list ->
                 _skills.update {
-                    list.filter { it.enabled }
+                    list.filter { it.enabled && it.id != BOOK_SOURCE_SKILL_ID }
                         .sortedBy { it.sortNumber }
                         .map { AiQuickSkillUi(id = it.id, name = it.name, description = it.description) }
                         .toImmutableList()

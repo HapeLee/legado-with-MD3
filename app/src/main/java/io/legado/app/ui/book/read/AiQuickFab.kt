@@ -3,22 +3,23 @@ package io.legado.app.ui.book.read
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -49,17 +50,17 @@ import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.delay
 
-private const val AI_FAB_SIZE_DP = 56f
-private const val AI_FAB_EDGE_DP = 0f
+private const val AI_FAB_SIZE_DP = 64f
 private const val AI_FAB_TOP_LIMIT_DP = 72f
 private const val AI_FAB_BOTTOM_GAP_DP = 96f
+private const val AI_FAB_EDGE_SNAP_DP = 72f
 
 /**
  * 阅读页 AI 悬浮球（应用内浮层，不申请 SYSTEM_ALERT_WINDOW）。
  *
- * - 可拖动，松手吸附到屏幕左 / 右边缘；贴边静止数秒后半隐藏（只露出半颗球），点击可恢复。
- * - 点击展开半屏面板：并列「AI 对话」与已启用技能列表；技能只显示名称，不带描述 / 正文。
- * - 面板从底部弹出，高度约为屏幕一半；展开时圆标浮到面板顶边，仍可点击收起。
+ * - 正圆 64dp；拖动时关闭动画（snap）做到跟手，松手再 tween 吸附到左右边缘。
+ * - 贴边静止数秒后半隐藏（只露出半颗），点一下恢复。
+ * - 点击展开第一版样式的二级菜单：紧贴在球上方的小卡片，列出「AI 对话」与已启用技能（已排除书源编写）。
  */
 @Composable
 fun AiQuickFab(
@@ -72,16 +73,19 @@ fun AiQuickFab(
     val density = LocalDensity.current
     val screenWidthDp = configuration.screenWidthDp.toFloat()
     val screenHeightDp = configuration.screenHeightDp.toFloat()
-    val maxX = (screenWidthDp - AI_FAB_SIZE_DP - AI_FAB_EDGE_DP).coerceAtLeast(0f)
-    val minY = AI_FAB_TOP_LIMIT_DP
-    val maxY = (screenHeightDp - AI_FAB_SIZE_DP - AI_FAB_BOTTOM_GAP_DP).coerceAtLeast(minY)
+    val half = AI_FAB_SIZE_DP / 2f
+    // 位置是球心的 dp 坐标。允许球心贴到屏幕边线（半隐藏时露半颗）。
+    val minCenterX = 0f
+    val maxCenterX = screenWidthDp
+    val minCenterY = AI_FAB_TOP_LIMIT_DP + half
+    val maxCenterY = (screenHeightDp - AI_FAB_BOTTOM_GAP_DP - half).coerceAtLeast(minCenterY)
 
-    // 位置为圆标左上角的 dp 坐标，初始贴右下（略高于底部中央的听书胶囊）。
-    var offsetX by remember { mutableFloatStateOf(maxX) }
-    var offsetY by remember { mutableFloatStateOf(maxY) }
-    LaunchedEffect(maxX, maxY) {
-        offsetX = offsetX.coerceIn(0f, maxX)
-        offsetY = offsetY.coerceIn(minY, maxY)
+    // 球心初始在右下角。
+    var centerX by remember { mutableFloatStateOf(maxCenterX - half) }
+    var centerY by remember { mutableFloatStateOf(maxCenterY) }
+    LaunchedEffect(maxCenterX, maxCenterY) {
+        centerX = centerX.coerceIn(minCenterX, maxCenterX)
+        centerY = centerY.coerceIn(minCenterY, maxCenterY)
     }
 
     var dragging by remember { mutableStateOf(false) }
@@ -89,7 +93,7 @@ fun AiQuickFab(
     var collapsed by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(false) }
 
-    // 贴边静止数秒后自动半隐藏，交互中（拖动 / 面板展开）不折叠。
+    // 贴边静止 3 秒后自动半隐藏，交互中（拖动 / 菜单展开）不折叠。
     LaunchedEffect(docked, collapsed, dragging, expanded) {
         if (docked != 0 && !collapsed && !dragging && !expanded) {
             delay(3000)
@@ -97,58 +101,54 @@ fun AiQuickFab(
         }
     }
 
-    // 半隐藏时把球心推到屏幕边线上，只露出半颗。
-    val displayXTarget = when {
-        collapsed && docked == 1 -> screenWidthDp - AI_FAB_SIZE_DP / 2f
-        collapsed && docked == -1 -> -AI_FAB_SIZE_DP / 2f
-        else -> offsetX
-    }
-    // 面板展开时球浮到半屏面板顶边，保持可见可点。
-    val displayYTarget = if (expanded) {
-        (screenHeightDp / 2f - AI_FAB_SIZE_DP - 8f).coerceAtLeast(minY)
-    } else {
-        offsetY
-    }
-    val displayX by animateFloatAsState(
-        targetValue = displayXTarget,
-        animationSpec = tween(260, easing = FastOutSlowInEasing),
-        label = "aiFabX",
-    )
-    val displayY by animateFloatAsState(
-        targetValue = displayYTarget,
-        animationSpec = tween(220, easing = FastOutSlowInEasing),
-        label = "aiFabY",
-    )
-    val fabScale by animateFloatAsState(
-        targetValue = if (expanded) 1f else 0.9f,
-        animationSpec = tween(220, easing = FastOutSlowInEasing),
-        label = "aiFabScale",
+    // 半隐藏进度：0=只露半颗，1=完整显示。
+    val expansion by animateFloatAsState(
+        targetValue = if (collapsed) 0f else 1f,
+        animationSpec = tween(300, easing = FastOutSlowInEasing),
+        label = "aiFabExpansion",
     )
 
+    // 展示用球心 X：贴边折叠时推到屏幕边线上，正好露半颗；拖动时 snap 跟手。
+    val displayCenterXTarget = when {
+        collapsed && docked == 1 -> screenWidthDp.toFloat()
+        collapsed && docked == -1 -> 0f
+        else -> centerX
+    }
+    val displayCenterX by animateFloatAsState(
+        targetValue = displayCenterXTarget,
+        animationSpec = if (dragging) snap() else tween(240, easing = FastOutSlowInEasing),
+        label = "aiFabX",
+    )
+    val displayCenterY by animateFloatAsState(
+        targetValue = centerY,
+        animationSpec = if (dragging) snap() else tween(240, easing = FastOutSlowInEasing),
+        label = "aiFabY",
+    )
+
+    // 球左上角 = 球心 - 半径。
+    val leftDp = displayCenterX - half
+    val topDp = displayCenterY - half
+
     Box(modifier = modifier.fillMaxSize()) {
-        // 半屏技能面板，从底部弹出。
+        // 二级菜单（第一版样式）：紧贴在球上方的小卡片，横向根据贴边方向避让。
         AnimatedVisibility(
             visible = expanded,
-            modifier = Modifier.align(Alignment.BottomCenter),
-            enter = slideInVertically(tween(260, easing = FastOutSlowInEasing)) { it },
-            exit = slideOutVertically(tween(200, easing = FastOutSlowInEasing)) { it },
+            modifier = Modifier.offset(x = menuX(leftDp, docked, screenWidthDp).dp, y = (topDp - 8f).dp),
+            enter = fadeIn(tween(160)) + scaleIn(tween(200), initialScale = 0.9f),
+            exit = fadeOut(tween(120)) + scaleOut(tween(160), targetScale = 0.9f),
         ) {
             Surface(
-                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                shape = RoundedCornerShape(18.dp),
                 color = LegadoTheme.colorScheme.surfaceContainerHigh,
                 shadowElevation = 8.dp,
                 tonalElevation = 3.dp,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height((screenHeightDp / 2f).dp),
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(12.dp)) {
                     AppText(
                         text = stringResource(R.string.ai_quick_panel_title),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Spacer(Modifier.height(10.dp))
                     SmallPlainButton(
                         onClick = {
                             expanded = false
@@ -160,15 +160,14 @@ fun AiQuickFab(
                     if (skills.isNotEmpty()) {
                         AppText(
                             text = stringResource(R.string.ai_quick_skills),
-                            modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
+                            modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
                             maxLines = 1,
                         )
                         LazyColumn(
-                            modifier = Modifier.heightIn(max = 320.dp),
+                            modifier = Modifier.heightIn(max = 280.dp),
                             verticalArrangement = Arrangement.spacedBy(2.dp),
                         ) {
                             items(skills, key = { it.id }) { skill ->
-                                // 只展示技能名称，不展示描述与正文。
                                 SmallPlainButton(
                                     onClick = {
                                         expanded = false
@@ -184,7 +183,7 @@ fun AiQuickFab(
             }
         }
 
-        // 可拖动圆标：点击展开 / 收起面板；半隐藏时点击先恢复完整显示。
+        // 正圆悬浮球：拖动手势 + 点击展开/收起/从半隐藏恢复。
         FloatingActionButton(
             onClick = {
                 if (collapsed) {
@@ -194,9 +193,8 @@ fun AiQuickFab(
                 }
             },
             modifier = Modifier
-                .align(Alignment.TopStart)
-                .offset(x = displayX.dp, y = displayY.dp)
-                .scale(fabScale)
+                .offset(x = leftDp.dp, y = topDp.dp)
+                .scale(0.9f + 0.1f * expansion)
                 .pointerInput(Unit) {
                     detectDragGestures(
                         onDragStart = {
@@ -207,19 +205,21 @@ fun AiQuickFab(
                         onDragCancel = { dragging = false },
                         onDragEnd = {
                             dragging = false
-                            // 就近吸附到左右边缘。
-                            docked = if (offsetX < screenWidthDp / 2f) -1 else 1
-                            offsetX = if (docked < 0) 0f else maxX
-                            offsetY = offsetY.coerceIn(minY, maxY)
+                            // 就近吸附到左右边缘；贴边即标记折叠（半隐藏）。
+                            docked = if (centerX < screenWidthDp / 2f) -1 else 1
+                            centerX = if (docked < 0) minCenterX else maxCenterX
+                            centerY = centerY.coerceIn(minCenterY, maxCenterY)
                         },
                     ) { change, dragAmount ->
                         change.consume()
-                        // dragAmount 是 px；density.density 是 px/dp，除一下得到 dp 增量。
-                        offsetX = (offsetX + dragAmount.x / density.density).coerceIn(0f, maxX)
-                        offsetY = (offsetY + dragAmount.y / density.density).coerceIn(minY, maxY)
+                        val dx = dragAmount.x / density.density
+                        val dy = dragAmount.y / density.density
+                        centerX = (centerX + dx).coerceIn(minCenterX, maxCenterX)
+                        centerY = (centerY + dy).coerceIn(minCenterY, maxCenterY)
                         docked = 0
                     }
                 },
+            shape = CircleShape,
             containerColor = LegadoTheme.colorScheme.primaryContainer,
             contentColor = LegadoTheme.colorScheme.onPrimaryContainer,
         ) {
@@ -229,4 +229,13 @@ fun AiQuickFab(
             )
         }
     }
+}
+
+/** 让二级菜单横向避让球：靠近右边缘时向左展开，否则向右，并夹在屏幕内。 */
+private fun menuX(fabLeftDp: Float, docked: Int, screenWidthDp: Float): Float {
+    val menuWidth = 220f
+    val gap = 8f
+    val preferLeft = docked == 1 || fabLeftDp + gap + menuWidth > screenWidthDp
+    val raw = if (preferLeft) fabLeftDp - menuWidth - gap else fabLeftDp + AI_FAB_SIZE_DP + gap
+    return raw.coerceIn(8f, (screenWidthDp - menuWidth - 8f).coerceAtLeast(8f))
 }

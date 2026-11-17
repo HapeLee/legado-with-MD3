@@ -3,6 +3,8 @@ package io.legado.app.ui.ai.chat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.JsonObject
+import io.legado.app.data.entities.AiArtifact
+import io.legado.app.help.config.AppConfigStore
 import io.legado.app.domain.gateway.AiArtifactGateway
 import io.legado.app.domain.gateway.AiChatGateway
 import io.legado.app.domain.gateway.AiProfileGateway
@@ -31,6 +33,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -84,18 +87,90 @@ class AiChatViewModel(
             is AiChatIntent.RenameConversation -> renameConversation(intent.id, intent.title)
             is AiChatIntent.SetReadingContext -> _uiState.update { it.copy(readingContext = intent.context) }
             is AiChatIntent.ApplySkill -> applySkill(intent.skillId)
+            is AiChatIntent.OpenBookChat -> openBookChat(intent.context, intent.skillId, intent.skillName)
+            AiChatIntent.SaveConversationToWorkspace -> saveConversationToWorkspace()
             AiChatIntent.ToggleWorkspace -> _uiState.update { it.copy(workspaceOpen = !it.workspaceOpen) }
             AiChatIntent.CloseWorkspace -> _uiState.update { it.copy(workspaceOpen = false) }
         }
     }
 
-    /** 从阅读页技能悬浮窗进入：把技能正文作为首条消息发给 AI，立即按该技能开工。 */
+    /**
+     * 阅读页「每本书一个对话小窗」：用 bookUrl 映射到独立会话；首次为该书新建会话并记住映射。
+     * skillId 非空时只把技能名放进标题栏，并发一句轻量提示，AI 会通过 load_skill 自己加载正文。
+     */
+    private fun openBookChat(context: AiReadingContext, skillId: String?, skillName: String?) {
+        _uiState.update { it.copy(readingContext = context, activeSkillName = skillName) }
+        viewModelScope.launch {
+            val key = bookChatKey(context.bookUrl)
+            val existingId = AppConfigStore.getString(key)
+            val conversation = when {
+                existingId != null && aiChatGateway.getConversation(existingId) != null -> existingId
+                else -> {
+                    val title = "《${context.bookName}》对话".take(40)
+                    val created = aiChatGateway.createConversation(title).id
+                    AppConfigStore.putString(key, created)
+                    created
+                }
+            }
+            selectConversation(conversation)
+            if (!skillId.isNullOrBlank()) {
+                // 只发一句提示，不贴 SKILL.md 正文；AI 按需调用 load_skill 加载完整指令。
+                val label = skillName?.takeIf { it.isNotBlank() } ?: skillId
+                sendMessage("请使用「$label」技能帮我处理当前这本书。")
+            }
+        }
+    }
+
+    private fun bookChatKey(bookUrl: String): String =
+        "aiBookChat_" + bookUrl.hashCode().toUInt().toString(16)
+
+    /** 把当前会话的消息导出为工作区产物，归到当前书名下，便于在「工作区」按书查找。 */
+    private fun saveConversationToWorkspace() {
+        val state = _uiState.value
+        val context = state.readingContext ?: return
+        val lines = lastMessages.joinToString("\n\n") { msg ->
+            val who = if (msg.role == AiMessageRole.USER) "我" else "AI"
+            "$who：${msg.content}"
+        }.trim()
+        if (lines.isBlank()) return
+        viewModelScope.launch {
+            runCatching {
+                val now = System.currentTimeMillis()
+                aiArtifactGateway.upsertArtifact(
+                    AiArtifact(
+                        id = "chat_" + (currentConversationId.value ?: now.toString()),
+                        taskType = "chat_save",
+                        bookUrl = context.bookUrl,
+                        contentHash = lines.hashCode().toUInt().toString(16),
+                        promptHash = "",
+                        modelProfileId = "",
+                        status = AiArtifact.STATUS_SUCCESS,
+                        output = "对话记录 · ${context.bookName}\n\n$lines",
+                        createdAt = now,
+                        updatedAt = now
+                    )
+                )
+            }
+            refreshArtifacts()
+            _effects.tryEmit(AiChatEffect.ShowMessage("已保存到《${context.bookName}》的工作区"))
+        }
+    }
+
+    private suspend fun refreshArtifacts() {
+        runCatching {
+            val artifacts = aiArtifactGateway.observeAllArtifacts().first()
+            _uiState.update { it.copy(workspaceArtifacts = artifacts.toImmutableList()) }
+        }
+    }
+
+    /** 从技能入口进入：只发一句轻量提示（技能名），AI 通过内置 load_skill 工具按需加载正文。 */
     private fun applySkill(skillId: String) {
         // 重组会重复下发同一 intent，用 applying 标志确保只自动发送一次。
         if (!appliedSkillIds.add(skillId)) return
         viewModelScope.launch {
             val skill = aiProfileGateway.listSkills().firstOrNull { it.id == skillId } ?: return@launch
-            sendMessage(skill.content.ifBlank { skill.name })
+            _uiState.update { it.copy(activeSkillName = skill.name) }
+            sendMessage("请使用「${skill.name}」技能帮我处理当前这本书。")
         }
     }
 

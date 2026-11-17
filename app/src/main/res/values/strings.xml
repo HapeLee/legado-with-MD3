@@ -2398,6 +2398,7 @@
     <string name="ai_replying">AI is replying…</string>
     <string name="ai_send">Send</string>
     <string name="ai_chat_input_hint">Ask anything…</string>
+    <string name="ai_save_conversation">Save chat</string>
     <string name="ai_chat_empty">Start a conversation</string>
     <string name="ai_regenerate">Regenerate</string>
     <string name="ai_thinking_mode">Thinking</string>

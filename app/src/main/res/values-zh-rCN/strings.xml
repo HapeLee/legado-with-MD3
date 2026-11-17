@@ -2454,6 +2454,7 @@
     <string name="ai_replying">AI 正在回复…</string>
     <string name="ai_send">发送</string>
     <string name="ai_chat_input_hint">输入问题…</string>
+    <string name="ai_save_conversation">保存对话</string>
     <string name="ai_chat_empty">开始一段对话</string>
     <string name="ai_regenerate">重新生成</string>
     <string name="ai_thinking_mode">思考模式</string>

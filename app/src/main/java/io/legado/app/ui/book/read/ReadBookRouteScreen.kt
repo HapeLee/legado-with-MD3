@@ -191,6 +191,8 @@ fun ReadBookRouteScreen(
     // AI 悬浮小窗独立持有技能列表，避免把 AI 职责塞进阅读页 ViewModel。
     val aiQuickViewModel: AiQuickAccessViewModel = koinViewModel()
     val aiQuickSkills by aiQuickViewModel.skills.collectAsStateWithLifecycle()
+    // 当前打开的「书籍 AI 对话小窗」参数；null 表示未打开。
+    var bookChatWindow by remember { mutableStateOf<BookChatWindowRequest?>(null) }
     val readerPageWindow = readerRenderState.pageWindow
     val readerPaginationError = readerRenderState.paginationError
     val readerBackground = readerRenderState.background
@@ -879,19 +881,41 @@ fun ReadBookRouteScreen(
                 AiQuickFab(
                     skills = aiQuickSkills,
                     onOpenChat = {
-                        onOpenAiChat(
-                            state.book?.bookUrl, state.book?.name, state.book?.author,
-                            state.durChapterIndex.takeIf { state.book != null },
-                            state.chapterName, null,
-                        )
+                        val book = state.book
+                        if (book != null) {
+                            bookChatWindow = BookChatWindowRequest(
+                                bookUrl = book.bookUrl,
+                                bookName = book.name.orEmpty(),
+                                chapterTitle = state.chapterName.orEmpty(),
+                                skillId = null,
+                                skillName = null,
+                            )
+                        }
                     },
                     onOpenSkill = { skillId ->
-                        onOpenAiChat(
-                            state.book?.bookUrl, state.book?.name, state.book?.author,
-                            state.durChapterIndex.takeIf { state.book != null },
-                            state.chapterName, skillId,
-                        )
+                        val book = state.book
+                        if (book != null) {
+                            val skillName = aiQuickSkills.firstOrNull { it.id == skillId }?.name
+                            bookChatWindow = BookChatWindowRequest(
+                                bookUrl = book.bookUrl,
+                                bookName = book.name.orEmpty(),
+                                chapterTitle = state.chapterName.orEmpty(),
+                                skillId = skillId,
+                                skillName = skillName,
+                            )
+                        }
                     },
+                )
+            }
+            // 书籍 AI 对话小窗（每本书一个独立会话，可拖动，带保存键）。
+            bookChatWindow?.let { req ->
+                AiBookChatWindow(
+                    bookUrl = req.bookUrl,
+                    bookName = req.bookName,
+                    chapterTitle = req.chapterTitle,
+                    skillId = req.skillId,
+                    skillName = req.skillName,
+                    onDismiss = { bookChatWindow = null },
                 )
             }
             AnimatedVisibility(
@@ -1236,3 +1260,12 @@ internal fun rememberReadStyleFilePickers(
         }
     }
 }
+
+/** 阅读页「书籍 AI 对话小窗」的打开参数。 */
+internal data class BookChatWindowRequest(
+    val bookUrl: String,
+    val bookName: String,
+    val chapterTitle: String,
+    val skillId: String?,
+    val skillName: String?,
+)

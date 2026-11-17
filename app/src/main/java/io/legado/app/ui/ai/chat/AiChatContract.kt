@@ -19,7 +19,9 @@ data class AiChatUiState(
     val pendingToolConfirmation: AiToolConfirmationUi? = null,
     val readingContext: AiReadingContext? = null,
     val workspaceOpen: Boolean = false,
-    val workspaceArtifacts: ImmutableList<AiArtifact> = persistentListOf()
+    val workspaceArtifacts: ImmutableList<AiArtifact> = persistentListOf(),
+    /** 阅读页技能小窗标题栏显示的技能名（仅标识，不注入正文）。 */
+    val activeSkillName: String? = null
 )
 
 @Stable
@@ -90,6 +92,17 @@ sealed interface AiChatIntent {
     data class SetReadingContext(val context: AiReadingContext?) : AiChatIntent
     /** 从阅读页技能悬浮窗进入：加载指定技能内容并作为首条消息自动开聊。 */
     data class ApplySkill(val skillId: String) : AiChatIntent
+    /**
+     * 打开「某本书的对话小窗」：按 bookUrl 找/建独立会话，设置阅读上下文。
+     * skillId 非空时只在标题栏显示技能名，并发一句轻量提示让 AI 自己用 load_skill 加载正文。
+     */
+    data class OpenBookChat(
+        val context: AiReadingContext,
+        val skillId: String? = null,
+        val skillName: String? = null
+    ) : AiChatIntent
+    /** 把当前对话保存到工作区（作为当前书的产物）。 */
+    data object SaveConversationToWorkspace : AiChatIntent
     data object ToggleWorkspace : AiChatIntent
     data object CloseWorkspace : AiChatIntent
 }
