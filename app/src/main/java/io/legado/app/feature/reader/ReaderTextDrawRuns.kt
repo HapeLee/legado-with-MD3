@@ -102,6 +102,7 @@ internal fun buildMergedTextRuns(
  */
 private fun ReaderElement.Text.drawsInOneRun(): Boolean =
     value.length == 1 &&
+        !(bounds.width <= 0f && value.isBlank()) &&
         link == null &&
         emphasisUnderline == null &&
         style.backgroundImage == null &&

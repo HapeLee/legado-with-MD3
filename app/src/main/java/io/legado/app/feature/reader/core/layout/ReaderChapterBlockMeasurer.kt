@@ -290,10 +290,16 @@ class ReaderChapterBlockMeasurer(
                 return
             }
             val firstText = items.firstOrNull() as? ReaderChapterInlineSource.Text
-            val prefixEnd = firstText?.takeIf {
-                (applyBodyIndent || hideBodyIndent) && !isTitle && bodyIndentText.isNotEmpty() &&
-                    it.value.startsWith(bodyIndentText)
-            }?.let { it.chapterPosition + bodyIndentText.length }
+            val indentPrefix = bodyIndentText.takeIf { text ->
+                text.isNotEmpty() && text.all { it.isWhitespace() }
+            }
+            val prefixEnd = firstText?.let { text ->
+                if ((applyBodyIndent || hideBodyIndent) && !isTitle &&
+                    indentPrefix != null && text.value.startsWith(indentPrefix)
+                ) {
+                    text.chapterPosition + indentPrefix.length
+                } else null
+            }
             var emittedContent = false
             var hasStandaloneImage = false
             var droppedActionImage = false
