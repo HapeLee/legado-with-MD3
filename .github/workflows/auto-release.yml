@@ -211,7 +211,8 @@ jobs:
           # 变体与 type 都转成驼峰，匹配 Gradle Task：appCore + Release -> assembleAppCoreRelease
           PRODUCT_CAP=$(echo ${{ env.product }} | awk '{print toupper(substr($0,1,1))substr($0,2)}')
           TYPE_CAP=$(echo ${{ env.type }} | awk '{print toupper(substr($0,1,1))substr($0,2)}')
-          ./gradlew assemble${PRODUCT_CAP}${TYPE_CAP} --no-configuration-cache
+          # 依赖解析命中 Maven Central 限流（HTTP 429）时自动重试一次；真实编译失败不重试。
+          bash scripts/run-gradle-with-retry.sh ./gradlew assemble${PRODUCT_CAP}${TYPE_CAP} --no-configuration-cache
         env:
           COMMIT_NUMBER: ${{ env.COMMIT_NUMBER_VAL }}
           APP_VERSION_NAME: ${{ env.VERSIONL }}

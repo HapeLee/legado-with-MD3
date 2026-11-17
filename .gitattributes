@@ -1,0 +1,3 @@
+# Shell 脚本在 Linux runner 上执行；固定 LF，避免 Windows 开发机（core.autocrlf=true）
+# 提交的 CRLF 让 bash 报 "$'\r': command not found"。
+*.sh text eol=lf

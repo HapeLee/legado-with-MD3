@@ -59,7 +59,8 @@ jobs:
           chmod +x gradlew
           # appCore -> AppCore：Gradle 变体任务名是驼峰形式
           PRODUCT_CAP=$(echo "$PRODUCT" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')
-          ./gradlew assemble${PRODUCT_CAP}Debug -PenableAbiSplits=false --no-daemon --no-configuration-cache
+          # 依赖解析命中 Maven Central 限流（HTTP 429）时自动重试一次；真实编译失败不重试。
+          bash scripts/run-gradle-with-retry.sh ./gradlew assemble${PRODUCT_CAP}Debug -PenableAbiSplits=false --no-daemon --no-configuration-cache
         env:
           COMMIT_NUMBER: ${{ github.run_number }}
           APP_VERSION_NAME: debug-${{ github.run_number }}
