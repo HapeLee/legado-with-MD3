@@ -2414,6 +2414,8 @@
     <string name="content_process_insert_action">插入</string>
     <string name="ai_skills">Skills</string>
     <string name="ai_new_skill">新建 Skill</string>
+    <string name="ai_quick_skill_picker">悬浮菜单技能</string>
+    <string name="ai_quick_skill_picker_desc">选择阅读悬浮菜单里显示哪些技能，全选则显示所有已启用技能。</string>
     <string name="ai_edit_skill">编辑 Skill</string>
     <string name="ai_skill_name">名称</string>
     <string name="ai_skill_description">描述</string>

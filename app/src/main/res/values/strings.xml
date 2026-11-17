@@ -2358,6 +2358,8 @@
     <string name="content_process_insert_action">Insert</string>
     <string name="ai_skills">Skills</string>
     <string name="ai_new_skill">New Skill</string>
+    <string name="ai_quick_skill_picker">Floating Menu Skills</string>
+    <string name="ai_quick_skill_picker_desc">Choose which skills appear in the reader's floating menu. Leave all selected to show every enabled skill.</string>
     <string name="ai_edit_skill">Edit Skill</string>
     <string name="ai_skill_name">Name</string>
     <string name="ai_skill_description">Description</string>

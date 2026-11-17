@@ -1,9 +1,13 @@
 package io.legado.app.ui.config.ai
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
@@ -11,6 +15,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SnackbarHost
@@ -30,10 +35,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.constant.PreferKey
 import io.legado.app.data.entities.AiSkillProfile
 import io.legado.app.domain.model.AiToolGroup
 import io.legado.app.feature.settings.search.SearchableSetting
 import io.legado.app.feature.settings.search.SearchableSettingsList
+import io.legado.app.help.config.AppConfigStore
+import io.legado.app.ui.book.read.AiQuickAccessViewModel
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
@@ -88,6 +96,7 @@ fun AiConfigScreen(
     val resources = LocalResources.current
     var showModelSheet by remember { mutableStateOf(false) }
     var editingSkill by remember { mutableStateOf<AiSkillProfile?>(null) }
+    var showQuickSkillPicker by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         effects.collectLatest { effect ->
@@ -210,6 +219,13 @@ fun AiConfigScreen(
                             onClick = { editingSkill = skill.toProfile() }
                         )
                     }
+                    SearchableSetting("ai.ai_quick_skill_picker") {
+                        ClickableSettingItem(
+                            title = stringResource(R.string.ai_quick_skill_picker),
+                            description = stringResource(R.string.ai_quick_skill_picker_desc),
+                            onClick = { showQuickSkillPicker = true }
+                        )
+                    }
                     ClickableSettingItem(
                         title = stringResource(R.string.ai_new_skill),
                         onClick = {
@@ -295,6 +311,20 @@ fun AiConfigScreen(
         }
     }
 
+    QuickSkillPickerSheet(
+        show = showQuickSkillPicker,
+        skills = state.skills,
+        onDismiss = { showQuickSkillPicker = false },
+        onSave = { ids ->
+            // 用逗号拼接写入；空集写空串（raw != null → 菜单不显示任何技能）。
+            AppConfigStore.putString(
+                PreferKey.aiQuickSkillIds,
+                ids.joinToString(",")
+            )
+            showQuickSkillPicker = false
+        }
+    )
+
     if (editingSkill != null) {
         val skill = editingSkill!!
         var name by remember(skill) { mutableStateOf(skill.name) }
@@ -309,48 +339,134 @@ fun AiConfigScreen(
                 if (skill.id.isBlank()) R.string.ai_new_skill else R.string.ai_edit_skill
             )
         ) {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text(stringResource(R.string.ai_skill_name)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = desc,
-                onValueChange = { desc = it },
-                label = { Text(stringResource(R.string.ai_skill_description)) },
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = content,
-                onValueChange = { content = it },
-                label = { Text(stringResource(R.string.ai_skill_content)) },
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = url,
-                onValueChange = { url = it },
-                label = { Text(stringResource(R.string.ai_skill_source_url)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Button(
-                onClick = {
-                    onIntent(
-                        AiConfigIntent.SaveSkill(
-                            skill.copy(
-                                name = name.trim(),
-                                description = desc.trim(),
-                                content = content.trim(),
-                                sourceUrl = url.trim()
+            // 正文可能很长（SKILL.md 动辄上百行）。整体可滚动 + 正文框限高内部滚动，
+            // 避免正文把「来源链接」和「保存」挤出可视区。
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.ai_skill_name)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = desc,
+                    onValueChange = { desc = it },
+                    label = { Text(stringResource(R.string.ai_skill_description)) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = content,
+                    onValueChange = { content = it },
+                    label = { Text(stringResource(R.string.ai_skill_content)) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 220.dp)
+                )
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = { Text(stringResource(R.string.ai_skill_source_url)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Button(
+                    onClick = {
+                        onIntent(
+                            AiConfigIntent.SaveSkill(
+                                skill.copy(
+                                    name = name.trim(),
+                                    description = desc.trim(),
+                                    content = content.trim(),
+                                    sourceUrl = url.trim()
+                                )
                             )
                         )
-                    )
-                    editingSkill = null
-                },
-                enabled = name.isNotBlank(),
-                modifier = Modifier.fillMaxWidth()
+                        editingSkill = null
+                    },
+                    enabled = name.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.save))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 悬浮菜单技能多选弹窗。
+ * 候选为已启用的技能（排除书源编写——它本就不进悬浮菜单）。
+ * 初始勾选：未配置时默认全选（等价于当前"显示全部"的行为）；已配置时按偏好还原。
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun QuickSkillPickerSheet(
+    show: Boolean,
+    skills: List<AiSkillListItemUi>,
+    onDismiss: () -> Unit,
+    onSave: (Set<String>) -> Unit,
+) {
+    if (!show) return
+    // 候选项与 AiQuickAccessViewModel 的过滤口径一致。
+    val candidates = skills.filter { it.enabled && it.id != "builtin.book_source" }
+    val raw = AppConfigStore.getString(PreferKey.aiQuickSkillIds)
+    val initiallySelected = if (raw == null) {
+        candidates.map { it.id }.toSet()
+    } else {
+        AiQuickAccessViewModel.parseSelected(raw)
+    }
+
+    var selected by remember(show) {
+        mutableStateOf(initiallySelected)
+    }
+
+    AppModalBottomSheet(
+        show = true,
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.ai_quick_skill_picker)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text(
+                text = stringResource(R.string.ai_quick_skill_picker_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            candidates.forEach { skill ->
+                val checked = skill.id in selected
+                ClickableSettingItem(
+                    title = skill.name,
+                    description = skill.description.ifBlank {
+                        stringResource(R.string.ai_skill_no_description)
+                    },
+                    trailingContent = {
+                        Checkbox(
+                            checked = checked,
+                            onCheckedChange = {
+                                // 每次生成新集合，确保 Compose 检测到变化并重组。
+                                selected = if (checked) selected - skill.id else selected + skill.id
+                            }
+                        )
+                    },
+                    onClick = {
+                        selected = if (checked) selected - skill.id else selected + skill.id
+                    }
+                )
+            }
+            Button(
+                onClick = { onSave(selected.toSet()) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
             ) {
                 Text(stringResource(R.string.save))
             }

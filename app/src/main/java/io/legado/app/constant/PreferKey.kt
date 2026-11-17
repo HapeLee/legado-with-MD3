@@ -6,6 +6,8 @@ object PreferKey {
     const val aiSkillsSeeded = "aiSkillsSeeded"
     const val aiSkillsSeedVersion = "aiSkillsSeedVersion"
     const val aiDisabledToolGroups = "aiDisabledToolGroups"
+    /** 阅读悬浮菜单里显示的技能 id，逗号分隔。null=未配置(显示全部启用技能)。 */
+    const val aiQuickSkillIds = "aiQuickSkillIds"
     const val fontScale = "fontScale"
     const val appFontPath = "appFontPath"
     const val appTheme = "app_theme"
