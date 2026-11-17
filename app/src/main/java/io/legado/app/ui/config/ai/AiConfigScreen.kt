@@ -219,13 +219,11 @@ fun AiConfigScreen(
                             onClick = { editingSkill = skill.toProfile() }
                         )
                     }
-                    SearchableSetting("ai.ai_quick_skill_picker") {
-                        ClickableSettingItem(
-                            title = stringResource(R.string.ai_quick_skill_picker),
-                            description = stringResource(R.string.ai_quick_skill_picker_desc),
-                            onClick = { showQuickSkillPicker = true }
-                        )
-                    }
+                    ClickableSettingItem(
+                        title = stringResource(R.string.ai_quick_skill_picker),
+                        description = stringResource(R.string.ai_quick_skill_picker_desc),
+                        onClick = { showQuickSkillPicker = true }
+                    )
                     ClickableSettingItem(
                         title = stringResource(R.string.ai_new_skill),
                         onClick = {

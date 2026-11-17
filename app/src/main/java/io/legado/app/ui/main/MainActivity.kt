@@ -1155,6 +1155,11 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
         } catch (_: Exception) {
             return
         }
+        // 同一个版本只在一次安装生命周期内通知一次，避免每次启动 App 都弹更新弹窗。
+        if (updateInfo.tagName == LocalConfig.notifiedUpdateTag) {
+            return
+        }
+        LocalConfig.notifiedUpdateTag = updateInfo.tagName
         suspendCancellableCoroutine { continuation ->
             val dialog = UpdateDialog(updateInfo)
             dialog.setOnDismissListener {

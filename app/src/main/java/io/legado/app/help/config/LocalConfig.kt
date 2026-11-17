@@ -176,4 +176,11 @@ by appCtx.getSharedPreferences("local", Context.MODE_PRIVATE) {
             putBoolean("deleteBookOriginal", value)
         }
 
+    /** 上次已通知过的更新版本 tag，避免每次启动都弹同一个版本的更新弹窗。 */
+    var notifiedUpdateTag: String?
+        get() = getString("notifiedUpdateTag", null)
+        set(value) {
+            edit { putString("notifiedUpdateTag", value) }
+        }
+
 }
