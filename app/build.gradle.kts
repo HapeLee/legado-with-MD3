@@ -40,9 +40,10 @@ val enableAbiSplits = providers.gradleProperty("enableAbiSplits")
     .getOrElse(true)
 
 android {
-    // Compose 1.13.0-beta01 的 AAR 元数据要求 compileSdk >= 37.1（android-37.0 会被 checkAarMetadata 拒绝）。
+    // Compose 1.13.0-beta01 要求 compileSdk >= 37.1；Miuix 0.9.5-beta01 的 AAR 元数据进一步要求 37.2
+    // （android-37.0/37.1 会被 checkAarMetadata 拒绝）。
     compileSdk = 37
-    compileSdkMinor = 1
+    compileSdkMinor = 2
     namespace = "io.legado.app"
 
     signingConfigs {

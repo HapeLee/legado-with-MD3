@@ -61,7 +61,7 @@ fun TextStyles.withFont(fontFamily: FontFamily?): TextStyles {
 
 /**
  * 保留 Miuix 的字号、字重和字距，借用 M3 对应角色的行高比例和留白策略。
- * Miuix 0.9.4 仅 paragraph 定义了 1.2.em，其余角色没有显式行高。
+ * Miuix 0.9.5 仅 paragraph 定义了 1.2.em，其余角色没有显式行高。
  * 使用 em，使自定义字体、字体缩放和下游字号调整仍沿用同一比例。
  * 同时用于 Miuix 原生组件和 LegadoTypography，避免两者排版分叉。
  */

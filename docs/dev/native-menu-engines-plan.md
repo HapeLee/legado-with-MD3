@@ -125,7 +125,7 @@ data class MochiDropdownBehavior(
   容器，会丢掉「按钮变成面板」的开合形变。
 - `trigger = Press` 意味着按下即开、按住滑到选项松手提交，与现有「点击按钮展开」语义不同。
 
-### Miuix 0.9.4-SNAPSHOT（vendored 源码）
+### Miuix 0.9.5-beta01-SNAPSHOT（vendored 源码）
 
 ```kotlin
 data class DropdownItem(
