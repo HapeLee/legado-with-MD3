@@ -48,19 +48,29 @@ class ReadReplaceRuleDelegate(
                 )
             }
         }
+        // 规则表也可能被阅读页之外的入口改（主界面「替换净化」页、规则编辑器、导入、
+        // Web API）。仓储写入后已重建 ContentProcessor 的规则缓存，这里只负责让当前
+        // 正在读的书重新走一遍正文处理，否则页面会一直停在按旧规则算出的文本上。
+        scope.launch {
+            replaceRuleRepository.ruleChanges.collect {
+                Coroutine.async(scope, Dispatchers.IO) {
+                    ReadBook.book?.let { ReadBook.loadContent(resetPageOffset = false) }
+                }
+            }
+        }
     }
 
+    // 下面两个方法不再显式调 rulesChanged()：仓储写入时已经重建净化缓存并发出
+    // ruleChanges，start() 的订阅会完成正文重载（避免同一动作重排两次）。
     fun setEnabled(id: Long, enabled: Boolean) {
         scope.launch {
             replaceRuleRepository.setEnabled(id, enabled)
-            rulesChanged()
         }
     }
 
     fun move(draggedId: Long, anchorId: Long, afterAnchor: Boolean) {
         scope.launch {
             replaceRuleRepository.moveReplaceRule(draggedId, anchorId, afterAnchor)
-            rulesChanged()
         }
     }
 

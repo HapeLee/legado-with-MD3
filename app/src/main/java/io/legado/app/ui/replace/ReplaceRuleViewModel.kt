@@ -334,9 +334,8 @@ class ReplaceRuleViewModel(
                     rule
                 }
             if (rulesToSave.isNotEmpty()) {
-                rulesToSave.forEach { rule ->
-                    repository.insert(rule)
-                }
+                // 一次事务写全量：既少一轮磁盘 I/O，也让净化缓存的失效只发生一次。
+                repository.insert(*rulesToSave.toTypedArray())
                 withContext(Dispatchers.Main) {
                     _importState.value = BaseImportUiState.Idle
                     _eventChannel.send(BaseRuleEvent.ShowSnackbar("成功导入 ${rulesToSave.size} 条规则"))
@@ -447,6 +446,8 @@ class ReplaceRuleViewModel(
             book.setUseReplaceRule(enabled)
             ReadBook.saveRead()
             _bookState.update { it.copy(replaceEnabled = enabled) }
+            // 本书开关不走规则表，仓储收不到写入事件，这里直接让当前书重载正文。
+            ReadBook.loadContent(resetPageOffset = false)
         }
     }
 

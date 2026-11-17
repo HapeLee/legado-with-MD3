@@ -3,15 +3,42 @@ package io.legado.app.data.repository
 import android.text.TextUtils
 import io.legado.app.data.dao.ReplaceRuleDao
 import io.legado.app.data.entities.ReplaceRule
+import io.legado.app.help.book.ContentProcessor
 import io.legado.app.utils.splitNotBlank
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 
 class ReplaceRuleRepository(
     private val dao: ReplaceRuleDao,
 ) {
+
+    /**
+     * 影响净化结果的写入完成事件。
+     *
+     * 净化规则由 [ContentProcessor] 按「书名 + 来源」缓存，只在构造与 `upReplaceRules()`
+     * 时装载。此前只有阅读页内的规则入口会触发重载，主界面「替换净化」页/规则编辑器/
+     * 导入的写入都不会让缓存失效：改完规则回到阅读页仍然按旧规则处理，刷新章节也只是
+     * 重下原文，看起来就是「有时候不替换」。
+     *
+     * 这里把「规则表变更」收口到仓储的写入侧：每次影响净化结果的写入都重建缓存并发出
+     * 一次事件，阅读页据此重载正文；没有阅读会话时缓存也已经是最新。
+     */
+    private val _ruleChanges = MutableSharedFlow<Unit>(
+        extraBufferCapacity = 16,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    val ruleChanges: SharedFlow<Unit> = _ruleChanges.asSharedFlow()
+
+    private fun notifyRulesChanged() {
+        ContentProcessor.upReplaceRules()
+        _ruleChanges.tryEmit(Unit)
+    }
 
     fun flowGroups(): Flow<List<String>> {
         return dao.flowGroups().flowOn(Dispatchers.IO)
@@ -44,24 +71,28 @@ class ReplaceRuleRepository(
     suspend fun update(vararg rule: ReplaceRule) {
         withContext(Dispatchers.IO) {
             dao.update(*rule)
+            notifyRulesChanged()
         }
     }
 
     suspend fun setEnabled(id: Long, enabled: Boolean) {
         withContext(Dispatchers.IO) {
             dao.updateEnabled(id, enabled)
+            notifyRulesChanged()
         }
     }
 
     suspend fun insert(vararg rule: ReplaceRule) {
         withContext(Dispatchers.IO) {
             dao.insert(*rule)
+            notifyRulesChanged()
         }
     }
 
     suspend fun delete(rule: ReplaceRule) {
         withContext(Dispatchers.IO) {
             dao.delete(rule)
+            notifyRulesChanged()
         }
     }
 
@@ -73,6 +104,7 @@ class ReplaceRuleRepository(
                 rule.order = dao.minOrder - 1
             }
             dao.update(rule)
+            notifyRulesChanged()
         }
     }
 
@@ -84,6 +116,7 @@ class ReplaceRuleRepository(
                 rule.order = dao.maxOrder + 1
             }
             dao.update(rule)
+            notifyRulesChanged()
         }
     }
 
@@ -97,6 +130,7 @@ class ReplaceRuleRepository(
                 }
             }
             dao.update(*rules.toTypedArray())
+            notifyRulesChanged()
         }
     }
 
@@ -146,12 +180,14 @@ class ReplaceRuleRepository(
         withContext(Dispatchers.IO) {
             if (ids.isEmpty()) return@withContext
             dao.updateEnabled(ids.toList(), true)
+            notifyRulesChanged()
         }
 
     suspend fun disableByIds(ids: Set<Long>) =
         withContext(Dispatchers.IO) {
             if (ids.isEmpty()) return@withContext
             dao.updateEnabled(ids.toList(), false)
+            notifyRulesChanged()
         }
 
     suspend fun deleteByIds(ids: Set<Long>) =
@@ -160,6 +196,7 @@ class ReplaceRuleRepository(
 
             val rules = dao.getByIds(ids)
             dao.delete(*rules.toTypedArray())
+            notifyRulesChanged()
         }
 
     suspend fun topByIds(ids: Set<Long>, isDesc: Boolean = false) =
@@ -181,6 +218,7 @@ class ReplaceRuleRepository(
                 }
                 dao.update(*updated.toTypedArray())
             }
+            notifyRulesChanged()
         }
 
     suspend fun bottomByIds(ids: Set<Long>, isDesc: Boolean = false) =
@@ -203,6 +241,7 @@ class ReplaceRuleRepository(
                 }
                 dao.update(*updated.toTypedArray())
             }
+            notifyRulesChanged()
         }
 
     /**
@@ -222,6 +261,7 @@ class ReplaceRuleRepository(
             remaining.add(insertIndex, dragged)
             val updated = remaining.mapIndexed { index, rule -> rule.copy(order = index + 1) }
             dao.update(*updated.toTypedArray())
+            notifyRulesChanged()
         }
     }
 
@@ -233,6 +273,7 @@ class ReplaceRuleRepository(
                 rule.copy(order = order)
             }
             dao.update(*updatedRules.toTypedArray())
+            notifyRulesChanged()
         }
     }
 

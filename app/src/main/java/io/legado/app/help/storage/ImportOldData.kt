@@ -14,6 +14,7 @@ import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.rule.*
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.ReplaceAnalyzer
+import io.legado.app.help.book.ContentProcessor
 import io.legado.app.utils.*
 import splitties.init.appCtx
 import java.io.File
@@ -113,6 +114,8 @@ object ImportOldData {
         val rules = ReplaceAnalyzer.jsonToReplaceRules(json).getOrNull()
         rules?.let {
             appDb.replaceRuleDao.insert(*rules.toTypedArray())
+            // 旧数据导入绕过 ReplaceRuleRepository，需显式失效净化规则缓存。
+            ContentProcessor.upReplaceRules()
             return rules.size
         }
         return 0

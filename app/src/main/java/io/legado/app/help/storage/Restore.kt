@@ -43,6 +43,7 @@ import io.legado.app.data.repository.HttpTtsRepository
 import io.legado.app.data.entities.ReadAloudVoiceEntity
 import io.legado.app.help.DirectLinkUpload
 import io.legado.app.help.LauncherIconHelp
+import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.readaloud.speech.HttpTtsCatalogParser
 import io.legado.app.help.book.upType
@@ -209,6 +210,8 @@ object Restore : KoinComponent {
             fileToListT<ReplaceRule>(path, "replaceRule.json")?.let {
                 try {
                     appDb.replaceRuleDao.insert(*it.toTypedArray())
+                    // 恢复不走 ReplaceRuleRepository，需显式失效净化规则缓存。
+                    ContentProcessor.upReplaceRules()
                 } catch (_: SQLiteConstraintException) {
                 }
             }

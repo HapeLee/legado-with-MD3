@@ -3,6 +3,7 @@ package io.legado.app.api.controller
 import io.legado.app.api.ReturnData
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.ReplaceRule
+import io.legado.app.help.book.ContentProcessor
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.replace
@@ -30,6 +31,8 @@ object ReplaceRuleController {
                 rule.order = appDb.replaceRuleDao.maxOrder + 1
             }
             appDb.replaceRuleDao.insert(rule)
+            // Web 端写入绕过 :app 的 ReplaceRuleRepository，这里补一次缓存失效。
+            ContentProcessor.upReplaceRules()
             returnData.setData(rule)
         }
         return returnData
@@ -44,6 +47,7 @@ object ReplaceRuleController {
             returnData.setErrorMsg("格式不对")
         } else {
             appDb.replaceRuleDao.delete(rule)
+            ContentProcessor.upReplaceRules()
             returnData.setData(rule)
         }
         return returnData
