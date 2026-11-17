@@ -501,7 +501,17 @@ fun Throwable.aiErrorKind(): AiErrorKind {
         return AiErrorKind.SERVER
     }
     if (text.contains("timeout", ignoreCase = true) || text.contains("stream interrupted", ignoreCase = true) ||
-        text.contains("failed to connect", ignoreCase = true) || text.contains("eof", ignoreCase = true)
+        text.contains("failed to connect", ignoreCase = true) || text.contains("eof", ignoreCase = true) ||
+        // 长任务时中间网络（NAT/防火墙/运营商）会掐断空闲长连接，
+        // Android 上典型报文就是 "Software caused connection abort" / "Connection reset"。
+        // 这些和限流无关，应归为网络中断，给出对应提示而不是当成未知错误。
+        text.contains("connection abort", ignoreCase = true) ||
+        text.contains("software caused connection", ignoreCase = true) ||
+        text.contains("connection reset", ignoreCase = true) ||
+        text.contains("connection closed", ignoreCase = true) ||
+        text.contains("broken pipe", ignoreCase = true) ||
+        text.contains("socketexception", ignoreCase = true) ||
+        text.contains("econnreset", ignoreCase = true)
     ) {
         return AiErrorKind.NETWORK
     }

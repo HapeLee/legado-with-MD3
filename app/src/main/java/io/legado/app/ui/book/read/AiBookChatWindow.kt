@@ -21,7 +21,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.Surface
@@ -184,6 +186,16 @@ fun AiBookChatWindow(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
+                SmallPlainButton(
+                    onClick = { viewModel.onIntent(AiChatIntent.ClearBookChatMessages) },
+                    icon = Icons.Default.DeleteSweep,
+                    contentDescription = stringResource(R.string.ai_clear_chat),
+                )
+                SmallPlainButton(
+                    onClick = { viewModel.onIntent(AiChatIntent.NewBookChat) },
+                    icon = Icons.Default.Add,
+                    contentDescription = stringResource(R.string.ai_new_chat),
+                )
                 SmallPlainButton(
                     onClick = { viewModel.onIntent(AiChatIntent.ToggleWorkspace) },
                     icon = Icons.Default.Folder,

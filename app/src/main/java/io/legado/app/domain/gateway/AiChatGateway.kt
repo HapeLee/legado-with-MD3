@@ -31,4 +31,6 @@ interface AiChatGateway {
     suspend fun updateConversationTitle(conversationId: String, title: String)
     suspend fun updateReasoningLevel(conversationId: String, reasoningLevel: String)
     suspend fun deleteConversation(conversationId: String)
+    /** 清空某个会话的全部消息，但保留会话本身（用于悬浮小窗的「清理对话」）。 */
+    suspend fun clearMessages(conversationId: String)
 }

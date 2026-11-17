@@ -2387,7 +2387,7 @@
     <string name="ai_error_rate_limit">Request limit reached. Auto-retried but still rate-limited. Please wait a moment and try again, or switch provider/API key.</string>
     <string name="ai_error_auth">Authentication failed. Check the provider API key and permissions.</string>
     <string name="ai_error_server">AI service is temporarily unavailable. Please try again later.</string>
-    <string name="ai_error_network">Connection interrupted or timed out. Check your network and retry.</string>
+    <string name="ai_error_network">Connection interrupted or timed out. Long tasks can be dropped by the network; this is not rate limiting. Please retry, or switch network/provider if it repeats.</string>
     <string name="ai_error_generic">AI request failed. Tap Details for more information.</string>
     <string name="ai_workspace">Workspace</string>
     <string name="ai_workspace_empty">Nothing saved yet. AI notes, summaries and archives you save will appear here.</string>
@@ -2397,6 +2397,7 @@
     <string name="ai_quick_skills">Skills</string>
     <string name="ai_recent_chats">Recent Chats</string>
     <string name="ai_new_chat">New Chat</string>
+    <string name="ai_clear_chat">Clear chat</string>
     <string name="ai_replying">AI is replying…</string>
     <string name="ai_send">Send</string>
     <string name="ai_chat_input_hint">Ask anything…</string>

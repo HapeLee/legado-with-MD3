@@ -91,6 +91,8 @@ class AiChatViewModel(
             AiChatIntent.SaveConversationToWorkspace -> saveConversationToWorkspace()
             AiChatIntent.ToggleWorkspace -> _uiState.update { it.copy(workspaceOpen = !it.workspaceOpen) }
             AiChatIntent.CloseWorkspace -> _uiState.update { it.copy(workspaceOpen = false) }
+            AiChatIntent.ClearBookChatMessages -> clearBookChatMessages()
+            AiChatIntent.NewBookChat -> newBookChat()
         }
     }
 
@@ -123,6 +125,41 @@ class AiChatViewModel(
 
     private fun bookChatKey(bookUrl: String): String =
         "aiBookChat_" + bookUrl.hashCode().toUInt().toString(16)
+
+    /**
+     * 悬浮小窗「清理对话」：停掉正在生成的流，清空当前会话消息，
+     * 但保留会话本身与书映射，界面停留在空会话，可立即继续提问。
+     */
+    private fun clearBookChatMessages() {
+        val id = currentConversationId.value
+        if (id.isNullOrBlank()) return
+        streamingJob?.cancel()
+        pendingToolRun = null
+        viewModelScope.launch {
+            runCatching { aiChatGateway.clearMessages(id) }
+            _effects.tryEmit(AiChatEffect.ShowMessage("已清理当前对话"))
+        }
+    }
+
+    /**
+     * 悬浮小窗「新对话」：为当前书新建一个会话并把 bookUrl 映射指向它，
+     * 这样重开小窗也进入新会话，不会回到旧的。
+     */
+    private fun newBookChat() {
+        val context = _uiState.value.readingContext ?: return
+        streamingJob?.cancel()
+        pendingToolRun = null
+        viewModelScope.launch {
+            runCatching {
+                val created = aiChatGateway.createConversation("《${context.bookName}》对话".take(40))
+                AppConfigStore.putString(bookChatKey(context.bookUrl), created.id)
+                selectConversation(created.id)
+                _effects.tryEmit(AiChatEffect.ShowMessage("已开启新对话"))
+            }.onFailure { error ->
+                _effects.tryEmit(AiChatEffect.ShowMessage(error.message ?: "新建对话失败"))
+            }
+        }
+    }
 
     /** 把当前会话的消息导出为工作区产物，归到当前书名下，便于在「工作区」按书查找。 */
     private fun saveConversationToWorkspace() {

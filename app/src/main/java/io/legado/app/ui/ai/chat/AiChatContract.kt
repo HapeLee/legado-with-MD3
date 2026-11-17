@@ -105,6 +105,10 @@ sealed interface AiChatIntent {
     data object SaveConversationToWorkspace : AiChatIntent
     data object ToggleWorkspace : AiChatIntent
     data object CloseWorkspace : AiChatIntent
+    /** 清空当前小窗会话的全部消息（保留会话与书名映射）。 */
+    data object ClearBookChatMessages : AiChatIntent
+    /** 为当前小窗的书新建一个全新会话，并更新 bookUrl 映射。 */
+    data object NewBookChat : AiChatIntent
 }
 
 sealed interface AiChatEffect {
