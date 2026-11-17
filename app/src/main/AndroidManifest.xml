@@ -27,6 +27,7 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
@@ -416,13 +417,23 @@
         <service
             android:name=".service.ExportBookService"
             android:foregroundServiceType="dataSync" />
+        <!--
+          Web 服务是用户主动开启、需要长期运行的本地 HTTP 服务，不属于「数据同步」：
+          dataSync 自 Android 15 起受「任意 24 小时累计 6 小时」运行配额限制，配额耗尽后
+          startForeground 会抛 ForegroundServiceStartNotAllowedException。specialUse 无时长上限。
+        -->
         <service
             android:name=".service.WebService"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="local_http_server" />
+        </service>
+        <!-- 磁贴自身不发前台通知，类型仅与 WebService 保持一致，避免误读。 -->
         <service
             android:name=".service.WebTileService"
             android:exported="true"
-            android:foregroundServiceType="dataSync"
+            android:foregroundServiceType="specialUse"
             android:icon="@drawable/ic_web_service_noti"
             android:label="legado Web Service"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"

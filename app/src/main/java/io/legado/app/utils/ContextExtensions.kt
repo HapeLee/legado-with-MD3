@@ -187,7 +187,10 @@ fun Context.startForegroundServiceCompat(intent: Intent) {
     try {
         ContextCompat.startForegroundService(this, intent)
     } catch (e: Exception) {
-        startService(intent)
+        // 系统可能直接拒绝以前台服务方式启动（如 dataSync 的 24 小时运行配额耗尽）。
+        // 退回普通启动，服务内部若无法进入前台会自行退出，不让异常冒到调用方线程。
+        runCatching { startService(intent) }
+            .onFailure { e2 -> e2.printOnDebug() }
     }
 }
 

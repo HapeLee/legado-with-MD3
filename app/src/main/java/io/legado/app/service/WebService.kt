@@ -2,8 +2,10 @@ package io.legado.app.service
 
 // ——————【新增引用】——————
 import android.annotation.SuppressLint
+import android.app.Notification
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.PowerManager
@@ -80,6 +82,18 @@ class WebService : BaseService() {
             }
     }
     private var ktorServer: KtorServer? = null
+    /**
+     * Web 服务是用户主动开启的常驻本地服务器，用 specialUse 而不是 dataSync：
+     * Android 15 起 dataSync 受「任意 24 小时累计 6 小时」配额限制，配额耗尽后
+     * startForeground 会抛 ForegroundServiceStartNotAllowedException。
+     * API 34 起才有该类型常量，更低版本沿用清单声明（无类型时长限制）。
+     */
+    private val specialUseType: Int
+        get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+        } else {
+            0
+        }
     private var notificationList = mutableListOf(appCtx.getString(R.string.service_starting))
     private val networkChangedListener by lazy {
         NetworkChangedListener(this)
@@ -88,6 +102,8 @@ class WebService : BaseService() {
     @SuppressLint("WakelockTimeout")
     override fun onCreate() {
         super.onCreate()
+        // 系统拒绝进入前台（如 dataSync 配额耗尽）时服务已被停止，不再做后续初始化。
+        if (foregroundStartRejected) return
         if (useWakeLock) {
             wakeLock.acquire()
             wifiLock?.acquire()
@@ -119,6 +135,11 @@ class WebService : BaseService() {
 
     @SuppressLint("WakelockTimeout")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (foregroundStartRejected) {
+            // 无法进入前台时不再启动 Ktor，避免起来了又被系统回收。
+            stopSelf()
+            return START_NOT_STICKY
+        }
         when (intent?.action) {
             IntentAction.stop -> {
                 // ——————【修改开始】通知栏点击停止时，也记录关闭状态——————
@@ -197,9 +218,25 @@ class WebService : BaseService() {
     }
 
     /**
-     * 更新通知
+     * 更新通知。同时是前台服务的唯一发布入口：首次调用进入前台，之后只更新通知内容。
+     *
+     * 本方法会被网络变化回调（ConnectivityManager 的 CallbackHandler 线程）和启动流程调用，
+     * 因此不能把“刷新通知”实现成再次 startForeground()：Android 15+ 对受限前台类型
+     * （dataSync / mediaProcessing）有 24 小时累计运行配额，配额耗尽后会抛
+     * ForegroundServiceStartNotAllowedException，异常落在系统回调线程上会直接终止进程。
+     * 本服务已改用 specialUse，仍按此约束编码以免将来回退类型时复发。
      */
     override fun startForegroundNotification() {
+        val notification = buildNotification()
+        if (postForegroundNotification(NotificationId.WebService, notification, specialUseType)) return
+        // 系统拒绝进入前台（如后台启动受限）。无法以前台服务存活，主动退出并把状态回传给 UI。
+        hostAddress = ""
+        postEvent(EventBus.WEB_SERVICE, "")
+        FlowEventBus.post(EventBus.WEB_SERVICE, "")
+        stopSelf()
+    }
+
+    private fun buildNotification(): Notification {
         val builder = NotificationCompat.Builder(this, AppConst.channelIdWeb)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setSmallIcon(R.drawable.ic_web_service_noti)
@@ -214,8 +251,7 @@ class WebService : BaseService() {
             getString(R.string.cancel),
             servicePendingIntent<WebService>(IntentAction.stop)
         )
-        val notification = builder.build()
-        startForeground(NotificationId.WebService, notification)
+        return builder.build()
     }
 
     @SuppressLint("ObsoleteSdkInt")
