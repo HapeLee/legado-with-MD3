@@ -337,13 +337,20 @@ fun AiConfigScreen(
             onDismissRequest = { editingSkill = null },
             title = stringResource(
                 if (skill.id.isBlank()) R.string.ai_new_skill else R.string.ai_edit_skill
-            )
+            ),
+            // 关键：关闭内容尺寸动画，否则弹窗会用无限高度测量内容，
+            // 导致下面的 verticalScroll 失效、长正文把「来源链接/保存」顶出屏幕且滚不到。
+            // 与书源编辑弹窗保持一致的做法。
+            animateContentSize = false,
         ) {
             // 正文可能很长（SKILL.md 动辄上百行）。整体可滚动 + 正文框限高内部滚动，
             // 避免正文把「来源链接」和「保存」挤出可视区。
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    // 显式高度上限，保证 verticalScroll 拿到有限约束；
+                    // 否则内容会被撑高，底部「来源链接/保存」滚不到。
+                    .heightIn(max = LocalResources.current.configuration.screenHeightDp.dp * 0.72f)
                     .verticalScroll(rememberScrollState())
             ) {
                 OutlinedTextField(
