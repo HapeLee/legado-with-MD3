@@ -8,6 +8,7 @@ import androidx.room.Transaction
 import androidx.room.Update
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.model.BookChapterCacheInfo
+import io.legado.app.data.model.ChapterWordCount
 import io.legado.app.data.model.ChapterWordCountUpdate
 import kotlinx.coroutines.flow.Flow
 
@@ -32,6 +33,9 @@ interface BookChapterDao {
 
     @Query("select url, title, isVolume, `index` from chapters where bookUrl = :bookUrl order by `index`")
     fun getChapterCacheInfoList(bookUrl: String): List<BookChapterCacheInfo>
+
+    @Query("select url, wordCount from chapters where bookUrl = :bookUrl and wordCount is not null and wordCount != ''")
+    fun getChapterWordCounts(bookUrl: String): List<ChapterWordCount>
 
     @Query("select * from chapters where bookUrl = :bookUrl order by `index`")
     fun getChapterListFlow(bookUrl: String): Flow<List<BookChapter>>

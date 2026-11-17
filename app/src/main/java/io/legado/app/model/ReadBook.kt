@@ -37,7 +37,6 @@ import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.isLocalManga
 import io.legado.app.help.book.isLocalModified
 import io.legado.app.help.book.isLocalTxt
-import io.legado.app.utils.StringUtils
 import io.legado.app.help.book.isMarkdown
 import io.legado.app.help.book.isPdf
 import io.legado.app.help.book.isSameNameAuthor
@@ -74,6 +73,8 @@ import io.legado.app.ui.book.read.pageestimate.PageEstimateMetrics
 import io.legado.app.ui.book.read.pageestimate.RoomExactChapterPageCountStore
 import io.legado.app.ui.book.read.pageestimate.WholeBookPageCoordinator
 import io.legado.app.ui.book.read.pageestimate.WholeBookPageState
+import io.legado.app.utils.HtmlFormatter
+import io.legado.app.utils.StringUtils
 import io.legado.app.utils.buildMainHandler
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.postEvent
@@ -523,16 +524,16 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 chineseConverterType = readSettingsGateway.currentSettings.chineseConverterType,
             )
             val processed = processor.getContent(book, chapter, content, includeTitle = false, paragraphIndent = null, includePresentation = true)
-            // 后台逐章渲染本地书时顺带把章节字数落库（EPUB/MOBI/TXT 通用），供目录显示。
-            if (readSettingsGateway.currentSettings.tocCountWords) {
-                val readableLength = processed.textList
-                    .sumOf { it.length.toLong() }
-                    .coerceAtMost(Int.MAX_VALUE.toLong())
-                    .toInt()
-                val wc = StringUtils.wordCountFormat(readableLength)
-                if (chapter.wordCount != wc) {
-                    chapter.wordCount = wc
-                    withContext(IO) { appDb.bookChapterDao.update(chapter) }
+            // 与正文缓存和维护重算使用同一原始正文计数口径，不受替换规则影响。
+            if (readSettingsGateway.currentSettings.tocCountWords && !chapter.isVolume) {
+                val readableLength = HtmlFormatter.countReadableTextLength(content)
+                if (readableLength > 0) {
+                    val wordCount = StringUtils.wordCountFormat(readableLength)
+                    if (chapter.wordCount != wordCount) {
+                        withContext(IO) {
+                            appDb.bookChapterDao.upWordCount(book.bookUrl, chapter.url, wordCount)
+                        }
+                    }
                 }
             }
             wholeBookPageCoordinator.updateChapterContent(
