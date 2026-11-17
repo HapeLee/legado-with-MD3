@@ -55,6 +55,17 @@ fun InputSettingItem(
         }
     }
 
+    // Keep the internal text state in sync with the外部 value when the field is collapsed.
+    // rememberTextFieldState only uses initialText on first composition, so an async data load
+    // (e.g. provider details arriving after the screen first renders) would otherwise leave a
+    // stale default in `state.text`. The snapshotFlow below would then write that stale value
+    // back into the ViewModel and clobber the freshly loaded name/baseUrl on save.
+    LaunchedEffect(value, expanded) {
+        if (!expanded && state.text.toString() != value) {
+            state.edit { replace(0, length, value) }
+        }
+    }
+
     // 仅在配置了实时回写时监听文本框内容；distinctUntilChanged 避免重复提交同一内容。
     if (onValueChange != null) {
         LaunchedEffect(Unit) {

@@ -99,17 +99,21 @@ class AiProviderEditViewModel(
                         current.copy(
                             providerId = provider?.id ?: current.providerId,
                             providerName = provider?.name ?: current.providerName,
-                            // 已有供应商把名字视为"用户已确定"，选预设不再覆盖它；新建则保持可覆盖。
-                            nameUserEdited = provider != null,
+                            // 已有供应商把名字视为"用户已确定"，选预设不再覆盖它；新建时若用户
+                            // 已经在首次数据库发射到达前输入过名字，也要保留这个编辑标记。
+                            nameUserEdited = provider != null || current.nameUserEdited,
                             protocol = provider?.protocol ?: current.protocol,
-                            baseUrl = provider?.baseUrl.orEmpty(),
-                            modelsUrl = provider?.modelsUrl.orEmpty(),
-                            apiKey = provider?.apiKey.orEmpty(),
-                            chatPath = provider?.chatPath.orEmpty(),
-                            responsesPath = provider?.responsesPath.orEmpty(),
-                            messagesPath = provider?.messagesPath.orEmpty(),
-                            modelsPath = provider?.modelsPath.orEmpty(),
-                            customHeaders = parseHeaderList(provider?.customHeadersJson),
+                            // 关键：新建供应商时 provider 为 null，首次数据库发射若用 orEmpty()
+                            // 会把用户此刻刚输入的名字/地址/路径全部清成默认值，导致"保存不了"。
+                            // 只有确实查到了已有供应商才用它的字段覆盖，否则保留当前（可能是用户输入）值。
+                            baseUrl = provider?.baseUrl ?: current.baseUrl,
+                            modelsUrl = provider?.modelsUrl ?: current.modelsUrl,
+                            apiKey = provider?.apiKey ?: current.apiKey,
+                            chatPath = provider?.chatPath ?: current.chatPath,
+                            responsesPath = provider?.responsesPath ?: current.responsesPath,
+                            messagesPath = provider?.messagesPath ?: current.messagesPath,
+                            modelsPath = provider?.modelsPath ?: current.modelsPath,
+                            customHeaders = provider?.let { parseHeaderList(it.customHeadersJson) } ?: current.customHeaders,
                             providerModels = providerModels,
                             initialized = true
                         )
@@ -131,8 +135,16 @@ class AiProviderEditViewModel(
             is AiProviderEditIntent.UpdateProtocol -> _uiState.update {
                 it.copy(protocol = intent.value, selectedProviderPresetId = "", fetchedModels = emptyList<AiFetchedModelUi>().toImmutableList())
             }
-            is AiProviderEditIntent.UpdateBaseUrl -> _uiState.update { it.copy(baseUrl = intent.value, selectedProviderPresetId = "") }
-            is AiProviderEditIntent.UpdateModelsUrl -> _uiState.update { it.copy(modelsUrl = intent.value, selectedProviderPresetId = "") }
+            // 只有值时才清掉预设选中态：InputSettingItem 的同步回写会把外部值原样再发一次，
+            // 若无脑清空，刚选好的预设会立刻跳回"自定义"。
+            is AiProviderEditIntent.UpdateBaseUrl -> _uiState.update { current ->
+                if (current.baseUrl == intent.value) current
+                else current.copy(baseUrl = intent.value, selectedProviderPresetId = "")
+            }
+            is AiProviderEditIntent.UpdateModelsUrl -> _uiState.update { current ->
+                if (current.modelsUrl == intent.value) current
+                else current.copy(modelsUrl = intent.value, selectedProviderPresetId = "")
+            }
             is AiProviderEditIntent.UpdateChatPath -> _uiState.update { it.copy(chatPath = intent.value) }
             is AiProviderEditIntent.UpdateResponsesPath -> _uiState.update { it.copy(responsesPath = intent.value) }
             is AiProviderEditIntent.UpdateMessagesPath -> _uiState.update { it.copy(messagesPath = intent.value) }

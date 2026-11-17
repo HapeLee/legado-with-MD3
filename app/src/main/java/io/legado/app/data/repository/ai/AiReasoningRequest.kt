@@ -1,10 +1,56 @@
 package io.legado.app.data.repository.ai
 
 import io.legado.app.domain.model.AiGenerateRequest
+import io.legado.app.domain.model.AiHttpException
+import io.legado.app.domain.model.AiProviderConfig
 import io.legado.app.domain.model.AiReasoningLevel
 import io.legado.app.domain.model.AiProtocol
+import java.util.concurrent.ConcurrentHashMap
 
 private val deepSeekV4 = Regex("^deepseek-v4(?:[.:-]|$)")
+
+/**
+ * Remembers provider/model endpoints whose chat-completions API rejected the vendor-specific
+ * `thinking` object (typical of OpenAI-compatible gateways that only accept `reasoning_effort`).
+ * Kept in memory: after the first detected rejection we build a compatible body up front, so a
+ * user does not pay a failed request on every single chat turn.
+ */
+internal object AiThinkingCompat {
+    private val rejected = ConcurrentHashMap.newKeySet<String>()
+    private fun key(provider: AiProviderConfig, modelId: String): String = "${provider.id}|$modelId"
+
+    fun isRejected(provider: AiProviderConfig, modelId: String): Boolean = key(provider, modelId) in rejected
+    fun markRejected(provider: AiProviderConfig, modelId: String) {
+        rejected.add(key(provider, modelId))
+    }
+}
+
+/** True when a gateway returned 400 stating that `thinking` is unsupported (OpenAI-compatible proxies). */
+internal fun Throwable.isThinkingUnsupportedError(): Boolean {
+    if (this !is AiHttpException || statusCode != 400) return false
+    val text = message.orEmpty().lowercase()
+    if (!text.contains("thinking")) return false
+    return text.contains("unsupported") || text.contains("not supported") || text.contains("invalid_request")
+}
+
+/** Broadly accepted OpenAI-style value, independent of provider identity, for gateways rejecting `thinking`. */
+internal fun AiReasoningLevel.standardChatEffort(): String? = when (this) {
+    // "none" 并非所有网关都接受；关闭思考时直接不发参数最稳妥。
+    AiReasoningLevel.OFF, AiReasoningLevel.AUTO -> null
+    AiReasoningLevel.LOW -> "low"
+    AiReasoningLevel.MEDIUM -> "medium"
+    AiReasoningLevel.HIGH, AiReasoningLevel.XHIGH, AiReasoningLevel.MAX -> "high"
+}
+
+/** Drop the rejected `thinking` object and express the same intent with `reasoning_effort`. */
+internal fun MutableMap<String, Any?>.useReasoningEffortInsteadOfThinking(level: AiReasoningLevel) {
+    remove("thinking")
+    remove("output_config")
+    // DeepSeek paths already set a canonical reasoning_effort; only fill it when absent.
+    if (!containsKey("reasoning_effort")) {
+        level.standardChatEffort()?.let { this["reasoning_effort"] = it }
+    }
+}
 
 /** DeepSeek Flash / V4 have a model-specific switch, independent of imported capability flags.
  * Docs: https://api-docs.deepseek.com/guides/thinking_mode/ (checked 2026-10-27).

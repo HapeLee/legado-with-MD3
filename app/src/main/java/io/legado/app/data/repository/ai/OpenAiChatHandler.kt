@@ -58,8 +58,11 @@ class OpenAiChatHandler : AiProtocolHandler {
         params.maxOutputTokens?.let { body["max_tokens"] = it }
         params.topP?.let { body["top_p"] = it }
         body.applyChatReasoning(request)
+        if (AiThinkingCompat.isRejected(provider, request.model.modelId)) {
+            body.useReasoningEffortInsteadOfThinking(request.params.reasoningLevel)
+        }
 
-        return retryWithBackoff(maxAttempts = 3, keyRotator = keyRotator) {
+        return chatRequestWithThinkingFallback(body, request, keyRotator) {
             val response = request.httpClient().newCallStrResponse {
                 url(provider.endpointUrl(provider.chatPath))
                 postJson(GSON.toJson(body))
@@ -110,10 +113,13 @@ class OpenAiChatHandler : AiProtocolHandler {
         params.maxOutputTokens?.let { body["max_tokens"] = it }
         params.topP?.let { body["top_p"] = it }
         body.applyChatReasoning(request)
+        if (AiThinkingCompat.isRejected(provider, request.model.modelId)) {
+            body.useReasoningEffortInsteadOfThinking(request.params.reasoningLevel)
+        }
 
         // For streaming, we retry before establishing the SSE connection.
         // Once streaming starts, errors are not retried (partial output would be confusing).
-        val response = retryWithBackoff(maxAttempts = 3, keyRotator = keyRotator) {
+        val response = chatRequestWithThinkingFallback(body, request, keyRotator) {
             request.httpClient().newCallResponse {
                 url(provider.endpointUrl(provider.chatPath))
                 postJson(GSON.toJson(body))
@@ -164,6 +170,35 @@ class OpenAiChatHandler : AiProtocolHandler {
             }
         } finally {
             response.close()
+        }
+    }
+
+    /**
+     * Runs a chat-completions request, retrying once with the standard `reasoning_effort`
+     * parameter if a gateway rejects the vendor-specific `thinking` object with HTTP 400.
+     * After the first rejection we remember the endpoint so subsequent turns skip `thinking`
+     * up front. Retryable transport/status errors are still handled by [retryWithBackoff].
+     */
+    private suspend fun <T> chatRequestWithThinkingFallback(
+        body: MutableMap<String, Any?>,
+        request: AiGenerateRequest,
+        keyRotator: KeyRotator,
+        call: suspend () -> T
+    ): T {
+        val provider = request.model.provider
+        val modelId = request.model.modelId
+        val thinkingUsed = body.containsKey("thinking")
+        return try {
+            retryWithBackoff(maxAttempts = 3, keyRotator = keyRotator) { call() }
+        } catch (error: Exception) {
+            if (thinkingUsed && error.isThinkingUnsupportedError()) {
+                AiThinkingCompat.markRejected(provider, modelId)
+                body.useReasoningEffortInsteadOfThinking(request.params.reasoningLevel)
+                // Fresh retry budget: the endpoint is now known to need reasoning_effort.
+                retryWithBackoff(maxAttempts = 2, keyRotator = keyRotator) { call() }
+            } else {
+                throw error
+            }
         }
     }
 
