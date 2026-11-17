@@ -17,6 +17,7 @@ import io.legado.app.utils.FileDoc
 import io.legado.app.utils.compress.LibArchiveUtils
 import io.legado.app.utils.openReadPfd
 import io.legado.app.utils.treeChildren
+import kotlin.io.path.invariantSeparatorsPathString
 import splitties.init.appCtx
 import java.io.File
 import java.io.FileNotFoundException
@@ -30,9 +31,9 @@ internal fun isLocalMangaImage(path: String): Boolean =
 
 private val localMangaImageExtensions = setOf("jpg", "jpeg", "png", "webp", "gif", "avif", "bmp")
 
-/** Coil needs an explicit file authority separator to keep the path absolute. */
+/** Coil 需要 file URL 而不是裸路径；toURI() 同时负责空格与非 ASCII 字符的转义。 */
 internal fun File.toLocalMangaImageUrl(): String =
-    URI("file", "", absolutePath, null).toASCIIString()
+    toURI().toASCIIString()
 
 // A directory import has the image bit without the archive bit. Older CBZ records may have
 // neither bit, so keep the explicit comic extension as a fallback.
@@ -246,7 +247,8 @@ internal fun relativeMangaArchivePaths(entries: List<String>): List<String> {
         if (paths.all { it.startsWith(parent) }) break
         common = parent.parent
     }
-    return paths.map { (common?.relativize(it) ?: it).toString() }
+    // 章节标题靠 '/' 切分；Path.toString() 在 Windows 上是反斜杠，会把整本书并成一章。
+    return paths.map { (common?.relativize(it) ?: it).invariantSeparatorsPathString }
 }
 
 internal fun <T> groupLocalMangaPages(

@@ -14,6 +14,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 import java.net.URI
 import java.nio.file.Files
 
@@ -31,8 +32,11 @@ class LocalMangaLoaderTest {
             val chapter = LocalMangaFiles.chapters(book).single()
             val url = LocalMangaLoader(cache).use { it.load(book, chapter).pages.single().imageUrl }
 
-            assertTrue(url.startsWith("file:///"))
-            assertEquals(image.absolutePath, URI(url).path)
+            // 规范形态由 File.toURI() 决定（file:/abs 或 Windows 下 file:/C:/abs），
+            // 关键是转义正确并且能原路还原成同一个文件。
+            assertEquals(image.toURI().toASCIIString(), url)
+            assertEquals("file", URI(url).scheme)
+            assertEquals(image.canonicalFile, File(URI(url)).canonicalFile)
         } finally {
             root.deleteRecursively()
             cache.deleteRecursively()
