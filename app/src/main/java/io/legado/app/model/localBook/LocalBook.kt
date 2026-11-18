@@ -234,6 +234,19 @@ object LocalBook {
         return content
     }
 
+    internal fun upgradeCachedRubyText(book: Book, chapter: BookChapter, cached: String): String? = try {
+        when {
+            book.isEpub -> EpubFile.upgradeCachedRubyText(book, chapter, cached)
+            book.isMobi -> MobiFile.upgradeCachedRubyText(book, chapter, cached)
+            else -> null
+        }
+    } catch (cancelled: kotlinx.coroutines.CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        AppLog.put("本地注音缓存检查失败: chapter=${chapter.index}, ${error.javaClass.simpleName}")
+        null
+    }
+
     /** Optional original markup. Failure must never replace the authoritative chapter text. */
     fun getPresentation(book: Book, chapter: BookChapter): io.legado.app.feature.reader.core.source.ReaderLocalPresentation? = try {
         when {

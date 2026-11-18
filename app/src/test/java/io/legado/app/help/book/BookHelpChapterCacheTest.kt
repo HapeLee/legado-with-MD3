@@ -1,8 +1,11 @@
 package io.legado.app.help.book
 
 import android.app.Application
+import io.legado.app.constant.BookType
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.feature.reader.platform.ReaderLocalPresentationResolver
+import io.legado.app.model.localBook.LocalBookSemanticHtml
 import io.legado.app.support.InMemoryAppDatabaseFixture
 import org.junit.After
 import org.junit.Assert.*
@@ -52,6 +55,60 @@ class BookHelpChapterCacheTest {
         assertFalse(old.exists())
         assertNull(BookHelp.getContent(book, chapter))
     }
+
+    @Test
+    fun `unmodified legacy EPUB cache upgrades and binds original Ruby presentation`() {
+        val local = localBook("legacy.epub")
+        val chapter = this.chapter.copy(bookUrl = local.bookUrl)
+        val file = File(BookHelp.cachePath, local.getFolderName()).resolve(chapter.getFileName())
+        try {
+            file.parentFile!!.mkdirs()
+            file.writeText("漢かん字")
+            val html = "<ruby>漢<rt>かん</rt></ruby>字"
+
+            assertNull(BookHelp.getCachedContentInfo(local, chapter))
+            val content = BookHelp.getContent(local, chapter) { LocalBookSemanticHtml.upgradeCachedRubyText(html, it) }
+            assertEquals("漢字", content)
+            assertEquals(content, file.readText())
+            assertEquals(content, BookHelp.getContent(local, chapter))
+            assertEquals(2, BookHelp.getCachedContentLength(local, chapter))
+            val presentation = ReaderLocalPresentationResolver.resolve(html)?.bind(checkNotNull(content))
+            assertEquals("かん", presentation?.rubies?.single()?.text)
+        } finally {
+            BookHelp.clearCache(local)
+        }
+    }
+
+    @Test
+    fun `edited MOBI cache stays authoritative even when it contains old annotations`() {
+        val local = localBook("edited.mobi")
+        val chapter = this.chapter.copy(bookUrl = local.bookUrl)
+        val file = BookHelp.getChapterContentFile(local, chapter)
+        val edited = "漢かん字\nPersonal note"
+        try {
+            file.parentFile!!.mkdirs()
+            file.writeText(edited)
+            val html = "<ruby>漢<rt>かん</rt></ruby>字"
+            val content = BookHelp.getContent(local, chapter) {
+                LocalBookSemanticHtml.upgradeCachedRubyText(html, it, decodeEntities = false)
+            }
+
+            assertEquals(edited, content)
+            assertEquals(edited, file.readText())
+            assertEquals(edited, BookHelp.getContent(local, chapter))
+            assertEquals(edited.length, BookHelp.getCachedContentLength(local, chapter))
+        } finally {
+            BookHelp.clearCache(local)
+        }
+    }
+
+    private fun localBook(name: String) = Book(
+        bookUrl = "/local/$name",
+        origin = BookType.localTag,
+        originName = name,
+        name = name,
+        type = BookType.local or BookType.text,
+    )
 
     @Test
     fun `keep duplicate title creates a durable marker and enabling removal clears both formats`() {
