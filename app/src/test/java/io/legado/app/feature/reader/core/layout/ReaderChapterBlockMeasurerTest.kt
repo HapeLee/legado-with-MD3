@@ -900,4 +900,66 @@ class ReaderChapterBlockMeasurerTest {
         assertEquals("　　正文", items.filterIsInstance<ReaderMeasuredInlineItem.Text>()
             .joinToString("") { it.value })
     }
+
+    @Test
+    fun rubyMeasuresMultilingualMultiLineTextWithoutBreakingBaseGroups() = runBlocking {
+        val html = "<p>あ<ruby><rb>植</rb><rt>しよく</rt></ruby><ruby><rb>毛莨</rb><rt>きんぽうげ</rt></ruby>" +
+            "<ruby>重<rp>(</rp><rt>chóng</rt><rp>)</rp></ruby><ruby><rb>read</rb><rt>/riːd.ɪŋ/</rt></ruby></p>"
+        val appearance = checkNotNull(ReaderLocalPresentationResolver.resolve(html))
+        val source = ReaderChapterSourceParser.parse(
+            0, "", MixedContentSegments.paragraphs(appearance.content, "", false),
+            includeTitle = false, adaptSpecialStyle = true, localPresentation = appearance,
+        )
+        assertEquals("あ植毛莨重read\n", source.semanticContent)
+
+        val proportionalShaper = ReaderTextShaperFactory { textStyle ->
+            object : ReaderTextShaper {
+                override fun shape(text: String) = GlyphClusters(
+                    text.map(Char::toString),
+                    FloatArray(text.length) { textStyle.fontSizePx },
+                )
+                override val fontLineMetrics = ReaderFontLineMetrics(
+                    heightPx = textStyle.fontSizePx * 1.2f,
+                    baselineOffsetPx = textStyle.fontSizePx,
+                    ascentPx = textStyle.fontSizePx * 0.8f,
+                    descentPx = textStyle.fontSizePx * 0.2f,
+                )
+            }
+        }
+        val baseTextStyle = style.bodyStyle.copy(fontSizePx = 20f)
+        val bodyShaper = proportionalShaper.create(baseTextStyle)
+        val measured = ReaderChapterBlockMeasurer(
+            bodyShaper, bodyShaper, { null }, textShaperFactory = proportionalShaper,
+        ).measure(
+            source,
+            style.copy(bodyStyle = baseTextStyle, bodyIndentCharacters = 0, bodyLineHeightPx = 24f, bodyBaselineOffsetPx = 20f),
+        ) as ReaderChapterMeasureResult.Success
+
+        // Multi-line pagination (width 100px):
+        // Line 1: "あ"(20) + "植"[しよく](30) + "毛莨"[きんぽうげ](50) = 100px
+        // Line 2: "重"[chóng](50px; "read"[/riːd.ɪŋ/] is 90px so it wraps as a whole word to Line 3)
+        // Line 3: "read"[/riːd.ɪŋ/](90px; letters r,e,a,d stay contiguous in the center [5..85])
+        val page = ReaderPaginator.paginateBlocks(
+            measured.blocks,
+            ReaderPaginationConfig(0, "", 100, 500, 0f, 0f, 0f, 0f, 24f, 20f),
+        ).single()
+        val elements = page.elements.filterIsInstance<ReaderElement.Text>()
+        assertEquals(listOf("あ", "植", "毛", "莨", "重", "r", "e", "a", "d"), elements.map { it.value })
+        assertEquals(listOf(null, "しよく", "きんぽうげ", null, "chóng", "/riːd.ɪŋ/", null, null, null), elements.map { it.rubyText })
+        // 分页器必须把整个组的 group id 带到绘制元素；否则组末会被当成普通字并进 merged run。
+        assertEquals(listOf(0, 1, 2, 2, 3, 4, 4, 4, 4), elements.map { it.rubyGroupId })
+        assertEquals(elements[2].bounds.top, elements[3].bounds.top, 0.01f)
+        assertTrue(elements[4].bounds.top > elements[2].bounds.top)
+        assertTrue(elements[5].bounds.top > elements[4].bounds.top)
+        assertEquals(elements[5].bounds.top, elements[8].bounds.top, 0.01f)
+        // Multi-char base ("read", 80px) widened by IPA ruby ("/riːd.ɪŋ/", 90px) pads outer edges by 5px
+        // so internal letters ('r'..'d') remain contiguous without artificial gaps.
+        assertEquals(5f, elements[5].glyphOffsetX, 0.01f)
+        assertEquals(0f, elements[6].glyphOffsetX, 0.01f)
+        assertEquals((elements[5].bounds.left + elements[8].bounds.right) / 2f, elements[5].rubyCenterX, 0.01f)
+        // 注音只挂组首（植 / 毛莨 / 重 / read 共 4 组），胶囊或换行拆出的续段不重复持有。
+        assertEquals(4, measured.blocks.filterIsInstance<ReaderMeasuredBlock.InlineParagraph>()
+            .flatMap { it.items }.filterIsInstance<ReaderMeasuredInlineItem.Text>()
+            .count { it.rubyText != null })
+    }
 }

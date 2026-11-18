@@ -2251,7 +2251,10 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawScrollPageConte
                 // 链接下划线仍由原生 Paint 绘制。
                 paint.isUnderlineText = (e.style.nativeUnderline && e.style.underline == null) ||
                         e.drawsLinkUnderline
-                native.drawText(e.value, e.bounds.left, e.baselinePx, paint)
+                native.drawText(e.value, e.bounds.left + e.glyphOffsetX, e.baselinePx, paint)
+                if (e.rubyText != null) {
+                    drawRubyText(native, e, paint, data.mergedRunPaint)
+                }
             } else if (run.first === e) {
                 drawMergedTextRun(
                     canvas = native,
@@ -3044,7 +3047,10 @@ private fun ReaderPageCanvas(
                     // 链接下划线仍按旧版优先（`TextHtmlColumn.draw` 的 isUnderlineText）。
                     paint.isUnderlineText = (e.style.nativeUnderline && e.style.underline == null) ||
                             e.drawsLinkUnderline
-                    native.drawText(e.value, e.bounds.left, e.baselinePx, paint)
+                    native.drawText(e.value, e.bounds.left + e.glyphOffsetX, e.baselinePx, paint)
+                    if (e.rubyText != null) {
+                        drawRubyText(native, e, paint, mergedRunPaint)
+                    }
                 } else if (run.first === e) {
                     drawMergedTextRun(
                         canvas = native,

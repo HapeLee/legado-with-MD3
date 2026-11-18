@@ -20,13 +20,26 @@ import java.net.URLDecoder
  */
 object LocalBookSemanticHtml {
 
+    private val rubyAnnotationRegex = Regex("<r[tp]\\b[^>]*>[\\s\\S]*?</r[tp]\\s*>", RegexOption.IGNORE_CASE)
+
+    /**
+     * Ruby 结构标签之间的缩进只是排版空白，不是基字内容。Jsoup 序列化 `<rbc>/<rtc>` 时也会
+     * 插入换行；如果留给 [HtmlFormatter]，这些空白会变成正文换行，把多字基字拆成多个段落。
+     */
+    private val rubyTagWhitespaceRegex = Regex(
+        "(?is)(<ruby\\b[^>]*>|</?(?:rb|rt|rp|rbc|rtc)\\b[^>]*>)\\s+" +
+            "(?=</?(?:rb|rt|rp|rbc|rtc)\\b|</ruby>)"
+    )
+
     /** The pre-rich-channel local-book transport. Decoding happens once at this boundary. */
     fun plainText(html: String, decodeEntities: Boolean = true): String {
         return plainTextMapped(html, decodeEntities, null)
     }
 
     internal fun plainTextMapped(html: String, decodeEntities: Boolean, projection: TextProjection?): String {
-        val text = HtmlFormatter.formatKeepImgMapped(html, projection = projection)
+        val normalized = html.replaceMapped(rubyTagWhitespaceRegex, "\$1", projection)
+        val stripped = normalized.replaceMapped(rubyAnnotationRegex, "", projection)
+        val text = HtmlFormatter.formatKeepImgMapped(stripped, projection = projection)
         return if (decodeEntities) text.replaceMapped("&lt;img", "&lt; img", projection, ignoreCase = true)
             .unescapeHtml4Mapped(projection) else text
                 .replaceMapped(Regex("<\\?xml[^>]*>"), "", projection)

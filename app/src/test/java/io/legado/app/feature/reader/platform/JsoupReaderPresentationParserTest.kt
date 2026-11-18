@@ -134,9 +134,35 @@ class JsoupReaderPresentationParserTest {
     @Test fun rubyRetainsLegacyCharactersWithoutSuppressingOtherStyles() {
         for (annotation in listOf("<rt>かん</rt>", "")) {
             val current = source("<p><ruby>漢$annotation</ruby><b>字</b></p>")
-            assertEquals(if (annotation.isEmpty()) "漢字\n" else "漢かん字\n", current.semanticContent)
+            assertEquals("漢字\n", current.semanticContent)
+            assertEquals(if (annotation.isEmpty()) null else "かん", texts(current).single { it.value == "漢" }.style.ruby)
             assertEquals(700, texts(current).single { it.value == "字" }.style.fontWeight)
         }
+        val multi = source(
+            "<p>前文<a href='#n'><ruby><rb>十</rb><rt>じゆう</rt><rb>力</rb><rt>りき＊</rt></ruby></a>中" +
+                "<ruby>饕<rp>(</rp><rt>tāo</rt><rp>)</rp>餮<rp>(</rp><rt>tiè</rt><rp>)</rp></ruby>" +
+                "<ruby><rb>道</rb><rt>ㄉㄠˋ</rt></ruby>" +
+                "<ruby><rb>read</rb><rt>/riːd/</rt></ruby>" +
+                "<ruby><rbc><rb>東</rb><rb>京</rb></rbc><rtc><rt>Tokyo</rt></rtc></ruby>尾文。</p>"
+        )
+        assertEquals("前文十力中饕餮道read東京尾文。\n", multi.semanticContent)
+        assertEquals(
+            listOf(
+                "前文" to null,
+                "十" to "じゆう",
+                "力" to "りき＊",
+                "中" to null,
+                "饕" to "tāo",
+                "餮" to "tiè",
+                "道" to "ㄉㄠˋ",
+                "read" to "/riːd/",
+                "東京" to "Tokyo",
+                "尾文。" to null,
+            ),
+            texts(multi).map { it.value to it.style.ruby },
+        )
+        assertEquals("#n", texts(multi).first { it.value == "十" }.style.link)
+        assertEquals("#n", texts(multi).first { it.value == "力" }.style.link)
     }
 
     @Test fun trimsLeadingParagraphIndentationAndPreservesNestedHeadingScale() {
@@ -169,7 +195,7 @@ class JsoupReaderPresentationParserTest {
             "甲乙" to "甲乙\n", "甲😀乙" to "甲😀乙\n", "A&amp;B" to "A&B\n",
             "<p>A</p><p>B</p>" to "A\nB\n", "<strong>A</strong>B" to "AB\n",
             "A<img src='x'>B" to "A\uFFFCB\n", "A<img>B" to "A<img>B\n", "<p></p>" to "", "<hr>" to "",
-            "<ruby>漢<rt>かん</rt><rp>(</rp></ruby>" to "漢かん(\n",
+            "<ruby>漢<rt>かん</rt><rp>(</rp></ruby>" to "漢\n",
             "<a id='n'></a>正文" to "正文\n", "<pre>A  B</pre>" to "A  B\n", "A<br><br>B" to "A\nB\n",
         )) {
             val current = source(html)

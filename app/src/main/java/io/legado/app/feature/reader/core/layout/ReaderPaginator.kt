@@ -196,6 +196,11 @@ sealed interface ReaderMeasuredInlineItem {
         val baselineOffsetPx: Float? = null,
         /** Positive values move this glyph below the line baseline; negative values move it above. */
         val baselineShiftPx: Float = 0f,
+        val glyphOffsetX: Float = 0f,
+        val rubyGroupId: Int = 0,
+        val rubyText: String? = null,
+        val rubyFontSizePx: Float = 0f,
+        val rubyBaselineDeltaPx: Float = 0f,
     ) : ReaderMeasuredInlineItem
 
     data class Image(
@@ -424,6 +429,7 @@ internal class ReaderPaginationSession(
             is ReaderElement.Text -> element.copy(
                 bounds = element.bounds.offsetY(deltaY),
                 baselinePx = element.baselinePx + deltaY,
+                rubyBaselinePx = if (element.rubyText != null) element.rubyBaselinePx + deltaY else 0f,
             )
 
             is ReaderElement.Image -> element.copy(
@@ -584,6 +590,7 @@ internal class ReaderPaginationSession(
         // 约 6 次这样的调用，是 `line-placement` 里最大的一块纯开销。
         // 顺带在建 `clusters` 那一趟里判定，不额外再扫一遍段落。
         var hasBackgroundImages = false
+        var hasRubyGroups = false
         val clusters = ArrayList<String>(paragraph.items.size)
         /**
          * 每个字要在左右两侧让出的命中字距（段内恒为 0，只有命中段首字/末字带值，见
@@ -595,6 +602,7 @@ internal class ReaderPaginationSession(
             when (item) {
                 is ReaderMeasuredInlineItem.Text -> {
                     if (item.style.backgroundImage != null) hasBackgroundImages = true
+                    if (item.rubyGroupId != 0) hasRubyGroups = true
                     matchSpacingPx[index] =
                         item.style.matchSpacingBeforePx + item.style.matchSpacingAfterPx
                     clusters += item.value
@@ -610,6 +618,10 @@ internal class ReaderPaginationSession(
             (paragraph.items[index] as? ReaderMeasuredInlineItem.Text)?.style?.backgroundImage
         } else null
 
+        val rubyGroupIds = if (hasRubyGroups) IntArray(paragraph.items.size) { index ->
+            (paragraph.items[index] as? ReaderMeasuredInlineItem.Text)?.rubyGroupId ?: 0
+        } else null
+
         val breakerWidthsPx = FloatArray(paragraph.items.size) { index ->
             paragraph.items[index].widthPx + letterSpacing + matchSpacingPx[index]
         }
@@ -623,6 +635,7 @@ internal class ReaderPaginationSession(
             letterSpacingPx = letterSpacing,
             firstLineWidthPx = (config.contentWidthPx - indentWidth)
                 .coerceAtLeast(0f).toInt(),
+            rubyGroupIds = rubyGroupIds,
         )
         val originalEnds = breaker.lineClusterStarts.drop(1)
         val refineStartNs = if (metrics != null) System.nanoTime() else 0L
@@ -692,7 +705,7 @@ internal class ReaderPaginationSession(
                     val scale = item.style.fontSizePx / paragraph.baseTextSizePx.coerceAtLeast(1f)
                     if (scale > maxTextScale) maxTextScale = scale
                     if (markerColorArgb == null) markerColorArgb = item.style.colorArgb
-                    if (item.value == " ") wordSpaceCount++
+                    if (item.value == " " && item.rubyGroupId == 0) wordSpaceCount++
                     val topPad = item.style.linePadTopPx
                     if (topPad > linePadTopPx) linePadTopPx = topPad
                     val bottomPad = item.style.linePadBottomPx
@@ -749,10 +762,14 @@ internal class ReaderPaginationSession(
             fun isCapsule(item: ReaderMeasuredInlineItem) =
                 item is ReaderMeasuredInlineItem.RoleCast || item is ReaderMeasuredInlineItem.BgmScene
 
+            fun sameRubyGroup(a: Int, b: Int) = rubyGroupIds != null &&
+                rubyGroupIds[a] != 0 && rubyGroupIds[a] == rubyGroupIds[b]
+
             fun gapStretches(itemIndex: Int) = itemIndex >= indentItems &&
                     itemIndex < itemCount - 1 &&
                     !isCapsule(paragraph.items[from + itemIndex]) &&
-                    !isCapsule(paragraph.items[from + itemIndex + 1])
+                    !isCapsule(paragraph.items[from + itemIndex + 1]) &&
+                    !sameRubyGroup(from + itemIndex, from + itemIndex + 1)
 
             val stretchableGaps = (0 until itemCount - 1).count(::gapStretches)
             // The breaker may hang closing punctuation to preserve a forbidden break. Restore the
@@ -828,6 +845,7 @@ internal class ReaderPaginationSession(
             // Processed body text can retain its indentation as real leading glyphs.
             // The View reader started a non-extended underline after those glyphs.
             val underlineElementStart = elements.size + indentItems
+            val lineTextElementStart = elements.size
             var previousItemBackground: ReaderTextBackgroundImage? = null
             var previousMatchSpacingAfterPx = 0f
             lineItems.forEachIndexed { itemIndex, item ->
@@ -837,7 +855,7 @@ internal class ReaderPaginationSession(
                 val itemBackground = backgroundOf(from + itemIndex)
                 when (item) {
                     is ReaderMeasuredInlineItem.Text -> {
-                        val expandedWordSpace = if (item.value == " ") wordSpaceExtra else 0f
+                        val expandedWordSpace = if (item.value == " " && item.rubyGroupId == 0) wordSpaceExtra else 0f
                         elements += ReaderElement.Text(
                             bounds = ReaderRect(
                                 x, y, x + item.widthPx + expandedWordSpace, y + actualLineHeight,
@@ -872,6 +890,8 @@ internal class ReaderPaginationSession(
                             backgroundFrameBottomPx = itemBackground?.frameBottomPx(actualLineHeight) ?: 0f,
                             backgroundFrameLeftPx = itemBackground?.frameLeftPx(actualLineHeight) ?: 0f,
                             backgroundFrameRightPx = itemBackground?.frameRightPx(actualLineHeight) ?: 0f,
+                            glyphOffsetX = item.glyphOffsetX,
+                            rubyGroupId = item.rubyGroupId,
                         )
                     }
 
@@ -944,7 +964,7 @@ internal class ReaderPaginationSession(
                 )
                 x += item.widthPx + letterSpacing +
                         (matchStyle?.matchSpacingAfterPx ?: 0f) +
-                        if (item is ReaderMeasuredInlineItem.Text && item.value == " ") wordSpaceExtra else 0f
+                        if (item is ReaderMeasuredInlineItem.Text && item.value == " " && item.rubyGroupId == 0) wordSpaceExtra else 0f
                 if (gapStretches(itemIndex)) {
                     x += justifyGap
                     if (itemIndex < visibleItemCount - 1) x += compressionGap
@@ -957,6 +977,34 @@ internal class ReaderPaginationSession(
                 ) {
                     previousItemBackground = itemBackground
                     previousMatchSpacingAfterPx = matchStyle?.matchSpacingAfterPx ?: 0f
+                }
+            }
+            if (hasRubyGroups) {
+                var rubyStart = 0
+                while (rubyStart < itemCount) {
+                    val textItem = lineItems[rubyStart] as? ReaderMeasuredInlineItem.Text
+                    val groupId = textItem?.rubyGroupId ?: 0
+                    if (groupId == 0 || textItem?.rubyText == null) {
+                        rubyStart++
+                        continue
+                    }
+                    var rubyEnd = rubyStart
+                    while (rubyEnd + 1 < itemCount &&
+                        (lineItems[rubyEnd + 1] as? ReaderMeasuredInlineItem.Text)?.rubyGroupId == groupId
+                    ) {
+                        rubyEnd++
+                    }
+                    val firstElemIndex = lineTextElementStart + rubyStart
+                    val lastElemIndex = lineTextElementStart + rubyEnd
+                    val firstElem = elements[firstElemIndex] as ReaderElement.Text
+                    val lastElem = elements[lastElemIndex] as ReaderElement.Text
+                    elements[firstElemIndex] = firstElem.copy(
+                        rubyText = textItem.rubyText,
+                        rubyFontSizePx = textItem.rubyFontSizePx,
+                        rubyBaselinePx = firstElem.baselinePx + textItem.rubyBaselineDeltaPx,
+                        rubyCenterX = (firstElem.bounds.left + lastElem.bounds.right) / 2f,
+                    )
+                    rubyStart = rubyEnd + 1
                 }
             }
             addPageUnderline(underlineElementStart, y + actualLineHeight)

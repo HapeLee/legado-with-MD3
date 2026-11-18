@@ -143,6 +143,9 @@ internal fun ReaderTextDrawRun.matchesLayout(members: List<ReaderElement>, advan
  */
 private fun ReaderElement.Text.drawsInOneRun(): Boolean =
     value.length == 1 &&
+        glyphOffsetX == 0f &&
+        rubyText == null &&
+        rubyGroupId == 0 &&
         !value[0].isSurrogate() &&
         !Character.isISOControl(value[0]) &&
         when (Character.getDirectionality(value[0])) {
@@ -199,4 +202,20 @@ internal fun drawMergedTextRun(
         false,
         scratchPaint,
     )
+}
+
+internal fun drawRubyText(
+    canvas: Canvas,
+    element: ReaderElement.Text,
+    basePaint: Paint,
+    scratchPaint: Paint,
+) {
+    val ruby = element.rubyText ?: return
+    scratchPaint.set(basePaint)
+    scratchPaint.textSize = element.rubyFontSizePx
+    scratchPaint.letterSpacing = 0f
+    scratchPaint.isUnderlineText = false
+    scratchPaint.isStrikeThruText = false
+    val width = scratchPaint.measureText(ruby)
+    canvas.drawText(ruby, element.rubyCenterX - width / 2f, element.rubyBaselinePx, scratchPaint)
 }

@@ -258,6 +258,13 @@ sealed interface ReaderElement {
         val backgroundFrameRightPx: Float = 0f,
         /** 同一行内紧随同背景图元素之后（对照旧 View TextLine 的行内连续绘制）。 */
         val continuesBackgroundRun: Boolean = false,
+        val glyphOffsetX: Float = 0f,
+        val rubyText: String? = null,
+        val rubyFontSizePx: Float = 0f,
+        val rubyBaselinePx: Float = 0f,
+        val rubyCenterX: Float = 0f,
+        /** Non-zero for every glyph of a ruby base group; merged runs must keep the whole group separate. */
+        val rubyGroupId: Int = 0,
     ) : ReaderElement {
         /** HTML links keep the legacy reader's accent priority, including during read-aloud. */
         fun resolvedColorArgb(accentColorArgb: Int): Int =

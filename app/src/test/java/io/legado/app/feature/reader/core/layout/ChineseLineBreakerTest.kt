@@ -6,8 +6,12 @@ import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class ChineseLineBreakerTest {
-    private fun breakText(words: List<String>, widthPx: Int) = ChineseLineBreaker(
-        words, FloatArray(words.size) { 10f }, 0, widthPx, 10f, 0f,
+    private fun breakText(
+        words: List<String>,
+        widthPx: Int,
+        rubyGroupIds: IntArray? = null,
+    ) = ChineseLineBreaker(
+        words, FloatArray(words.size) { 10f }, 0, widthPx, 10f, 0f, rubyGroupIds = rubyGroupIds,
     )
 
     @Test fun normalBreak() {
@@ -329,5 +333,31 @@ class ChineseLineBreakerTest {
         )
         assertArrayEquals(intArrayOf(0, 8, 13), result.lineClusterStarts)
         assertArrayEquals(floatArrayOf(98f, 50f), result.lineWidthsPx, 0f)
+    }
+
+    @Test
+    fun rubyGroupBaseStaysOnOneLine() {
+        val result = breakText(
+            listOf("a", "東", "京", "b"),
+            widthPx = 25,
+            rubyGroupIds = intArrayOf(0, 1, 1, 0),
+        )
+
+        assertArrayEquals(intArrayOf(0, 1, 3, 4), result.lineStarts)
+        assertArrayEquals(floatArrayOf(10f, 20f, 10f), result.lineWidthsPx, 0f)
+    }
+
+    @Test
+    fun rubyGroupCarriesOpeningQuoteToNextLine() {
+        // 溢出落在组内时回退到组首，并把组首前紧贴的开引号一起带到下一行行首，
+        // 而不是把「单独留在上一行行尾（避头尾，同 #2449 拉丁整词口径）。
+        val result = breakText(
+            listOf("a", "「", "東", "京"),
+            widthPx = 35,
+            rubyGroupIds = intArrayOf(0, 0, 1, 1),
+        )
+
+        assertArrayEquals(intArrayOf(0, 1, 4), result.lineClusterStarts)
+        assertArrayEquals(floatArrayOf(10f, 30f), result.lineWidthsPx, 0f)
     }
 }
