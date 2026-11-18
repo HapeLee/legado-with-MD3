@@ -152,7 +152,6 @@ data class ReaderLocalPresentation(
                         .distinct().sorted()
                     cuts.zipWithNext { a, b ->
                         val appearance = relevant.firstOrNull { a >= it.start && b <= it.endExclusive }
-                            ?: relevant.firstOrNull { it.start < b && it.endExclusive > a }
                         // 只接受完整覆盖的 ruby。基字跨图片/段落等无法合并的边界时宁可丢弃注音，
                         // 也不把同一段注音复制到多个片段造成重复绘制。
                         val ruby = relevantRubies.firstOrNull { a == it.start && b == it.endExclusive }?.text

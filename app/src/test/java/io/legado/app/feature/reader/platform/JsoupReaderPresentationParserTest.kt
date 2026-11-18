@@ -165,6 +165,19 @@ class JsoupReaderPresentationParserTest {
         assertEquals("#n", texts(multi).first { it.value == "力" }.style.link)
     }
 
+    @Test fun rubyBaseRelativeFontSizeAppliesOnce() {
+        val current = source("<p><ruby><rb style='font-size:120%'>漢</rb><rt>かん</rt></ruby></p>")
+        assertEquals(1.2f, texts(current).single { it.value == "漢" }.style.fontSizeScale, 0.001f)
+    }
+
+    @Test fun partialInlineStyleInsideRubyDoesNotLeakToWholeBase() {
+        val current = source("<p><ruby><rb>東<em>京</em></rb><rt>とうきょう</rt></ruby></p>")
+        val base = texts(current).filter { it.value.isNotEmpty() }
+        assertEquals("東京", base.joinToString("") { it.value })
+        assertTrue(base.all { it.style.italic != true })
+        assertEquals("とうきょう", base.first { it.style.ruby != null }.style.ruby)
+    }
+
     @Test fun trimsLeadingParagraphIndentationAndPreservesNestedHeadingScale() {
         val current = source("<h2>\n  <center>标题</center>\n</h2>")
         assertEquals("标题\n", current.semanticContent)

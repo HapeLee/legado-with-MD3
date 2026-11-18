@@ -138,7 +138,7 @@ internal object JsoupReaderPresentationParser {
                                     "rp" -> continue
                                     "rb" -> {
                                         flushRubyBase()
-                                        walk(child, descendInline(child, "rb", ctx), block)
+                                        walk(child, ctx, block)
                                         flushRubyBase()
                                     }
                                     "rt" -> emitRuby(child)
