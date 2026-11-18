@@ -324,8 +324,7 @@ object BookHelp {
         // 保存阅读缓存文本(.nb)
         getChapterContentFile(book, bookChapter).apply { parentFile?.mkdirs() }.writeText(content)
         if (notifyContentChange) ContentProcessor.invalidateSemanticContent(book.bookUrl, bookChapter.index)
-        if (readGateway.currentSettings.tocCountWords) {
-            // 本地 EPUB/MOBI 也在此统计章节字数（原先仅在线小说）。
+        if ((book.isOnLineTxt || book.isEpub || book.isMobi) && readGateway.currentSettings.tocCountWords) {
             // 正文里携带的 <img src="data:base64">、内联 SVG 等富文本源码会把章节字数虚抬
             // 几倍（3 页正文显示 3000+ 字）。这里剔除标签/Base64 后按可读纯文本计数，
             // 取代原先的 StringUtils.wordCountFormat(content.length)。
