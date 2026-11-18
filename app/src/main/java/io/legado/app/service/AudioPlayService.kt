@@ -37,6 +37,7 @@ import io.legado.app.constant.EventBus
 import io.legado.app.constant.IntentAction
 import io.legado.app.constant.NotificationId
 import io.legado.app.constant.Status
+import io.legado.app.data.entities.BookChapter
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.gateway.PlaybackCapsuleGateway
@@ -63,6 +64,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
 import splitties.systemservices.audioManager
@@ -96,13 +98,10 @@ class AudioPlayService : BaseService(),
         var url: String = ""
             private set
 
-        private const val MEDIA_SESSION_ACTIONS = (PlaybackStateCompat.ACTION_PLAY
-                or PlaybackStateCompat.ACTION_PAUSE
-                or PlaybackStateCompat.ACTION_PLAY_PAUSE
-                or PlaybackStateCompat.ACTION_STOP)
-
-        private const val APP_ACTION_STOP = "Stop"
-        private const val APP_ACTION_TIMER = "Timer"
+        private const val ACTION_OPEN_AUDIO_PLAYER = "io.legado.app.action.OPEN_AUDIO_PLAYER"
+        private const val ACTION_STOP_FROM_NOTIFICATION = "io.legado.app.action.STOP_AUDIO_PLAYER"
+        private const val MEDIA_ACTION_STOP = "Stop"
+        private const val MEDIA_ACTION_TIMER = "Timer"
     }
 
     private val otherSettingsGateway get() = GlobalContext.get().get<OtherSettingsGateway>()
@@ -132,8 +131,11 @@ class AudioPlayService : BaseService(),
     private var position = AudioPlay.book?.durChapterPos ?: 0
     private var prepareJob: Coroutine<*>? = null
     private var preparingMedia = false
+    private var playbackChapter: BookChapter? = null
+    private var reportedDuration = -1L
     private var dsJob: Job? = null
     private var upPlayProgressJob: Job? = null
+    private var notificationUpdateJob: Job? = null
     private var playSpeed: Float = 1f
     private var loudnessEnhancer: LoudnessEnhancer? = null
     private var cover: Bitmap =
@@ -142,10 +144,10 @@ class AudioPlayService : BaseService(),
     private var capsuleOverlayWindow: ReadAloudOverlayWindow? = null
 
     override fun onCreate() {
+        pause = true
         // 基类会立即发出前台服务通知，需要先准备通知使用的会话令牌。
         initMediaSession()
         super.onCreate()
-        pause = true
         isRun = true
         GlobalContext.get().get<PlaybackCapsuleGateway>()
             .setSessionAvailable(PlaybackCapsuleSource.AudioBook, true)
@@ -155,6 +157,7 @@ class AudioPlayService : BaseService(),
         initBroadcastReceiver()
         upMediaMetadata()
         upMediaSessionPlaybackState()
+        // 「使用媒体通道」控制通知的展示形式。媒体键始终由当前有声书会话处理。
         mediaSessionCompat.isActive = true
         lifecycleScope.launch {
             aloudSettingsGateway.settings
@@ -182,12 +185,16 @@ class AudioPlayService : BaseService(),
             when (action) {
                 IntentAction.play -> play(AudioPlay.durChapterPos)
                 IntentAction.playNew -> play(0)
-                IntentAction.stopPlay -> stopPlayback()
+                IntentAction.stopPlay -> {
+                    resetPlayback()
+                    upMediaSessionPlaybackState()
+                    upAudioPlayNotification()
+                }
 
                 IntentAction.pause -> pause()
                 IntentAction.resume -> resume()
-                IntentAction.prev -> AudioPlay.prev()
-                IntentAction.next -> AudioPlay.next()
+                IntentAction.prev -> skipToPreviousChapter()
+                IntentAction.next -> skipToNextChapter()
                 IntentAction.adjustSpeed -> upSpeed(intent.getFloatExtra("adjust", 1f))
                 IntentAction.adjustGain -> applyGain(intent.getIntExtra("gain", 0))
                 IntentAction.addTimer -> addTimer()
@@ -197,7 +204,7 @@ class AudioPlayService : BaseService(),
                 }
 
                 IntentAction.stop -> stopSelf()
-                APP_ACTION_STOP -> AudioPlay.stop()
+                ACTION_STOP_FROM_NOTIFICATION -> AudioPlay.stop()
             }
         }
         return super.onStartCommand(intent, flags, startId)
@@ -235,12 +242,15 @@ class AudioPlayService : BaseService(),
      * 播放音频
      */
     private fun play(startPosition: Int) {
-        stopPlayback()
+        resetPlayback()
         position = startPosition
         url = AudioPlay.durPlayUrl
+        playbackChapter = AudioPlay.durChapter
         upMediaMetadata()
         if (!requestFocus()) {
             AudioPlay.upLoading(false)
+            upMediaSessionPlaybackState()
+            upAudioPlayNotification()
             return
         }
         pause = false
@@ -253,7 +263,7 @@ class AudioPlayService : BaseService(),
                 url,
                 source = AudioPlay.bookSource,
                 ruleData = AudioPlay.book,
-                chapter = AudioPlay.durChapter,
+                chapter = playbackChapter,
                 coroutineContext = coroutineContext
             )
             exoPlayer.setMediaItem(analyzeUrl.getMediaItem())
@@ -271,9 +281,11 @@ class AudioPlayService : BaseService(),
         }
     }
 
-    private fun stopPlayback() {
+    private fun resetPlayback() {
         prepareJob?.cancel()
         preparingMedia = false
+        playbackChapter = null
+        reportedDuration = -1L
         pause = true
         needResumeOnAudioFocusGain = false
         releasePlaybackLocks()
@@ -281,10 +293,10 @@ class AudioPlayService : BaseService(),
         exoPlayer.pause()
         exoPlayer.stop()
         exoPlayer.clearMediaItems()
-        AudioPlay.status = Status.STOP
-        postEvent(EventBus.AUDIO_STATE, Status.STOP)
-        upMediaSessionPlaybackState()
-        upAudioPlayNotification()
+        if (AudioPlay.status != Status.STOP) {
+            AudioPlay.status = Status.STOP
+            postEvent(EventBus.AUDIO_STATE, Status.STOP)
+        }
     }
 
     /**
@@ -300,7 +312,7 @@ class AudioPlayService : BaseService(),
             }
             upPlayProgressJob?.cancel()
             exoPlayer.pause()
-            if (exoPlayer.currentMediaItem != null) publishPlayPosition()
+            if (exoPlayer.currentMediaItem != null && isCurrentPlaybackChapter()) publishPlayPosition()
             upMediaSessionPlaybackState()
             AudioPlay.status = Status.PAUSE
             postEvent(EventBus.AUDIO_STATE, Status.PAUSE)
@@ -355,14 +367,20 @@ class AudioPlayService : BaseService(),
      * 调节进度
      */
     private fun adjustProgress(position: Long) {
+        if (playbackChapter != null && !isCurrentPlaybackChapter()) return
         val maxPosition = exoPlayer.duration.takeIf { it >= 0 } ?: Long.MAX_VALUE
         this.position = position.coerceIn(0, minOf(maxPosition, Int.MAX_VALUE.toLong())).toInt()
+        AudioPlay.seekPositionChanged(this.position)
         if (exoPlayer.currentMediaItem != null) {
             exoPlayer.seekTo(this.position.toLong())
-            publishPlayPosition()
         }
+        postEvent(EventBus.AUDIO_PROGRESS, this.position)
         upMediaSessionPlaybackState()
     }
+
+    private fun isCurrentPlaybackChapter(): Boolean = playbackChapter?.let {
+        it.bookUrl == AudioPlay.book?.bookUrl && it.index == AudioPlay.durChapterIndex
+    } == true
 
     /**
      * 调节速度
@@ -383,15 +401,8 @@ class AudioPlayService : BaseService(),
      */
     override fun onPlaybackStateChanged(playbackState: Int) {
         super.onPlaybackStateChanged(playbackState)
+        if (!isCurrentPlaybackChapter()) return
         when (playbackState) {
-            Player.STATE_IDLE -> {
-                // 空闲
-            }
-
-            Player.STATE_BUFFERING -> {
-                // 缓冲中
-            }
-
             Player.STATE_READY -> {
                 // 准备好
                 AudioPlay.upLoading(false)
@@ -403,8 +414,12 @@ class AudioPlayService : BaseService(),
                     AudioPlay.status = Status.PAUSE
                     postEvent(EventBus.AUDIO_STATE, Status.PAUSE)
                 }
-                postEvent(EventBus.AUDIO_SIZE, exoPlayer.duration.toInt())
-                if (exoPlayer.duration >= 0) AudioPlay.saveDurChapter(exoPlayer.duration)
+                val duration = exoPlayer.duration
+                postEvent(EventBus.AUDIO_SIZE, duration.toInt())
+                if (duration >= 0 && duration != reportedDuration) {
+                    reportedDuration = duration
+                    AudioPlay.saveDurChapter(duration)
+                }
             }
 
             Player.STATE_ENDED -> {
@@ -425,8 +440,7 @@ class AudioPlayService : BaseService(),
     }
 
     override fun onEvents(player: Player, events: Player.Events) {
-        val timelineChanged = events.contains(Player.EVENT_TIMELINE_CHANGED)
-        if (timelineChanged || events.contains(Player.EVENT_PLAYBACK_STATE_CHANGED)) {
+        if (events.containsAny(Player.EVENT_TIMELINE_CHANGED, Player.EVENT_MEDIA_ITEM_TRANSITION)) {
             upMediaMetadata()
         }
         upMediaSessionPlaybackState()
@@ -513,7 +527,7 @@ class AudioPlayService : BaseService(),
         upPlayProgressJob?.cancel()
         val skipEnds = AudioPlay.book?.getCloseCredits() ?: 0
         upPlayProgressJob = lifecycleScope.launch {
-            while (isActive) {
+            while (isActive && isCurrentPlaybackChapter()) {
                 publishPlayPosition()
                 postEvent(EventBus.AUDIO_BUFFER_PROGRESS, exoPlayer.bufferedPosition.toInt())
                 postEvent(EventBus.AUDIO_SIZE, exoPlayer.duration.toInt())
@@ -565,38 +579,31 @@ class AudioPlayService : BaseService(),
      * 更新媒体状态
      */
     private fun upMediaSessionPlaybackState() {
-        val state = when {
-            exoPlayer.playerError != null -> PlaybackStateCompat.STATE_ERROR
-            exoPlayer.isPlaying -> PlaybackStateCompat.STATE_PLAYING
-            preparingMedia || exoPlayer.playbackState == Player.STATE_BUFFERING -> {
-                if (pause) PlaybackStateCompat.STATE_PAUSED else PlaybackStateCompat.STATE_BUFFERING
-            }
-            exoPlayer.playbackState == Player.STATE_READY -> PlaybackStateCompat.STATE_PAUSED
-            else -> PlaybackStateCompat.STATE_STOPPED
-        }
-        var actions = MEDIA_SESSION_ACTIONS
-        if (AudioPlay.durChapterIndex > 0) {
-            actions = actions or PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
-        }
-        if (AudioPlay.durChapterIndex < AudioPlay.simulatedChapterSize - 1) {
-            actions = actions or PlaybackStateCompat.ACTION_SKIP_TO_NEXT
-        }
-        if (exoPlayer.isCurrentMediaItemSeekable) {
-            actions = actions or PlaybackStateCompat.ACTION_SEEK_TO
-        }
+        val playback = resolveAudioPlayMediaState(
+            playerState = exoPlayer.playbackState,
+            isPlaying = exoPlayer.isPlaying,
+            hasError = exoPlayer.playerError != null,
+            preparing = preparingMedia,
+            paused = pause,
+            playbackSpeed = exoPlayer.playbackParameters.speed,
+        )
+        val actions = audioPlayMediaActions(
+            AudioPlay.durChapterIndex,
+            AudioPlay.simulatedChapterSize,
+            exoPlayer.isCurrentMediaItemSeekable && isCurrentPlaybackChapter(),
+        )
         val mediaPosition = if (exoPlayer.currentMediaItem != null) {
             exoPlayer.currentPosition
         } else {
             PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN
         }
-        val speed = if (exoPlayer.isPlaying) exoPlayer.playbackParameters.speed else 0f
         mediaSessionCompat.setPlaybackState(
             PlaybackStateCompat.Builder()
                 .setActions(actions)
-                .setState(state, mediaPosition, speed)
+                .setState(playback.state, mediaPosition, playback.speed)
                 .setBufferedPosition(exoPlayer.bufferedPosition)
-                .addCustomAction(APP_ACTION_STOP, getString(R.string.stop), R.drawable.ic_stop_black_24dp)
-                .addCustomAction(APP_ACTION_TIMER, getString(R.string.set_timer), R.drawable.ic_time_add_24dp)
+                .addCustomAction(MEDIA_ACTION_STOP, getString(R.string.stop), R.drawable.ic_stop_black_24dp)
+                .addCustomAction(MEDIA_ACTION_TIMER, getString(R.string.set_timer), R.drawable.ic_time_add_24dp)
                 .build()
         )
     }
@@ -638,21 +645,29 @@ class AudioPlayService : BaseService(),
                 if (exoPlayer.isCurrentMediaItemSeekable) adjustProgress(pos)
             }
 
-            override fun onSkipToPrevious() {
-                if (AudioPlay.durChapterIndex > 0) AudioPlay.prev()
-            }
+            override fun onSkipToPrevious() = skipToPreviousChapter()
 
-            override fun onSkipToNext() {
-                if (AudioPlay.durChapterIndex < AudioPlay.simulatedChapterSize - 1) AudioPlay.next()
-            }
+            override fun onSkipToNext() = skipToNextChapter()
 
             override fun onCustomAction(action: String?, extras: Bundle?) {
                 when (action) {
-                    APP_ACTION_STOP -> onStop()
-                    APP_ACTION_TIMER -> addTimer()
+                    MEDIA_ACTION_STOP -> onStop()
+                    MEDIA_ACTION_TIMER -> addTimer()
                 }
             }
         })
+    }
+
+    private fun skipToPreviousChapter() {
+        if (canSkipAudioChapter(AudioPlay.durChapterIndex, AudioPlay.simulatedChapterSize, -1)) {
+            AudioPlay.prev()
+        }
+    }
+
+    private fun skipToNextChapter() {
+        if (canSkipAudioChapter(AudioPlay.durChapterIndex, AudioPlay.simulatedChapterSize, 1)) {
+            AudioPlay.next()
+        }
     }
 
     /**
@@ -755,7 +770,7 @@ class AudioPlayService : BaseService(),
         builder.addAction(
             R.drawable.ic_stop_black_24dp,
             getString(R.string.stop),
-            servicePendingIntent<AudioPlayService>(APP_ACTION_STOP)
+            servicePendingIntent<AudioPlayService>(ACTION_STOP_FROM_NOTIFICATION)
         )
         builder.addAction(
             R.drawable.ic_time_add_24dp,
@@ -769,7 +784,7 @@ class AudioPlayService : BaseService(),
 
     private fun audioPlayerPendingIntent() = activityPendingIntent(
         MainActivity.createAudioPlayIntent(this, inBookshelf = AudioPlay.inBookshelf),
-        "io.legado.app.action.OPEN_AUDIO_PLAYER",
+        ACTION_OPEN_AUDIO_PLAYER,
     )
 
     private fun choiceMediaStyle(): MediaStyle {
@@ -781,10 +796,16 @@ class AudioPlayService : BaseService(),
     }
 
     private fun upAudioPlayNotification() {
-        try {
-            notificationManager.notify(NotificationId.AudioPlayService, createNotification().build())
-        } catch (e: Exception) {
-            AppLog.put("创建音频播放通知出错,${e.localizedMessage}", e, true)
+        if (notificationUpdateJob?.isActive == true) return
+        notificationUpdateJob = lifecycleScope.launch {
+            // 切章时播放器可能在同一轮主线程内触发多个回调，合并通知刷新。
+            yield()
+            if (!isRun) return@launch
+            try {
+                notificationManager.notify(NotificationId.AudioPlayService, createNotification().build())
+            } catch (e: Exception) {
+                AppLog.put("创建音频播放通知出错,${e.localizedMessage}", e, true)
+            }
         }
     }
 

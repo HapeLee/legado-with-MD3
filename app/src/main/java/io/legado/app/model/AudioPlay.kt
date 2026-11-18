@@ -26,9 +26,17 @@ import io.legado.app.service.AudioPlayService
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.startService
 import io.legado.app.utils.toastOnUi
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.withContext
 import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
 
@@ -36,6 +44,8 @@ import splitties.init.appCtx
 @Suppress("unused")
 object AudioPlay : CoroutineScope by MainScope() {
 
+    private const val SEEK_SAVE_DELAY_MS = 300L
+    private val readSavePermit = Semaphore(1)
     private val otherSettingsGateway get() = GlobalContext.get().get<OtherSettingsGateway>()
     private val readSettingsGateway get() = GlobalContext.get().get<ReadSettingsGateway>()
 
@@ -73,7 +83,11 @@ object AudioPlay : CoroutineScope by MainScope() {
     var durAudioSize = 0
     var inBookshelf = false
     var bookSource: BookSource? = null
-    val loadingChapters = arrayListOf<Int>()
+
+    private data class ChapterLoad(val bookUrl: String, val index: Int, val job: Job)
+
+    // 加载由主线程管理，换章或停止只取消当前章节的请求。
+    private var chapterLoad: ChapterLoad? = null
 
     fun changePlayMode() {
         playMode = playMode.next()
@@ -124,18 +138,15 @@ object AudioPlay : CoroutineScope by MainScope() {
         postEvent(EventBus.AUDIO_BUFFER_PROGRESS, 0)
     }
 
-    private fun addLoading(index: Int): Boolean {
-        synchronized(this) {
-            if (loadingChapters.contains(index)) return false
-            loadingChapters.add(index)
-            return true
+    private fun cancelChapterLoad() {
+        val load = chapterLoad
+        chapterLoad = null
+        load?.job?.cancel()
+        if (load != null) {
+            durLyric = null
+            callback?.upLyric(null)
         }
-    }
-
-    private fun removeLoading(index: Int) {
-        synchronized(this) {
-            loadingChapters.remove(index)
-        }
+        upLoading(false)
     }
 
     fun loadOrUpPlayUrl() {
@@ -150,66 +161,63 @@ object AudioPlay : CoroutineScope by MainScope() {
      * 加载播放URL
      */
     private fun loadPlayUrl() {
+        val currentBook = book
+        val source = bookSource
+        if (currentBook == null || source == null) {
+            appCtx.toastOnUi("book or source is null")
+            return
+        }
+        val bookUrl = currentBook.bookUrl
         val index = durChapterIndex
-        if (addLoading(index)) {
-            val book = book
-            val bookSource = bookSource
-            if (book != null && bookSource != null) {
-                upDurChapter()
-                val chapter = durChapter
-                if (chapter == null) {
-                    removeLoading(index)
-                    return
-                }
+        if (chapterLoad?.let { it.bookUrl == bookUrl && it.index == index } == true) return
+        if (chapterLoad != null) cancelChapterLoad()
+
+        val job = launch(start = CoroutineStart.LAZY) {
+            val requestJob = coroutineContext.job
+            var playbackRequested = false
+            try {
+                val chapter = withContext(IO) { appDb.bookChapterDao.getChapter(bookUrl, index) }
+                if (!isCurrentChapterLoad(bookUrl, index, requestJob)) return@launch
+                upDurChapter(chapter)
+                if (chapter == null) return@launch
                 if (chapter.isVolume) {
                     skipTo(index + 1)
-                    removeLoading(index)
-                    return
+                    return@launch
                 }
-                upLoading(true)
-                WebBook.getContent(this, bookSource, book, chapter)
-                    .onSuccess { content ->
-                        if (content.isEmpty()) {
-                            appCtx.toastOnUi("未获取到资源链接")
-                            // 加载失败时清空歌词
-                            durLyric = null
-                            callback?.upLyric(null)
-                        } else {
-                            contentLoadFinish(chapter, content)
-                        }
-                    }.onError { error ->
-                        AppLog.put("获取资源链接出错\n$error", error, true)
+                val content = withContext(IO) { WebBook.getContentAwait(source, currentBook, chapter) }
+                if (!isCurrentChapterLoad(bookUrl, index, requestJob)) return@launch
+                if (content.isEmpty()) {
+                    appCtx.toastOnUi("未获取到资源链接")
+                    return@launch
+                }
+                durPlayUrl = content
+                durLyric = chapter.getVariable("lyric").takeIf { it.isNotBlank() }
+                upPlayUrl()
+                playbackRequested = true
+                // 重新加载歌词，确保循环播放时歌词进度重置
+                callback?.upLyric(durLyric)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                AppLog.put("获取资源链接出错\n$error", error, true)
+            } finally {
+                if (chapterLoad?.job === requestJob) {
+                    chapterLoad = null
+                    if (!playbackRequested) {
                         upLoading(false)
-                        // 加载失败时清空歌词
                         durLyric = null
                         callback?.upLyric(null)
-                    }.onCancel {
-                        removeLoading(index)
-                        // 取消加载时清空歌词
-                        durLyric = null
-                        callback?.upLyric(null)
-                    }.onFinally {
-                        removeLoading(index)
                     }
-            } else {
-                removeLoading(index)
-                appCtx.toastOnUi("book or source is null")
+                }
             }
         }
+        chapterLoad = ChapterLoad(bookUrl, index, job)
+        upLoading(true)
+        job.start()
     }
 
-    /**
-     * 加载完成
-     */
-    private fun contentLoadFinish(chapter: BookChapter, content: String) {
-        if (chapter.index == book?.durChapterIndex) {
-            durPlayUrl = content
-            durLyric = chapter.getVariable("lyric").takeIf { it.isNotBlank() }
-            upPlayUrl()
-            // 重新加载歌词，确保循环播放时歌词进度重置
-            callback?.upLyric(durLyric)
-        }
-    }
+    private fun isCurrentChapterLoad(bookUrl: String, index: Int, job: Job) =
+        chapterLoad?.job === job && book?.bookUrl == bookUrl && durChapterIndex == index
 
     private fun upPlayUrl() {
         if (isPlayToEnd()) {
@@ -242,9 +250,13 @@ object AudioPlay : CoroutineScope by MainScope() {
      */
     fun upDurChapter() {
         val book = book ?: return
-        durChapter = appDb.bookChapterDao.getChapter(book.bookUrl, durChapterIndex)
-        durAudioSize = durChapter?.end?.toInt() ?: 0
-        val title = durChapter?.title ?: appCtx.getString(R.string.data_loading)
+        upDurChapter(appDb.bookChapterDao.getChapter(book.bookUrl, durChapterIndex))
+    }
+
+    private fun upDurChapter(chapter: BookChapter?) {
+        durChapter = chapter
+        durAudioSize = chapter?.end?.toInt() ?: 0
+        val title = chapter?.title ?: appCtx.getString(R.string.data_loading)
         postEvent(EventBus.AUDIO_SUB_TITLE, title)
         postEvent(EventBus.AUDIO_SIZE, durAudioSize)
         postEvent(EventBus.AUDIO_PROGRESS, durChapterPos)
@@ -267,8 +279,7 @@ object AudioPlay : CoroutineScope by MainScope() {
     }
 
     fun stop() {
-        coroutineContext.cancelChildren()
-        upLoading(false)
+        cancelChapterLoad()
         if (AudioPlayService.isRun) {
             context.startService<AudioPlayService> {
                 action = IntentAction.stop
@@ -300,43 +311,33 @@ object AudioPlay : CoroutineScope by MainScope() {
     }
 
     fun adjustProgress(position: Int) {
-        durChapterPos = position
-        saveRead()
         if (AudioPlayService.isRun) {
             context.startService<AudioPlayService> {
                 action = IntentAction.adjustProgress
                 putExtra("position", position)
             }
+        } else {
+            seekPositionChanged(position)
+            postEvent(EventBus.AUDIO_PROGRESS, durChapterPos)
         }
     }
 
     fun skipTo(index: Int) {
-        Coroutine.async {
-            stopPlay()
-            if (index in 0..<simulatedChapterSize) {
-                durChapterIndex = index
-                durChapterPos = 0
-                durPlayUrl = ""
-                saveRead()
-                loadPlayUrl()
-            }
-        }
+        if (index !in 0 until simulatedChapterSize) return
+        stopPlay()
+        durChapterIndex = index
+        durChapterPos = 0
+        durPlayUrl = ""
+        saveRead()
+        loadPlayUrl()
     }
 
     fun prev() {
-        Coroutine.async {
-            stopPlay()
-            if (durChapterIndex > 0) {
-                durChapterIndex -= 1
-                durChapterPos = 0
-                durPlayUrl = ""
-                saveRead()
-                loadPlayUrl()
-            }
-        }
+        skipTo(durChapterIndex - 1)
     }
 
     fun next() {
+        if (simulatedChapterSize <= 0) return
         stopPlay()
         when (playMode) {
             PlayMode.LIST_END_STOP -> {
@@ -394,6 +395,7 @@ object AudioPlay : CoroutineScope by MainScope() {
     }
 
     fun stopPlay() {
+        if (chapterLoad != null) cancelChapterLoad()
         if (AudioPlayService.isRun) {
             context.startService<AudioPlayService> {
                 action = IntentAction.stopPlay
@@ -403,12 +405,16 @@ object AudioPlay : CoroutineScope by MainScope() {
 
     fun saveRead() {
         val book = book ?: return
-        Coroutine.async {
+        val chapterIndex = durChapterIndex
+        val chapterPosition = durChapterPos
+        val source = bookSource
+        // 记录调用时的章节与位置，按提交顺序保存，避免换章后读到新位置。
+        Coroutine.async(semaphore = readSavePermit) {
             book.lastCheckCount = 0
             book.durChapterTime = System.currentTimeMillis()
-            val chapterChanged = book.durChapterIndex != durChapterIndex
-            book.durChapterIndex = durChapterIndex
-            book.durChapterPos = durChapterPos
+            val chapterChanged = book.durChapterIndex != chapterIndex
+            book.durChapterIndex = chapterIndex
+            book.durChapterPos = chapterPosition
             if (chapterChanged) {
                 appDb.bookChapterDao.getChapter(book.bookUrl, book.durChapterIndex)?.let {
                     book.durChapterTitle = it.getDisplayTitle(
@@ -416,7 +422,7 @@ object AudioPlay : CoroutineScope by MainScope() {
                         book.getUseReplaceRule(otherSettingsGateway.currentSettings.replaceEnableDefault),
                         chineseConverterType = readSettingsGateway.currentSettings.chineseConverterType,
                     )
-                    SourceCallBack.callBackBook(SourceCallBack.SAVE_READ, bookSource, book, it)
+                    SourceCallBack.callBackBook(SourceCallBack.SAVE_READ, source, book, it)
                 }
             }
             book.update()
@@ -435,9 +441,23 @@ object AudioPlay : CoroutineScope by MainScope() {
         }
     }
 
+    private var seekSaveJob: Job? = null
+
+    internal fun seekPositionChanged(position: Int) {
+        durChapterPos = position.coerceAtLeast(0)
+        seekSaveJob?.cancel()
+        val bookUrl = book?.bookUrl ?: return
+        val chapterIndex = durChapterIndex
+        // 拖动中的事件只更新内存；停播后也可以保存最后一次定位。
+        seekSaveJob = launch {
+            delay(SEEK_SAVE_DELAY_MS)
+            if (book?.bookUrl == bookUrl && durChapterIndex == chapterIndex) saveRead()
+        }
+    }
+
     fun playPositionChanged(position: Int) {
         durChapterPos = position
-        saveRead()
+        if (seekSaveJob?.isActive != true) saveRead()
     }
 
     fun upLoading(loading: Boolean) {
@@ -460,8 +480,8 @@ object AudioPlay : CoroutineScope by MainScope() {
         if (activityContext === context) {
             activityContext = null
             callback = null
+            if (chapterLoad != null) cancelChapterLoad()
         }
-        coroutineContext.cancelChildren()
     }
 
     fun registerService(context: Context) {

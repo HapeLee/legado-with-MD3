@@ -100,7 +100,7 @@ class AudioPlayViewModel(
         }
     }
 
-    /** 耳机/媒体键事件（由 MediaButtonReceiver 在有声书路由激活时投递） */
+    /** 播放服务未启动时，由 MediaButtonReceiver 为已打开的有声书页投递播放键。 */
     private fun collectMediaButton() {
         viewModelScope.launch {
             eventFlow<Boolean>(EventBus.MEDIA_BUTTON).collect { play ->
