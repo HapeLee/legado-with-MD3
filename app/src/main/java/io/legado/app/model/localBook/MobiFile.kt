@@ -31,11 +31,11 @@ class MobiFile(var book: Book) {
             // Keep the old whole-document projection, including its paragraph boundaries.
             // Optional CSS interpretation must not change the meaning of old stored ordinals.
             soup.select("[style*=display:none]").remove()
-            val channel = LocalBookSemanticHtml.plainText(soup.outerHtml(), decodeEntities = false)
-            return channel
-                .takeIf { it.isNotBlank() }
-                ?: ""
+            return formatChapterHtml(soup.outerHtml())
         }
+
+        private fun formatChapterHtml(html: String): String =
+            LocalBookSemanticHtml.plainText(html, decodeEntities = false).takeIf { it.isNotBlank() }.orEmpty()
 
         @Synchronized
         private fun getMFile(book: Book): MobiFile {
@@ -54,12 +54,18 @@ class MobiFile(var book: Book) {
 
         @Synchronized
         override fun getContent(book: Book, chapter: BookChapter): String? {
-            return getMFile(book).getContent(chapter)
+            return getMFile(book).getChapterHtml(chapter)?.let(::formatChapterHtml)
         }
 
         @Synchronized
+        internal fun upgradeCachedRubyText(book: Book, chapter: BookChapter, cached: String): String? =
+            getMFile(book).getChapterHtml(chapter)?.let {
+                LocalBookSemanticHtml.upgradeCachedRubyText(it, cached, decodeEntities = false)
+            }
+
+        @Synchronized
         fun getPresentation(book: Book, chapter: BookChapter): io.legado.app.feature.reader.core.source.ReaderLocalPresentation? =
-            getMFile(book).getContent(chapter, presentation = true)?.let {
+            getMFile(book).getChapterHtml(chapter, presentation = true)?.let {
                 io.legado.app.feature.reader.platform.ReaderLocalPresentationResolver.resolve(it, decodeEntities = false)
             }
 
@@ -200,7 +206,7 @@ class MobiFile(var book: Book) {
         return chapterList
     }
 
-    private fun getContent(chapter: BookChapter, presentation: Boolean = false): String? {
+    private fun getChapterHtml(chapter: BookChapter, presentation: Boolean = false): String? {
         return when (val book = mobiBook) {
             is KF8Book -> getContentKF8(book, chapter, presentation)
             is KF6Book -> getContentKF6(book, chapter, presentation)
@@ -244,7 +250,7 @@ class MobiFile(var book: Book) {
             it.removeAttr("filepos")
         }
 
-        return if (presentation) presentationHtml(soup) else format(soup)
+        return if (presentation) presentationHtml(soup) else soup.outerHtml()
     }
 
     private fun getContentKF8(kf8Book: KF8Book, chapter: BookChapter, presentation: Boolean): String? {
@@ -283,7 +289,7 @@ class MobiFile(var book: Book) {
             it.attr("src", "recindex:$recindex")
             LocalBookSemanticHtml.sanitizeImage(it, preserveAppearance = presentation)
         }
-        return if (!presentation) format(soup) else presentationHtml(soup) { href ->
+        return if (!presentation) soup.outerHtml() else presentationHtml(soup) { href ->
             if (href.startsWith("kindle:flow:")) kf8Book.getFlowText(href) else null
         }
     }

@@ -84,6 +84,7 @@ object BookHelp {
     private val cacheGateway by lazy { GlobalContext.get().get<DownloadCacheSettingsGateway>() }
 
     private const val CACHED_CONTENT_PREFIX_LENGTH = 1_024
+    private val localRubyCacheLock = Any()
     private val downloadDir: File = appCtx.externalFiles
     private const val cacheFolderName = "book_cache"
     private const val cacheImageFolderName = "images"
@@ -322,7 +323,14 @@ object BookHelp {
             }
         }
         // 保存阅读缓存文本(.nb)
-        getChapterContentFile(book, bookChapter).apply { parentFile?.mkdirs() }.writeText(content)
+        val file = getChapterContentFile(book, bookChapter)
+        if (book.isEpub || book.isMobi) {
+            synchronized(localRubyCacheLock) {
+                writeCheckedRubyCache(file, content)
+            }
+        } else {
+            file.apply { parentFile?.mkdirs() }.writeText(content)
+        }
         if (notifyContentChange) ContentProcessor.invalidateSemanticContent(book.bookUrl, bookChapter.index)
         if ((book.isOnLineTxt || book.isEpub || book.isMobi) && readGateway.currentSettings.tocCountWords) {
             // 正文里携带的 <img src="data:base64">、内联 SVG 等富文本源码会把章节字数虚抬
@@ -788,6 +796,13 @@ object BookHelp {
     private fun legacyChapterContentFile(book: Book, chapter: BookChapter, suffix: String = "nb") =
         File(downloadDir.getFile(cacheFolderName, book.getFolderName()), chapter.getFileName(suffix))
 
+    private fun rubyCacheStamp(file: File) = File(file.path + ".ruby-v1")
+
+    private fun writeCheckedRubyCache(file: File, content: String) {
+        FileUtils.writeTextAtomic(file.path, content)
+        rubyCacheStamp(file).createNewFile()
+    }
+
     /** 新缓存优先；历史缓存保留原位，避免升级时搬动仍在读取的文件。 */
     private fun cachedChapterContentFile(book: Book, chapter: BookChapter, suffix: String = "nb"): File =
         getChapterContentFile(book, chapter, suffix).let { current ->
@@ -1052,28 +1067,62 @@ object BookHelp {
     /**
      * 读取章节内容
      */
-    fun getContent(book: Book, bookChapter: BookChapter): String? {
+    fun getContent(book: Book, bookChapter: BookChapter): String? =
+        getContent(book, bookChapter) { cached -> LocalBook.upgradeCachedRubyText(book, bookChapter, cached) }
+
+    internal fun getContent(
+        book: Book,
+        bookChapter: BookChapter,
+        upgradeRubyCache: (String) -> String?,
+    ): String? {
         if (book.isLocalManga) return null
+        val localRubyBook = book.isEpub || book.isMobi
         val file = cachedChapterContentFile(book, bookChapter)
         if (file.exists()) {
+            if (localRubyBook && rubyCacheStamp(file).isFile) return file.readText()
             val string = file.readText()
             if (string.isNotEmpty()) {
-                return string
+                if (!localRubyBook) return string
+                val upgraded = upgradeRubyCache(string) ?: return string
+                return persistRubyCacheUpgrade(book, bookChapter, file, string, upgraded)
             }
             // A stale empty cache (e.g. a title-only chapter cached before blank
             // pages were supported) must not read as a load failure: drop it and
             // reload. Local books reparse to a blank page; online books fall
-            // through to null so the caller still triggers a download.
-            file.delete()
+            // through to null so the caller still triggers a download. EPUB/MOBI
+            // may also be upgrading to a valid empty, stamped cache in another reader.
+            if (!localRubyBook) file.delete()
         }
         if (book.isLocal) {
             val string = LocalBook.getContent(book, bookChapter)
-            if (string != null && (book.isEpub || book.isMobi)) {
+            if (string != null && localRubyBook) {
                 saveText(book, bookChapter, string, notifyContentChange = false)
             }
             return string
         }
         return null
+    }
+
+    private fun persistRubyCacheUpgrade(
+        book: Book,
+        chapter: BookChapter,
+        file: File,
+        cached: String,
+        upgraded: String,
+    ): String = synchronized(localRubyCacheLock) {
+        // The reader may have saved an edit while the original chapter was being extracted.
+        val latestFile = cachedChapterContentFile(book, chapter)
+        val latest = latestFile.takeIf { it.isFile }?.readText()
+        if (latestFile != file || latest != cached || rubyCacheStamp(file).isFile) {
+            return@synchronized latest ?: cached
+        }
+        try {
+            if (upgraded == cached) rubyCacheStamp(file).createNewFile()
+            else writeCheckedRubyCache(file, upgraded)
+        } catch (error: IOException) {
+            AppLog.put("本地注音缓存写入失败: chapter=${chapter.index}", error)
+        }
+        upgraded
     }
 
     /**
@@ -1088,7 +1137,7 @@ object BookHelp {
      */
     fun getCachedContentInfo(book: Book, bookChapter: BookChapter): CachedContentInfo? {
         val file = cachedChapterContentFile(book, bookChapter)
-        if (!file.isFile) return null
+        if (!file.isFile || (book.isEpub || book.isMobi) && !rubyCacheStamp(file).isFile) return null
 
         return try {
             var length = 0L
@@ -1129,10 +1178,15 @@ object BookHelp {
      */
     fun delContent(book: Book, bookChapter: BookChapter) {
         val file = getChapterContentFile(book, bookChapter)
-        file.delete()
-        legacyChapterContentFile(book, bookChapter).delete()
-        // 章节目录里可能还有图片，非空时 delete 会失败，不会误删。
-        file.parentFile?.delete()
+        val legacyFile = legacyChapterContentFile(book, bookChapter)
+        synchronized(localRubyCacheLock) {
+            rubyCacheStamp(file).delete()
+            rubyCacheStamp(legacyFile).delete()
+            file.delete()
+            legacyFile.delete()
+            // 章节目录里可能还有图片，非空时 delete 会失败，不会误删。
+            file.parentFile?.delete()
+        }
         ContentProcessor.invalidateSemanticContent(book.bookUrl, bookChapter.index)
     }
 

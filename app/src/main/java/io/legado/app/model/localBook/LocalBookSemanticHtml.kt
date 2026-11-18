@@ -38,7 +38,18 @@ object LocalBookSemanticHtml {
     internal fun plainTextMapped(html: String, decodeEntities: Boolean, projection: TextProjection?): String {
         val normalized = html.replaceMapped(rubyTagWhitespaceRegex, "\$1", projection)
         val stripped = stripRubyAnnotations(normalized, projection)
-        val text = HtmlFormatter.formatKeepImgMapped(stripped, projection = projection)
+        return formatTransport(stripped, decodeEntities, projection)
+    }
+
+    /** Only upgrade a cache that exactly matches the extraction used before Ruby support. */
+    internal fun upgradeCachedRubyText(html: String, cached: String, decodeEntities: Boolean = true): String {
+        val current = plainText(html, decodeEntities)
+        if (current == cached) return cached
+        return if (formatTransport(html, decodeEntities, null) == cached) current else cached
+    }
+
+    private fun formatTransport(html: String, decodeEntities: Boolean, projection: TextProjection?): String {
+        val text = HtmlFormatter.formatKeepImgMapped(html, projection = projection)
         return if (decodeEntities) text.replaceMapped("&lt;img", "&lt; img", projection, ignoreCase = true)
             .unescapeHtml4Mapped(projection) else text
                 .replaceMapped(Regex("<\\?xml[^>]*>"), "", projection)
@@ -80,11 +91,14 @@ object LocalBookSemanticHtml {
 
         projection?.replace(nonOverlapping.map { (start, end) -> TextProjection.Edit(start, end, 0) })
 
-        var result = html
-        for ((start, end) in nonOverlapping.asReversed()) {
-            result = result.removeRange(start, end)
+        return buildString(html.length - nonOverlapping.sumOf { (start, end) -> end - start }) {
+            var cursor = 0
+            for ((start, end) in nonOverlapping) {
+                append(html, cursor, start)
+                cursor = end
+            }
+            append(html, cursor, html.length)
         }
-        return result
     }
 
     private val allowedImgAttrs = setOf("src", "alt", "width", "height", "class", "style")

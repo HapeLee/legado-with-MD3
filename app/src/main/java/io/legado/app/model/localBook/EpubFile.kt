@@ -52,12 +52,16 @@ class EpubFile(var book: Book) {
 
         @Synchronized
         override fun getContent(book: Book, chapter: BookChapter): String? {
-            return getEFile(book).getContent(chapter)
+            return getEFile(book).getChapterHtml(chapter)?.let { LocalBookSemanticHtml.plainText(it) }
         }
 
         @Synchronized
+        internal fun upgradeCachedRubyText(book: Book, chapter: BookChapter, cached: String): String? =
+            getEFile(book).getChapterHtml(chapter)?.let { LocalBookSemanticHtml.upgradeCachedRubyText(it, cached) }
+
+        @Synchronized
         fun getPresentation(book: Book, chapter: BookChapter): io.legado.app.feature.reader.core.source.ReaderLocalPresentation? =
-            getEFile(book).getContent(chapter, presentation = true)?.let {
+            getEFile(book).getChapterHtml(chapter, presentation = true)?.let {
                 io.legado.app.feature.reader.platform.ReaderLocalPresentationResolver.resolve(it)
             }
 
@@ -124,7 +128,7 @@ class EpubFile(var book: Book) {
         }.getOrThrow()
     }
 
-    private fun getContent(chapter: BookChapter, presentation: Boolean = false): String? {
+    private fun getChapterHtml(chapter: BookChapter, presentation: Boolean = false): String? {
         /*获取当前章节文本*/
         val contents = epubBookContents ?: return null
         val nextChapterFirstResourceHref = chapter.getVariable("nextUrl").substringBeforeLast("#")
@@ -182,8 +186,7 @@ class EpubFile(var book: Book) {
                 if (element.normalName() == "body") element.tagName("section")
             }
         }
-        val html = elements.outerHtml()
-        return if (presentation) html else LocalBookSemanticHtml.plainText(html)
+        return elements.outerHtml()
     }
 
     private fun getBody(res: Resource, startFragmentId: String?, endFragmentId: String?, presentation: Boolean): Element {

@@ -195,6 +195,7 @@ class AudioPlayService : BaseService(),
                 IntentAction.resume -> resume()
                 IntentAction.prev -> skipToPreviousChapter()
                 IntentAction.next -> skipToNextChapter()
+                IntentAction.upPlayMode -> upMediaSessionPlaybackState()
                 IntentAction.adjustSpeed -> upSpeed(intent.getFloatExtra("adjust", 1f))
                 IntentAction.adjustGain -> applyGain(intent.getIntExtra("gain", 0))
                 IntentAction.addTimer -> addTimer()
@@ -591,6 +592,7 @@ class AudioPlayService : BaseService(),
             AudioPlay.durChapterIndex,
             AudioPlay.simulatedChapterSize,
             exoPlayer.isCurrentMediaItemSeekable && isCurrentPlaybackChapter(),
+            AudioPlay.playMode,
         )
         val mediaPosition = if (exoPlayer.currentMediaItem != null) {
             exoPlayer.currentPosition
@@ -665,7 +667,7 @@ class AudioPlayService : BaseService(),
     }
 
     private fun skipToNextChapter() {
-        if (canSkipAudioChapter(AudioPlay.durChapterIndex, AudioPlay.simulatedChapterSize, 1)) {
+        if (canSkipToNextAudioChapter(AudioPlay.durChapterIndex, AudioPlay.simulatedChapterSize, AudioPlay.playMode)) {
             AudioPlay.next()
         }
     }

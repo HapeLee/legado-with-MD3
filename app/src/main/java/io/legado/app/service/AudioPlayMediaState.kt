@@ -2,6 +2,7 @@ package io.legado.app.service
 
 import android.support.v4.media.session.PlaybackStateCompat
 import androidx.media3.common.Player
+import io.legado.app.model.AudioPlay.PlayMode
 
 internal data class AudioPlayMediaState(val state: Int, val speed: Float)
 
@@ -30,13 +31,22 @@ internal fun canSkipAudioChapter(index: Int, chapterCount: Int, offset: Int): Bo
     return index in 0 until chapterCount && index + offset in 0 until chapterCount
 }
 
-internal fun audioPlayMediaActions(index: Int, chapterCount: Int, canSeek: Boolean): Long {
+internal fun canSkipToNextAudioChapter(index: Int, chapterCount: Int, playMode: PlayMode): Boolean =
+    index in 0 until chapterCount &&
+        (playMode != PlayMode.LIST_END_STOP || canSkipAudioChapter(index, chapterCount, 1))
+
+internal fun audioPlayMediaActions(
+    index: Int,
+    chapterCount: Int,
+    canSeek: Boolean,
+    playMode: PlayMode,
+): Long {
     var actions = PlaybackStateCompat.ACTION_PLAY or PlaybackStateCompat.ACTION_PAUSE or
         PlaybackStateCompat.ACTION_PLAY_PAUSE or PlaybackStateCompat.ACTION_STOP
     if (canSkipAudioChapter(index, chapterCount, -1)) {
         actions = actions or PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
     }
-    if (canSkipAudioChapter(index, chapterCount, 1)) {
+    if (canSkipToNextAudioChapter(index, chapterCount, playMode)) {
         actions = actions or PlaybackStateCompat.ACTION_SKIP_TO_NEXT
     }
     if (canSeek) actions = actions or PlaybackStateCompat.ACTION_SEEK_TO
