@@ -107,7 +107,7 @@ class ReaderTextDrawRunsTest {
     }
 
     @Test
-    fun nonuniformGapsAndDifferentRowsAreNotMerged() {
+    fun nonuniformGapsRowsAndRubyGroupsAreNotMerged() {
         val elements = row(listOf("甲", "乙"), 2f)
         assertTrue(runs(listOf(elements[0], elements[1].copy(baselinePx = 20f))).isEmpty())
         assertTrue(runs(listOf(elements[0], elements[1].copy(style = elements[1].style.copy(italic = true)))).isEmpty())
@@ -116,5 +116,15 @@ class ReaderTextDrawRunsTest {
         val runs = runs(shifted)
         assertEquals("甲乙", runs.getValue(shifted[0]).text)
         assertFalse(runs.containsKey(shifted[2]))
+
+        val ruby = row(listOf("甲", "東", "京", "文"), 2f).mapIndexed { index, element ->
+            when (index) {
+                1 -> element.copy(rubyGroupId = 1, rubyText = "とうきょう", glyphOffsetX = 5f)
+                2 -> element.copy(rubyGroupId = 1)
+                else -> element
+            }
+        }
+        assertTrue(buildMergedTextRuns(ruby, 30) { _, _ -> true }
+            .keys.none { it.rubyGroupId != 0 })
     }
 }

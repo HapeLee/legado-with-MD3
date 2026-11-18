@@ -9,6 +9,7 @@ class ChineseLineBreaker(
     private val ideographWidthPx: Float,
     letterSpacingPx: Float,
     firstLineWidthPx: Int = widthPx,
+    private val rubyGroupIds: IntArray? = null,
 ) {
     private val starts = mutableListOf(0)
     private val clusterStarts = mutableListOf(0)
@@ -64,7 +65,8 @@ class ChineseLineBreaker(
 
     /** Used again during pagination so refinement cannot undo a contextual quote boundary. */
     internal fun isForbiddenBreakAt(index: Int): Boolean = index in 1 until clusters.size &&
-            (isForbiddenBreak(clusters[index - 1], clusters[index]) ||
+            ((rubyGroupIds != null && rubyGroupIds[index - 1] != 0 && rubyGroupIds[index - 1] == rubyGroupIds[index]) ||
+                    isForbiddenBreak(clusters[index - 1], clusters[index]) ||
                     (symmetricRoles[index] == CLOSE && clusters[index - 1] != clusters[index]) ||
                     symmetricRoles[index - 1] == OPEN)
 
@@ -204,11 +206,33 @@ class ChineseLineBreaker(
      * 保留原断点，按字符回退（同超长词）。
      */
     private fun safeBreakStart(candidate: Int, lineStart: Int): Int {
+        rubyGroupStartBefore(candidate)?.takeIf { it > lineStart }?.let { groupStart ->
+            var start = groupStart
+            while (start > lineStart + 1 && isOpeningAt(start - 1)) start--
+            // 开标点串随组一起移到下一行行首；串贴到本行行首无处再退时落回原候选，
+            // 按字符断行保分页进度（同超长词），注音只随组首不会因此重复绘制。
+            if (!isOpeningAt(start - 1)) return start
+        }
         val start = latinWordStartBefore(candidate) ?: candidate
         if (start <= lineStart) return candidate
         var breakStart = start
         while (breakStart > lineStart + 1 && isOpeningAt(breakStart - 1)) breakStart--
         return if (isOpeningAt(breakStart - 1)) candidate else breakStart
+    }
+
+    /**
+     * When the overflow point falls inside a multi-character ruby base, move the break back to
+     * the group start so the annotation stays over one unbroken base. A group wider than the
+     * whole line keeps the original break so pagination can still make progress.
+     */
+    private fun rubyGroupStartBefore(index: Int): Int? {
+        val ids = rubyGroupIds ?: return null
+        if (index <= 0 || index >= ids.size) return null
+        val id = ids[index - 1]
+        if (id == 0 || ids[index] != id) return null
+        var start = index - 1
+        while (start > 0 && ids[start - 1] == id) start--
+        return start
     }
 
     /**

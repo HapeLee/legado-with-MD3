@@ -16,9 +16,11 @@ data class ReaderLocalPresentation(
     val anchors: Map<String, Int>,
     val chapterStartAnchors: Set<String> = emptySet(),
     val images: List<Image> = emptyList(),
+    val rubies: List<Ruby> = emptyList(),
 ) {
     data class Span(val start: Int, val endExclusive: Int, val style: ReaderInlineSourceStyle)
     data class Image(val start: Int, val endExclusive: Int, val presentation: ReaderLocalImagePresentation)
+    data class Ruby(val start: Int, val endExclusive: Int, val text: String)
     /** Geometry uses the parser's neutral 10px font and is scaled only while measuring. */
     data class Paragraph(
         val start: Int,
@@ -83,8 +85,15 @@ data class ReaderLocalPresentation(
                     image.copy(start = range.first, endExclusive = range.last + 1) else null
             }
         }
+        val mappedRubies = rubies.mapNotNull { ruby ->
+            if (ruby.text.isEmpty()) null
+            else projection.ranges(ruby.start, ruby.endExclusive, styling = true)
+                .singleOrNull()
+                ?.takeIf { ReaderSemanticLocation.isValidOffset(text, it.first) && ReaderSemanticLocation.isValidOffset(text, it.last + 1) }
+                ?.let { Ruby(it.first, it.last + 1, ruby.text) }
+        }.sortedBy { it.start }
         return copy(content = text, spans = merged, paragraphs = mappedParagraphs, images = mappedImages,
-            rules = rules.mapNotNull { projection.boundary(it, keepDeleted = true) }, anchors = mappedAnchors)
+            rubies = mappedRubies, rules = rules.mapNotNull { projection.boundary(it, keepDeleted = true) }, anchors = mappedAnchors)
     }
 
     internal fun applyTo(source: ReaderChapterSource): ReaderChapterSource {
@@ -93,6 +102,7 @@ data class ReaderLocalPresentation(
         val geometry = paragraphs.filterNot { it.blankLine || it.rule }
         var hintCursor = 0
         var spanCursor = 0
+        var rubyCursor = 0
         fun safeCut(position: Int): Boolean {
             val found = markers.binarySearchBy(position) { it.start }
             val index = if (found >= 0) found else -found - 2
@@ -131,12 +141,26 @@ data class ReaderLocalPresentation(
                     var spanEnd = spanCursor
                     while (spanEnd < spans.size && spans[spanEnd].start < stop) spanEnd++
                     val relevant = spans.subList(spanCursor, spanEnd)
-                    val cuts = (listOf(start, stop) + relevant.flatMap { listOf(it.start, it.endExclusive) }
-                        .filter { it > start && it < stop && safeCut(it) }).distinct().sorted()
+                    while (rubyCursor < rubies.size && rubies[rubyCursor].endExclusive <= start) rubyCursor++
+                    var rubyEnd = rubyCursor
+                    while (rubyEnd < rubies.size && rubies[rubyEnd].start < stop) rubyEnd++
+                    val relevantRubies = rubies.subList(rubyCursor, rubyEnd)
+                    val cuts = (listOf(start, stop) +
+                        (relevant.flatMap { listOf(it.start, it.endExclusive) } +
+                            relevantRubies.flatMap { listOf(it.start, it.endExclusive) })
+                            .filter { it > start && it < stop && safeCut(it) && relevantRubies.none { r -> it > r.start && it < r.endExclusive } })
+                        .distinct().sorted()
                     cuts.zipWithNext { a, b ->
                         val appearance = relevant.firstOrNull { a >= it.start && b <= it.endExclusive }
-                        item.copy(value = item.value.substring(a - item.chapterPosition, b - item.chapterPosition),
-                            chapterPosition = a, style = appearance?.style ?: item.style)
+                        // 只接受完整覆盖的 ruby。基字跨图片/段落等无法合并的边界时宁可丢弃注音，
+                        // 也不把同一段注音复制到多个片段造成重复绘制。
+                        val ruby = relevantRubies.firstOrNull { a == it.start && b == it.endExclusive }?.text
+                        val baseStyle = appearance?.style ?: item.style
+                        item.copy(
+                            value = item.value.substring(a - item.chapterPosition, b - item.chapterPosition),
+                            chapterPosition = a,
+                            style = if (ruby != null) baseStyle.copy(ruby = ruby) else baseStyle,
+                        )
                     }
                 }
                 block.copy(items = items, chapterPosition = from, presentation = hint)

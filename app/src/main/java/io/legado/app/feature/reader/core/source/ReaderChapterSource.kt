@@ -86,6 +86,7 @@ data class ReaderInlineSourceStyle(
     val subscript: Boolean = false,
     /** Semantic HTML mark; its background color is resolved at draw time. */
     val marked: Boolean = false,
+    val ruby: String? = null,
 )
 
 data class ReaderChapterSource(

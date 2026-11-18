@@ -8,6 +8,7 @@ import io.legado.app.feature.reader.core.source.ReaderChapterSourceBlock
 import io.legado.app.feature.reader.core.source.ReaderChapterSourceParser
 import io.legado.app.feature.reader.core.source.ReaderChapterInlineSource
 import io.legado.app.help.book.MixedContentSegments
+import io.legado.app.model.localBook.LocalBookSemanticHtml
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -134,9 +135,52 @@ class JsoupReaderPresentationParserTest {
     @Test fun rubyRetainsLegacyCharactersWithoutSuppressingOtherStyles() {
         for (annotation in listOf("<rt>かん</rt>", "")) {
             val current = source("<p><ruby>漢$annotation</ruby><b>字</b></p>")
-            assertEquals(if (annotation.isEmpty()) "漢字\n" else "漢かん字\n", current.semanticContent)
+            assertEquals("漢字\n", current.semanticContent)
+            assertEquals(if (annotation.isEmpty()) null else "かん", texts(current).single { it.value == "漢" }.style.ruby)
             assertEquals(700, texts(current).single { it.value == "字" }.style.fontWeight)
         }
+        assertEquals("漢", LocalBookSemanticHtml.plainText("<ruby>漢<rt>かん</rt></ruby>").trim())
+        assertEquals("前漢後", LocalBookSemanticHtml.plainText(
+            "<p>前<ruby>漢<rt>かん</rt><rp>(</rp></ruby>後</p>").trim())
+        for (malformed in listOf(
+            "<p>前<ruby>漢<rt>かん</ruby>後</p>",
+            "<p>前<ruby>漢<rt>かん</rp></ruby>後</p>",
+        )) {
+            val plain = LocalBookSemanticHtml.plainText(malformed)
+            assertTrue("$malformed -> $plain", plain.contains("前") && plain.contains("後"))
+        }
+        val sized = source("<p><ruby><rb style='font-size:120%'>漢</rb><rt>かん</rt></ruby></p>")
+        assertEquals(1.2f, texts(sized).single { it.value == "漢" }.style.fontSizeScale, 0.001f)
+        val styled = source("<p><ruby><rb>東<em>京</em></rb><rt>とうきょう</rt></ruby></p>")
+        val styledBase = texts(styled).filter { it.value.isNotEmpty() }
+        assertEquals("東京", styledBase.joinToString("") { it.value })
+        assertTrue(styledBase.all { it.style.italic != true })
+        assertEquals("とうきょう", styledBase.first { it.style.ruby != null }.style.ruby)
+        val multi = source(
+            "<p>前文<a href='#n'><ruby><rb>十</rb><rt>じゆう</rt><rb>力</rb><rt>りき＊</rt></ruby></a>中" +
+                "<ruby>饕<rp>(</rp><rt>tāo</rt><rp>)</rp>餮<rp>(</rp><rt>tiè</rt><rp>)</rp></ruby>" +
+                "<ruby><rb>道</rb><rt>ㄉㄠˋ</rt></ruby>" +
+                "<ruby><rb>read</rb><rt>/riːd/</rt></ruby>" +
+                "<ruby><rbc><rb>東</rb><rb>京</rb></rbc><rtc><rt>Tokyo</rt></rtc></ruby>尾文。</p>"
+        )
+        assertEquals("前文十力中饕餮道read東京尾文。\n", multi.semanticContent)
+        assertEquals(
+            listOf(
+                "前文" to null,
+                "十" to "じゆう",
+                "力" to "りき＊",
+                "中" to null,
+                "饕" to "tāo",
+                "餮" to "tiè",
+                "道" to "ㄉㄠˋ",
+                "read" to "/riːd/",
+                "東京" to "Tokyo",
+                "尾文。" to null,
+            ),
+            texts(multi).map { it.value to it.style.ruby },
+        )
+        assertEquals("#n", texts(multi).first { it.value == "十" }.style.link)
+        assertEquals("#n", texts(multi).first { it.value == "力" }.style.link)
     }
 
     @Test fun trimsLeadingParagraphIndentationAndPreservesNestedHeadingScale() {
@@ -169,7 +213,7 @@ class JsoupReaderPresentationParserTest {
             "甲乙" to "甲乙\n", "甲😀乙" to "甲😀乙\n", "A&amp;B" to "A&B\n",
             "<p>A</p><p>B</p>" to "A\nB\n", "<strong>A</strong>B" to "AB\n",
             "A<img src='x'>B" to "A\uFFFCB\n", "A<img>B" to "A<img>B\n", "<p></p>" to "", "<hr>" to "",
-            "<ruby>漢<rt>かん</rt><rp>(</rp></ruby>" to "漢かん(\n",
+            "<ruby>漢<rt>かん</rt><rp>(</rp></ruby>" to "漢\n",
             "<a id='n'></a>正文" to "正文\n", "<pre>A  B</pre>" to "A  B\n", "A<br><br>B" to "A\nB\n",
         )) {
             val current = source(html)

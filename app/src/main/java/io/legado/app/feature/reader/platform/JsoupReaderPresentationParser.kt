@@ -47,8 +47,11 @@ internal object JsoupReaderPresentationParser {
         val rules = mutableListOf<Int>()
         val anchors = linkedMapOf<String, Int>()
         val images = mutableListOf<ReaderLocalPresentation.Image>()
+        val rubies = mutableListOf<ReaderLocalPresentation.Ruby>()
         var first = -1
         var last = -1
+        var rubyBaseStart = -1
+        var rubyBaseEnd = -1
         var current = blockGeometry(BlockCtx(), 10f, 1f)
         fun flush() {
             if (first >= 0 && last > first) {
@@ -64,6 +67,8 @@ internal object JsoupReaderPresentationParser {
         fun include(start: Int, end: Int) {
             if (first < 0) first = start
             last = maxOf(last, end)
+            if (rubyBaseStart < 0) rubyBaseStart = start
+            rubyBaseEnd = maxOf(rubyBaseEnd, end)
         }
         fun blank(position: Int) {
             paragraphs += ReaderLocalPresentation.Paragraph(position, position, current.firstMargin,
@@ -98,7 +103,70 @@ internal object JsoupReaderPresentationParser {
                 }
             }
             when (tag) {
-                "script", "style", "noscript", "template" -> return
+                "script", "style", "noscript", "template", "rp", "rt" -> return
+                "ruby" -> {
+                    val rubyInline = descendInline(node, tag, inline)
+                    val pendingBases = ArrayDeque<IntRange>()
+                    fun flushRubyBase() {
+                        if (rubyBaseStart >= 0 && rubyBaseEnd > rubyBaseStart) {
+                            pendingBases.addLast(rubyBaseStart until rubyBaseEnd)
+                        }
+                        rubyBaseStart = -1
+                        rubyBaseEnd = -1
+                    }
+                    fun emitRuby(rtElement: Element, spanAllPending: Boolean = false) {
+                        flushRubyBase()
+                        if (pendingBases.isEmpty()) return
+                        val base = if (spanAllPending && pendingBases.size > 1) {
+                            val combined = pendingBases.first().first..pendingBases.last().last
+                            pendingBases.clear()
+                            combined
+                        } else {
+                            pendingBases.removeFirst()
+                        }
+                        val rtText = rtElement.text().trim()
+                        if (rtText.isNotEmpty()) {
+                            rubies += ReaderLocalPresentation.Ruby(base.first, base.last + 1, rtText)
+                        }
+                    }
+                    fun walkRubyChildren(container: Element, ctx: InlineCtx) {
+                        rubyBaseStart = -1
+                        rubyBaseEnd = -1
+                        for (child in container.childNodes()) {
+                            if (child is Element) {
+                                when (child.normalName()) {
+                                    "rp" -> continue
+                                    "rb" -> {
+                                        flushRubyBase()
+                                        walk(child, ctx, block)
+                                        flushRubyBase()
+                                    }
+                                    "rt" -> emitRuby(child)
+                                    "rbc" -> {
+                                        flushRubyBase()
+                                        walkRubyChildren(child, descendInline(child, "rbc", ctx))
+                                        flushRubyBase()
+                                    }
+                                    "rtc" -> {
+                                        flushRubyBase()
+                                        val rts = child.children().filter { it.normalName() == "rt" }
+                                        if (rts.size == 1 && pendingBases.size > 1) {
+                                            emitRuby(rts.single(), spanAllPending = true)
+                                        } else {
+                                            rts.forEach { emitRuby(it) }
+                                        }
+                                    }
+                                    else -> walk(child, ctx, block)
+                                }
+                            } else {
+                                walk(child, ctx, block)
+                            }
+                        }
+                        flushRubyBase()
+                    }
+                    walkRubyChildren(node, rubyInline)
+                    return
+                }
                 "br" -> {
                     val empty = first < 0
                     flush()
@@ -142,7 +210,7 @@ internal object JsoupReaderPresentationParser {
         val bodyInline = descendInline(body, "body", InlineCtx())
         body.childNodes().forEach { walk(it, bodyInline, context) }
         flush()
-        return ReaderLocalPresentation(html, spans, paragraphs, rules, anchors, images = images)
+        return ReaderLocalPresentation(html, spans, paragraphs, rules, anchors, images = images, rubies = rubies)
     }
 
     private data class BlockGeo(
