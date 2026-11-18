@@ -94,6 +94,9 @@ object AudioPlay : CoroutineScope by MainScope() {
         book?.setPlayMode(playMode.ordinal)
         saveRead()
         postEvent(EventBus.PLAY_MODE_CHANGED, playMode)
+        if (AudioPlayService.isRun) {
+            context.startService<AudioPlayService> { action = IntentAction.upPlayMode }
+        }
     }
 
     fun upData(book: Book) {
@@ -480,7 +483,8 @@ object AudioPlay : CoroutineScope by MainScope() {
         if (activityContext === context) {
             activityContext = null
             callback = null
-            if (chapterLoad != null) cancelChapterLoad()
+            // An active service owns pending chapter playback after the player UI closes.
+            if (serviceContext == null && chapterLoad != null) cancelChapterLoad()
         }
     }
 

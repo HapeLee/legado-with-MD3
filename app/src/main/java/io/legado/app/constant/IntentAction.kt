@@ -40,4 +40,5 @@ object IntentAction {
 
     /** 视频悬浮小窗：显示/隐藏切换。 */
     const val toggleVideoFloating = "toggleVideoFloating"
+    const val upPlayMode = "upPlayMode"
 }
