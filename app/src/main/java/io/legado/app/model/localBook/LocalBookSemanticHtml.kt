@@ -8,6 +8,7 @@ import io.legado.app.utils.HtmlFormatter
 import io.legado.app.utils.encodeURI
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
+import org.jsoup.parser.Parser
 import org.jsoup.select.Elements
 import java.net.URI
 import java.net.URLDecoder
@@ -19,8 +20,6 @@ import java.net.URLDecoder
  * Preserves structural HTML semantics while keeping character offsets stable.
  */
 object LocalBookSemanticHtml {
-
-    private val rubyAnnotationRegex = Regex("<r[tp]\\b[^>]*>[\\s\\S]*?</r[tp]\\s*>", RegexOption.IGNORE_CASE)
 
     /**
      * Ruby 结构标签之间的缩进只是排版空白，不是基字内容。Jsoup 序列化 `<rbc>/<rtc>` 时也会
@@ -38,12 +37,54 @@ object LocalBookSemanticHtml {
 
     internal fun plainTextMapped(html: String, decodeEntities: Boolean, projection: TextProjection?): String {
         val normalized = html.replaceMapped(rubyTagWhitespaceRegex, "\$1", projection)
-        val stripped = normalized.replaceMapped(rubyAnnotationRegex, "", projection)
+        val stripped = stripRubyAnnotations(normalized, projection)
         val text = HtmlFormatter.formatKeepImgMapped(stripped, projection = projection)
         return if (decodeEntities) text.replaceMapped("&lt;img", "&lt; img", projection, ignoreCase = true)
             .unescapeHtml4Mapped(projection) else text
                 .replaceMapped(Regex("<\\?xml[^>]*>"), "", projection)
                 .replaceMapped(Regex("<!DOCTYPE[^>]*>"), "", projection)
+    }
+
+    /**
+     * Canonical text never contains ruby annotations. Only explicitly closed <rt>/<rp>
+     * elements are removed; malformed markup stays untouched so surrounding text cannot be
+     * swallowed by a mismatched or unclosed annotation tag.
+     */
+    private fun stripRubyAnnotations(html: String, projection: TextProjection?): String {
+        if (!html.contains("<rt", ignoreCase = true) && !html.contains("<rp", ignoreCase = true)) {
+            return html
+        }
+        val document = Parser.htmlParser().setTrackPosition(true).parseInput(html, "")
+        val ranges = document.body().select("rt, rp").mapNotNull { element ->
+            val startRange = element.sourceRange()
+            val endRange = element.endSourceRange()
+            if (!startRange.isTracked || !endRange.isTracked) return@mapNotNull null
+            val start = startRange.start().pos()
+            val end = endRange.end().pos()
+            if (start !in 0..html.length || end !in start..html.length) return@mapNotNull null
+            val name = element.normalName()
+            val raw = html.substring(start, end)
+            if (!raw.startsWith("<$name", ignoreCase = true) ||
+                !raw.trimEnd().endsWith("</$name>", ignoreCase = true)
+            ) return@mapNotNull null
+            start to end
+        }.sortedBy { it.first }
+        if (ranges.isEmpty()) return html
+
+        val nonOverlapping = mutableListOf<Pair<Int, Int>>()
+        for (range in ranges) {
+            val previous = nonOverlapping.lastOrNull()
+            if (previous == null || range.first >= previous.second) nonOverlapping += range
+        }
+        if (nonOverlapping.isEmpty()) return html
+
+        projection?.replace(nonOverlapping.map { (start, end) -> TextProjection.Edit(start, end, 0) })
+
+        var result = html
+        for ((start, end) in nonOverlapping.asReversed()) {
+            result = result.removeRange(start, end)
+        }
+        return result
     }
 
     private val allowedImgAttrs = setOf("src", "alt", "width", "height", "class", "style")

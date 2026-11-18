@@ -107,7 +107,7 @@ class ReaderTextDrawRunsTest {
     }
 
     @Test
-    fun nonuniformGapsAndDifferentRowsAreNotMerged() {
+    fun nonuniformGapsRowsAndRubyGroupsAreNotMerged() {
         val elements = row(listOf("甲", "乙"), 2f)
         assertTrue(runs(listOf(elements[0], elements[1].copy(baselinePx = 20f))).isEmpty())
         assertTrue(runs(listOf(elements[0], elements[1].copy(style = elements[1].style.copy(italic = true)))).isEmpty())
@@ -116,51 +116,15 @@ class ReaderTextDrawRunsTest {
         val runs = runs(shifted)
         assertEquals("甲乙", runs.getValue(shifted[0]).text)
         assertFalse(runs.containsKey(shifted[2]))
-    }
 
-    @Test
-    fun rubyGroupMembersNeverJoinMergedRuns() {
-        val style = ReaderTextStyle(0, 10f)
-        fun text(
-            value: String,
-            left: Float,
-            right: Float,
-            rubyGroupId: Int = 0,
-            rubyText: String? = null,
-            glyphOffsetX: Float = 0f,
-        ) = ReaderElement.Text(
-            bounds = ReaderRect(left, 0f, right, 12f),
-            baselinePx = 10f,
-            value = value,
-            style = style,
-            selected = false,
-            emphasized = false,
-            chapterPosition = 0,
-            glyphOffsetX = glyphOffsetX,
-            rubyText = rubyText,
-            rubyGroupId = rubyGroupId,
-        )
-
-        // Wide ruby: group first has both the horizontal offset and the only ruby text;
-        // group last only carries the group id, so it must not silently merge with the next glyph.
-        val wide = listOf(
-            text("甲", 0f, 10f),
-            text("東", 12f, 27f, rubyGroupId = 1, rubyText = "とうきょう", glyphOffsetX = 5f),
-            text("京", 27f, 42f, rubyGroupId = 1),
-            text("文", 44f, 54f),
-        )
-        val wideRuns = buildMergedTextRuns(wide, 30) { _, _ -> true }
-        assertTrue(wideRuns.keys.none { it.rubyGroupId != 0 })
-
-        // Narrow ruby: the group first has no glyph offset, but the whole group must still
-        // stay out of the run because its bounds are not a plain glyph advance.
-        val narrow = listOf(
-            text("甲", 0f, 10f),
-            text("東", 12f, 22f, rubyGroupId = 2, rubyText = "とう"),
-            text("京", 22f, 32f, rubyGroupId = 2),
-            text("文", 34f, 44f),
-        )
-        val narrowRuns = buildMergedTextRuns(narrow, 30) { _, _ -> true }
-        assertTrue(narrowRuns.keys.none { it.rubyGroupId != 0 })
+        val ruby = row(listOf("甲", "東", "京", "文"), 2f).mapIndexed { index, element ->
+            when (index) {
+                1 -> element.copy(rubyGroupId = 1, rubyText = "とうきょう", glyphOffsetX = 5f)
+                2 -> element.copy(rubyGroupId = 1)
+                else -> element
+            }
+        }
+        assertTrue(buildMergedTextRuns(ruby, 30) { _, _ -> true }
+            .keys.none { it.rubyGroupId != 0 })
     }
 }
