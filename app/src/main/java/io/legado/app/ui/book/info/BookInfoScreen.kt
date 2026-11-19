@@ -127,6 +127,7 @@ import io.legado.app.ui.theme.ProvideColorSchemeOverride
 import io.legado.app.ui.theme.ThemeOverrideState
 import io.legado.app.ui.theme.animateColorSchemeAsState
 import io.legado.app.ui.theme.fadingEdge
+import io.legado.app.ui.theme.isMiuixHyperOs4Enabled
 import io.legado.app.ui.theme.rememberImageSeedColor
 import io.legado.app.ui.theme.rememberThemeOverride
 import io.legado.app.ui.theme.responsiveHazeEffectFixedStyle
@@ -307,6 +308,8 @@ private fun BookInfoScreenContent(
     onOpenExplore: (title: String, url: String) -> Unit,
 ) {
     val isMiuix = LegadoTheme.composeEngine == ComposeEngine.Miuix
+    val intro = state.book?.intro
+    val hasWebIntro = remember(intro) { parseBookInfoIntro(intro) is BookInfoIntroContent.Web }
     val scrollBehavior = if (isMiuix) {
         MiuixGlassScrollBehavior(MiuixScrollBehavior())
     } else {
@@ -362,6 +365,8 @@ private fun BookInfoScreenContent(
             }
         },
         alwaysDrawBehindBars = true,
+        // 详情简介的 WebView 不能被录进 HyperOS 4 的背景图层（#2610）。
+        disableContentSampling = isMiuixHyperOs4Enabled() && hasWebIntro,
     ) { paddingValues ->
         val book = state.book
         if (book == null) {
@@ -1853,9 +1858,7 @@ private fun parseBookInfoIntro(intro: String?): BookInfoIntroContent? {
  * （WebCacheManager 缓存、书源对象、WebJsExtensions），
  * 并处理 legado/yuedu scheme（导入）与其他 scheme（确认后跳转）。
  *
- * WebView 经 [WebViewContainerCompose] 的 FrameLayout 间接挂载：直接作为
- * AndroidView 子 View 时，加载后改高度会触发 Vulkan functor 重绘路径，
- * 在 Android 16 HWUI Vulkan 后端上引发 drawVk SIGTRAP 原生崩溃（issue #2468）。
+ * WebView 经 [WebViewContainerCompose] 的 FrameLayout 间接挂载（#2468）。
  */
 @Composable
 private fun BookInfoWebIntro(
