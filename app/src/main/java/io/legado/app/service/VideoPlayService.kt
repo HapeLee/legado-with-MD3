@@ -1,6 +1,7 @@
 package io.legado.app.service
 
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import androidx.core.app.NotificationCompat
 import androidx.media.app.NotificationCompat.MediaStyle
 import androidx.media3.common.Player
@@ -97,12 +98,22 @@ class VideoPlayService : BaseService() {
     }
 
     override fun startForegroundNotification() {
-        try {
-            startForeground(NotificationId.VideoPlayService, createNotification().build())
+        val notification = try {
+            createNotification().build()
         } catch (e: Exception) {
             io.legado.app.constant.AppLog.put(
                 "创建视频播放通知出错,${e.localizedMessage}", e, true
             )
+            stopSelf()
+            return
+        }
+        // 与朗读、有声书一致：显式声明 mediaPlayback，不依赖清单类型的隐式推断。
+        if (!startForegroundSafely(
+                NotificationId.VideoPlayService,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
+            )
+        ) {
             stopSelf()
         }
     }
@@ -166,8 +177,11 @@ class VideoPlayService : BaseService() {
         return NotificationCompat.Builder(this, AppConst.channelIdReadAloud)
             .setSmallIcon(R.drawable.ic_play)
             .setSubText(getString(R.string.video))
+            .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setOngoing(playing)
             .setOnlyAlertOnce(true)
+            .setShowWhen(false)
             .setContentTitle(title)
             .setContentIntent(
                 activityPendingIntent(
@@ -203,7 +217,8 @@ class VideoPlayService : BaseService() {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setStyle(
                 MediaStyle()
-                    .setShowActionsInCompactView(1, 2)
+                    // actions 顺序是 上一章/播放暂停/下一章/停止，折叠态取前三个。
+                    .setShowActionsInCompactView(0, 1, 2)
                     .setMediaSession(mediaSessionCompat?.sessionToken)
             )
     }

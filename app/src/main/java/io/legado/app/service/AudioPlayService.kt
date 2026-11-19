@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ServiceInfo
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -740,8 +741,11 @@ class AudioPlayService : BaseService(),
             .Builder(this@AudioPlayService, AppConst.channelIdReadAloud)
             .setSmallIcon(R.drawable.ic_volume_up)
             .setSubText(getString(R.string.audio))
+            .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
+            .setShowWhen(false)
             .setContentTitle(nTitle)
             .setContentText(nSubtitle)
             .setContentIntent(audioPlayerPendingIntent())
@@ -815,12 +819,21 @@ class AudioPlayService : BaseService(),
      * 更新通知
      */
     override fun startForegroundNotification() {
-        try {
-            val notification = createNotification()
-            startForeground(NotificationId.AudioPlayService, notification.build())
+        val notification = try {
+            createNotification().build()
         } catch (e: Exception) {
             AppLog.put("创建音频播放通知出错,${e.localizedMessage}", e, true)
             //创建通知出错不结束服务就会崩溃,服务必须绑定通知
+            stopSelf()
+            return
+        }
+        // 与朗读服务保持一致：显式声明 mediaPlayback，不依赖清单类型的隐式推断。
+        if (!startForegroundSafely(
+                NotificationId.AudioPlayService,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
+            )
+        ) {
             stopSelf()
         }
     }
