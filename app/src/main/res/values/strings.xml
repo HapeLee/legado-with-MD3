@@ -1275,8 +1275,8 @@
     <string name="autobackup_fail">Autobackup failed\n%s</string>
     <string name="end">end</string>
     <string name="custom_group_summary">Turn off Replace Group / Turn on Add Group</string>
-    <string name="pref_media_button_per_next">Media Buttons • Previous | Next</string>
-    <string name="pref_media_button_per_next_summary">Previous Paragraph|Next Paragraph/Previous Chapter|Next Chapter</string>
+    <string name="pref_media_button_per_next">Media buttons skip by chapter</string>
+    <string name="pref_media_button_per_next_summary">On: previous/next on the notification, lock screen and headset switch chapters. Off: they rewind/fast-forward by paragraph.</string>
     <string name="read_aloud_by_page_summary">Turning pages in time, with a pause when the page is turned</string>
     <string name="check_source_show_debug_message">Check book source shows debug message</string>
     <string name="check_source_show_debug_message_summary">Show network status and timestamp during source checking</string>

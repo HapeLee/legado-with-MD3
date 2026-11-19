@@ -193,14 +193,21 @@ abstract class BaseReadAloudService : BaseService(),
          */
         private const val ESTIMATED_CHARS_PER_SECOND = 4f
 
-        private const val READ_ALOUD_MEDIA_SESSION_ACTIONS =
+        /**
+         * 朗读媒体会话的固定动作集合。
+         *
+         * 「上一/下一」不在这里：它按 [ReadConfig.mediaButtonPerNext] 在
+         * [readAloudSkipAction] 里决定挂 SKIP 还是 FAST_FORWARD。系统媒体控件
+         * 是按 PlaybackState.actions 画按钮的，声明了 SKIP_TO_NEXT 就表示「切章」，
+         * 段落快进只能声明 FAST_FORWARD，否则 Android 13+ 会画出 ⏭ 却执行「下一段」
+         * （issue #2604：通知把动作硬编码成下一章，系统面板却按媒体按钮设置走段落）。
+         */
+        private val READ_ALOUD_MEDIA_SESSION_BASE_ACTIONS =
             (PlaybackStateCompat.ACTION_PLAY
                     or PlaybackStateCompat.ACTION_PAUSE
                     or PlaybackStateCompat.ACTION_PLAY_PAUSE
                     or PlaybackStateCompat.ACTION_STOP
-                    or PlaybackStateCompat.ACTION_SEEK_TO
-                    or PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
-                    or PlaybackStateCompat.ACTION_SKIP_TO_NEXT)
+                    or PlaybackStateCompat.ACTION_SEEK_TO)
 
     }
 
@@ -259,6 +266,10 @@ abstract class BaseReadAloudService : BaseService(),
         ReadConfig.systemMediaControlCompatibilityChange
     @Volatile
     private var androidMediaControlEnabled = ReadConfig.androidMediaControlEnabled
+
+    /** 「上一/下一」走章节还是段落；缓存成字段，避免每秒刷媒体进度时反复读偏好。 */
+    @Volatile
+    private var navigateByChapter = ReadConfig.mediaButtonPerNext
     private val finishChapterTimerLock = Any()
     private var finishChapterAtIndex = NO_FINISH_CHAPTER
 
@@ -1364,6 +1375,24 @@ abstract class BaseReadAloudService : BaseService(),
     }
 
     /**
+     * 通知栏按钮与系统媒体控件的「上一/下一」目标。
+     *
+     * 两处必须同源：Android 13+ 会把带 MediaSession 的通知重绘成系统媒体控件，用户实际
+     * 点的是 [PlaybackStateCompat] 声明的动作，而不是通知里 addAction 的那几个。以前通知
+     * 硬编码「下一章」、会话按 mediaButtonPerNext 走「下一段」，点下去就是 issue #2604。
+     */
+    private fun skipAction(forward: Boolean): ReadAloudSkipAction =
+        readAloudSkipAction(
+            forward = forward,
+            navigateByChapter = navigateByChapter,
+        )
+
+    private fun mediaSessionActions(): Long =
+        READ_ALOUD_MEDIA_SESSION_BASE_ACTIONS or
+            skipAction(false).playbackAction or
+            skipAction(true).playbackAction
+
+    /**
      * 更新媒体状态
      */
     private fun upMediaSessionPlaybackState(state: Int) {
@@ -1383,14 +1412,7 @@ abstract class BaseReadAloudService : BaseService(),
         lastMediaSessionPositionMs = position
         lastMediaSessionUpdateElapsedMs = now
         val playbackState = PlaybackStateCompat.Builder()
-            .setActions(
-                if (androidMediaControlEnabled) {
-                    READ_ALOUD_MEDIA_SESSION_ACTIONS
-                } else {
-                    // 「使用媒体通道」这一路用原有按键集合，锁屏媒体控件行为不变。
-                    MediaHelp.MEDIA_SESSION_ACTIONS
-                }
-            )
+            .setActions(mediaSessionActions())
             // TTS 没有真实时间轴, 位置按字符进度与语速估算为毫秒时间
             .setState(
                 state,
@@ -1536,7 +1558,7 @@ abstract class BaseReadAloudService : BaseService(),
             }
 
             override fun onSkipToNext() {
-                if (ReadConfig.mediaButtonPerNext) {
+                if (navigateByChapter) {
                     nextChapter()
                 } else {
                     nextP()
@@ -1544,19 +1566,29 @@ abstract class BaseReadAloudService : BaseService(),
             }
 
             override fun onSkipToPrevious() {
-                if (ReadConfig.mediaButtonPerNext) {
+                if (navigateByChapter) {
                     prevChapter()
                 } else {
                     prevP()
                 }
             }
 
+            /** 段落模式声明的是 FAST_FORWARD，系统只会走这里。 */
+            override fun onFastForward() {
+                if (!navigateByChapter) nextP()
+            }
+
+            override fun onRewind() {
+                if (!navigateByChapter) prevP()
+            }
+
             override fun onStop() {
                 stopReadAloudService()
             }
 
+            /** 进度条在两个通知路径上都会显示，拖动必须都能定位。 */
             override fun onSeekTo(pos: Long) {
-                if (androidMediaControlEnabled) seekToMediaPosition(pos)
+                seekToMediaPosition(pos)
             }
 
             override fun onCustomAction(action: String, extras: Bundle?) {
@@ -1588,7 +1620,13 @@ abstract class BaseReadAloudService : BaseService(),
         lifecycleScope.launch {
             AppConfigStore.observeBoolean(PreferKey.mediaButtonPerNext)
                 .drop(1)
-                .collect { upReadAloudNotification() }
+                .collect {
+                    navigateByChapter = it == true
+                    // 系统媒体控件的按钮来自 PlaybackState.actions，只刷通知不会换掉 ⏭/⏩。
+                    lastMediaSessionState = PlaybackStateCompat.STATE_NONE
+                    refreshMediaSessionPlaybackState()
+                    upReadAloudNotification()
+                }
         }
     }
 
@@ -1681,8 +1719,10 @@ abstract class BaseReadAloudService : BaseService(),
     }
 
     private fun choiceMediaStyle(): androidx.media.app.NotificationCompat.MediaStyle {
+        // 折叠态按「上一 / 播放暂停 / 下一」取；停止和定时放展开区，
+        // 之前取的是 1,2,4（播放/停止/定时），折叠态看不到切章按钮。
         val mediaStyle = androidx.media.app.NotificationCompat.MediaStyle()
-            .setShowActionsInCompactView(1, 2, 4)
+            .setShowActionsInCompactView(0, 1, 3)
         if (systemMediaCompatibilityEnabled && !androidMediaControlEnabled) {
             mediaStyle.setMediaSession(mediaSessionCompat.sessionToken)
         }
@@ -1718,12 +1758,16 @@ abstract class BaseReadAloudService : BaseService(),
             .setVibrate(null)
             .setSound(null)
             .setLights(0, 0, 0)
+            // 媒体通知不该带时间戳：这里显示的是「正在读什么」，不是一条事件消息。
+            .setShowWhen(false)
         builder.setLargeIcon(cover)
-        // 按钮定义：上一章、播放、停止、下一章、定时
+        // 按钮定义：上一条/上一条章、播放、停止、下一条/下一章、定时
+        val previousSkip = skipAction(forward = false)
+        val nextSkip = skipAction(forward = true)
         builder.addAction(
-            R.drawable.ic_skip_previous,
-            getString(R.string.previous_chapter),
-            aloudServicePendingIntent(IntentAction.prev)
+            previousSkip.iconRes,
+            getString(previousSkip.labelRes),
+            aloudServicePendingIntent(previousSkip.intentAction)
         )
         if (pause) {
             builder.addAction(
@@ -1744,9 +1788,9 @@ abstract class BaseReadAloudService : BaseService(),
             aloudServicePendingIntent(IntentAction.stop)
         )
         builder.addAction(
-            R.drawable.ic_skip_next,
-            getString(R.string.next_chapter),
-            aloudServicePendingIntent(IntentAction.next)
+            nextSkip.iconRes,
+            getString(nextSkip.labelRes),
+            aloudServicePendingIntent(nextSkip.intentAction)
         )
         builder.addAction(
             R.drawable.ic_time_add_24dp,
@@ -1765,19 +1809,8 @@ abstract class BaseReadAloudService : BaseService(),
         }
 
     private fun createAndroidMediaControlNotification(): NotificationCompat.Builder {
-        val navigateByChapter = ReadConfig.mediaButtonPerNext
-        val previousAction = if (navigateByChapter) {
-            IntentAction.prev
-        } else {
-            IntentAction.prevParagraph
-        }
-        val nextAction = if (navigateByChapter) IntentAction.next else IntentAction.nextParagraph
-        val previousLabel = getString(
-            if (navigateByChapter) R.string.previous_chapter else R.string.prev_sentence
-        )
-        val nextLabel = getString(
-            if (navigateByChapter) R.string.next_chapter else R.string.next_sentence
-        )
+        val previousSkip = skipAction(forward = false)
+        val nextSkip = skipAction(forward = true)
         val chapterTitle = readerReadAloudChapter?.title
             ?.takeIf { it.isNotBlank() }
             ?: getString(R.string.read_aloud_s)
@@ -1796,6 +1829,7 @@ abstract class BaseReadAloudService : BaseService(),
             .setVibrate(null)
             .setSound(null)
             .setLights(0, 0, 0)
+            .setShowWhen(false)
             .apply {
                 if (!resources.configuration.isNightMode) {
                     // Some OEM media controls derive a white progress tint from light artwork.
@@ -1805,9 +1839,9 @@ abstract class BaseReadAloudService : BaseService(),
                 }
             }
             .addAction(
-                R.drawable.ic_skip_previous,
-                previousLabel,
-                aloudServicePendingIntent(previousAction),
+                previousSkip.iconRes,
+                getString(previousSkip.labelRes),
+                aloudServicePendingIntent(previousSkip.intentAction),
             )
             .addAction(
                 if (pause) R.drawable.ic_play else R.drawable.ic_pause,
@@ -1817,9 +1851,9 @@ abstract class BaseReadAloudService : BaseService(),
                 ),
             )
             .addAction(
-                R.drawable.ic_skip_next,
-                nextLabel,
-                aloudServicePendingIntent(nextAction),
+                nextSkip.iconRes,
+                getString(nextSkip.labelRes),
+                aloudServicePendingIntent(nextSkip.intentAction),
             )
             .addAction(
                 R.drawable.ic_time_add_24dp,
@@ -2040,6 +2074,49 @@ abstract class BaseReadAloudService : BaseService(),
     }
 
 }
+
+/**
+ * 通知按钮与系统媒体控件共用的「上一/下一」定义。
+ *
+ * [playbackAction] 必须与 [intentAction] 语义一致：SKIP_TO_NEXT 就是切章，
+ * FAST_FORWARD 才是段落快进。系统媒体控件按 [playbackAction] 决定画 ⏭ 还是 ⏩，
+ * 用户按下去走 MediaSession 回调；两者对不上就会出现「按钮写着下一章、点了变快进」
+ * （issue #2604）。
+ */
+internal data class ReadAloudSkipAction(
+    val intentAction: String,
+    val iconRes: Int,
+    val labelRes: Int,
+    val playbackAction: Long,
+)
+
+internal fun readAloudSkipAction(
+    forward: Boolean,
+    navigateByChapter: Boolean,
+): ReadAloudSkipAction =
+    if (navigateByChapter) {
+        ReadAloudSkipAction(
+            intentAction = if (forward) IntentAction.next else IntentAction.prev,
+            iconRes = if (forward) R.drawable.ic_skip_next else R.drawable.ic_skip_previous,
+            labelRes = if (forward) R.string.next_chapter else R.string.previous_chapter,
+            playbackAction = if (forward) {
+                PlaybackStateCompat.ACTION_SKIP_TO_NEXT
+            } else {
+                PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
+            },
+        )
+    } else {
+        ReadAloudSkipAction(
+            intentAction = if (forward) IntentAction.nextParagraph else IntentAction.prevParagraph,
+            iconRes = if (forward) R.drawable.ic_fast_forward else R.drawable.ic_fast_rewind,
+            labelRes = if (forward) R.string.next_sentence else R.string.prev_sentence,
+            playbackAction = if (forward) {
+                PlaybackStateCompat.ACTION_FAST_FORWARD
+            } else {
+                PlaybackStateCompat.ACTION_REWIND
+            },
+        )
+    }
 
 /**
  * 把已朗读字符数按每秒朗读字数估算为媒体播放器时间轴毫秒值
