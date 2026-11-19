@@ -1382,6 +1382,16 @@ fun MainActivity.mainEntryProvider(
                     )
                 }
             },
+            onOpenVideoPlayer = { article ->
+                onNavigateToRoute(
+                    MainRouteVideoPlay(
+                        rssOrigin = article.origin,
+                        rssLink = article.link,
+                        rssSort = article.sort,
+                        rssTitle = article.title,
+                    )
+                )
+            },
             onEditSource = { onNavigateToRoute(MainRouteRssSourceEdit(it)) },
             onLogin = {
                 onNavigateToRoute(MainRouteSourceLogin(SourceLoginType.RssSource, it))

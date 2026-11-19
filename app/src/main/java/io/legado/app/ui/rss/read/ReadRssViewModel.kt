@@ -47,6 +47,22 @@ internal fun shouldPreserveRssArticleOnRefresh(
     ruleContent: String?,
 ) = ruleContent.isNullOrBlank() || !ruleDescription.isNullOrBlank()
 
+/**
+ * 阅读页是否提供「播放视频」。
+ *
+ * 判定必须以**订阅源**为准：列表解析只填标题/链接等文本字段，`RssArticle.type`
+ * 长期停在默认 0，单看文章会把所有 type=2 的视频源都判成图文。文章自带的视频标记作为兼容
+ * （收藏/历史里可能存在旧数据）。
+ */
+internal fun canPlayRssVideo(sourceType: Int?, article: RssArticle?): Boolean =
+    article != null && (isRssVideoSource(sourceType) || article.type == RSS_SOURCE_TYPE_VIDEO)
+
+/** 订阅源在源信息里声明为视频源（`type == 2`）。 */
+internal fun isRssVideoSource(sourceType: Int?): Boolean =
+    sourceType == RSS_SOURCE_TYPE_VIDEO
+
+internal const val RSS_SOURCE_TYPE_VIDEO = 2
+
 data class ReadRssSettings(
     val showStatusBar: Boolean = true,
     val userAgent: String = "",
@@ -78,6 +94,10 @@ class ReadRssViewModel(
 
     private val _contentState = MutableStateFlow<String?>(null)
     val contentState: StateFlow<String?> = _contentState.asStateFlow()
+
+    /** 视频订阅源才给「播放视频」入口；源与文章都异步加载，这里用状态流驱动菜单。 */
+    private val _canPlayVideo = MutableStateFlow(false)
+    val canPlayVideo: StateFlow<Boolean> = _canPlayVideo.asStateFlow()
 
     private val _urlState = MutableStateFlow<AnalyzeUrl?>(null)
     val urlState: StateFlow<AnalyzeUrl?> = _urlState.asStateFlow()
@@ -119,6 +139,7 @@ class ReadRssViewModel(
                 _rssStarState.value = favoriteRepository.find(args.origin, link)
                 rssArticle = _rssStarState.value?.toRssArticle()
                     ?: articleRepository.findByLink(args.origin, link)
+                updateCanPlayVideo()
                 val article = rssArticle ?: return@execute
                 if (!article.description.isNullOrBlank()) {
                     _contentState.value = article.description!!
@@ -151,9 +172,14 @@ class ReadRssViewModel(
                     title = rssSource!!.sourceName
                 }
                 rssArticle = article
+                updateCanPlayVideo()
                 loadContent(article, ruleContent)
             }
         }
+    }
+
+    private fun updateCanPlayVideo() {
+        _canPlayVideo.value = canPlayRssVideo(rssSource?.type, rssArticle)
     }
 
     private suspend fun loadUrl(url: String, baseUrl: String) {

@@ -170,6 +170,7 @@ fun RssReadRouteScreen(
     val content by viewModel.contentState.collectAsStateWithLifecycle()
     val analyzeUrl by viewModel.urlState.collectAsStateWithLifecycle()
     val isSpeaking by viewModel.isSpeakingState.collectAsStateWithLifecycle()
+    val canPlayVideo by viewModel.canPlayVideo.collectAsStateWithLifecycle()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val fallbackUserAgent = settings.userAgent
 
@@ -486,7 +487,7 @@ fun RssReadRouteScreen(
                                                     icon = Icons.Default.Share,
                                                 )
                                             )
-                                            if (viewModel.rssArticle?.type == 2) {
+                                            if (canPlayVideo) {
                                                 add(
                                                     AppAction(
                                                         id = RssReadMenuPlayVideo,

@@ -52,7 +52,11 @@ class RssReadMenuContractTest {
         ).forEach { call ->
             assertTrue("缺少动作：$call", source.contains(call))
         }
-        assertTrue("播放视频项丢了 type==2 条件", source.contains("viewModel.rssArticle?.type == 2"))
+        assertTrue("播放视频项应跟随视频源状态", source.contains("if (canPlayVideo)"))
+        assertTrue(
+            "播放视频入口未订阅 VM 状态",
+            source.contains("viewModel.canPlayVideo.collectAsStateWithLifecycle()"),
+        )
         assertTrue("登录项丢了条件", source.contains("rssSource?.loginUrl.isNullOrBlank()"))
         assertTrue("朗读文案未随状态切换", source.contains("R.string.aloud_stop"))
         assertTrue("朗读文案未随状态切换", source.contains("R.string.read_aloud"))

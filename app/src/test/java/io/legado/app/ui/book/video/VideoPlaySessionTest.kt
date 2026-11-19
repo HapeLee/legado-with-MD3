@@ -12,6 +12,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.RssArticle
+import io.legado.app.data.entities.RssSource
 import io.legado.app.data.entities.rule.BookInfoRule
 import io.legado.app.data.entities.rule.ContentRule
 import io.legado.app.data.entities.rule.TocRule
@@ -344,6 +345,39 @@ class VideoPlaySessionTest {
         )
     }
 
+    @Test
+    fun rssArticleMediaKeepsSourceHeaders() = runBlocking {
+        fixture.database.rssSourceDao.insert(
+            RssSource(
+                sourceUrl = "https://rss.test",
+                sourceName = "RSS",
+                type = 2,
+                header = """{"Referer":"https://rss.test/list","User-Agent":"rss-agent"}""",
+            )
+        )
+        val article = RssArticle(
+            origin = "https://rss.test",
+            sort = "sort",
+            title = "RSS Video",
+            link = "https://rss.test/header",
+            content = "https://cdn.rss.test/video.m3u8",
+            type = 2,
+        )
+        VideoPlay.attachPlayer(player.instance)
+
+        VideoPlay.openRssArticle(article)
+        awaitState("RSS 视频地址") { it.playUrl == "https://cdn.rss.test/video.m3u8" }
+
+        val configuration = requireNotNull(player.lastMediaItem?.localConfiguration)
+        val uri = configuration.uri.toString()
+        // 订阅源的 header 必须进播放器，否则视频站按 Referer/UA 拒绝 m3u8
+        assertTrue(uri.startsWith("https://cdn.rss.test/video.m3u8"))
+        assertTrue(uri.contains("rss-agent"))
+        assertTrue(uri.contains("https://rss.test/list"))
+        assertEquals("application/x-mpegURL", configuration.mimeType)
+        awaitWrites()
+    }
+
     // ——————————————————— 卷与集 ———————————————————
 
     @Test
@@ -548,6 +582,8 @@ class VideoPlaySessionTest {
         var position = 0L
         var pauseCalls = 0
         var released = false
+        var lastMediaItem: MediaItem? = null
+            private set
         private var playing = false
         private var mediaItemCount = 0
 
@@ -559,6 +595,7 @@ class VideoPlaySessionTest {
                 "getMediaItemCount" -> mediaItemCount
                 "setMediaItem" -> {
                     mediaItemCount = 1
+                    lastMediaItem = args?.getOrNull(0) as? MediaItem
                     if (args != null && args.size > 1) position = args[1] as Long
                     null
                 }

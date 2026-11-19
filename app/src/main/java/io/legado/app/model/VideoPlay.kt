@@ -19,8 +19,11 @@ import io.legado.app.help.CacheManager
 import io.legado.app.help.book.isNotShelf
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.exoplayer.ExoPlayerHelper
+import io.legado.app.model.analyzeRule.AnalyzeUrl
+import io.legado.app.model.analyzeRule.AnalyzeUrl.Companion.getMediaItem
 import io.legado.app.model.rss.Rss
 import io.legado.app.utils.NetworkUtils
+import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -300,7 +303,7 @@ object VideoPlay : CoroutineScope by MainScope() {
                 danmaku = null,
             )
         }
-        val url = withContext(Dispatchers.IO) {
+        val prepared = withContext(Dispatchers.IO) {
             runCatching {
                 val source = appDb.rssSourceDao.getByKey(target.origin)
                 val raw = if (target.content.isNullOrBlank() || target.content == target.link) {
@@ -313,17 +316,27 @@ object VideoPlay : CoroutineScope by MainScope() {
                 } else {
                     target.content
                 }
-                raw?.trim()?.takeIf { it.isNotEmpty() }
+                val url = raw?.trim()?.takeIf { it.isNotEmpty() }
                     ?.let { NetworkUtils.getAbsoluteURL(target.link, it) }
+                    ?: return@runCatching null
+                // 与书源同一个出口：订阅源的 UA/Referer/Cookie 必须带进播放器，
+                // 视频站的 m3u8 常按 Referer 拒绝裸直链
+                val analyzeUrl = AnalyzeUrl(
+                    NetworkUtils.normalizeMediaUrl(url),
+                    source = source,
+                    ruleData = target,
+                    coroutineContext = coroutineContext,
+                    hasLoginHeader = false,
+                )
+                analyzeUrl.getMediaItem() to analyzeUrl.url
             }.getOrNull()
         }
-        if (url.isNullOrBlank()) {
+        val (mediaItem, mediaUrl) = prepared ?: run {
             fail(IllegalStateException(appCtx.getString(R.string.video_link_not_found)))
             return
         }
-        val mediaUrl = NetworkUtils.normalizeMediaUrl(url)
         playUrl = mediaUrl
-        player.setMediaItem(MediaItem.fromUri(mediaUrl), durChapterPos.coerceAtLeast(0).toLong())
+        player.setMediaItem(mediaItem, durChapterPos.coerceAtLeast(0).toLong())
         player.playbackParameters = player.playbackParameters.withSpeed(playSpeed)
         player.prepare()
         if (autoPlay) player.play()

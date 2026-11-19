@@ -16,8 +16,10 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.data.entities.RssArticle
 import io.legado.app.data.entities.RssReadRecord
 import io.legado.app.ui.rss.read.RedirectPolicy
+import io.legado.app.ui.rss.read.isRssVideoSource
 import io.legado.app.ui.widget.components.variable.VariableEditorUiState
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +35,8 @@ fun RssSortRouteScreen(
     onBackClick: () -> Unit,
     onSearch: (String) -> Unit,
     onOpenRead: (title: String?, origin: String, link: String?, openUrl: String?) -> Unit,
+    /** 视频订阅源的文章直接进播放页，不再先落一层显示 m3u8 文本的网页。 */
+    onOpenVideoPlayer: (RssArticle) -> Unit,
     onEditSource: (String) -> Unit,
     onLogin: (String) -> Unit,
     viewModel: RssSortViewModel = koinViewModel()
@@ -184,7 +188,14 @@ fun RssSortRouteScreen(
                 paddingValues = paddingValues,
                 onRead = { article ->
                     viewModel.read(article)
-                    onOpenRead(article.title, article.origin, article.link, null)
+                    // `@js:` 链接是源内的分类跳转，交给上层按原路径处理
+                    if (!article.link.contains("@js:") &&
+                        isRssVideoSource(viewModel.rssSource?.type)
+                    ) {
+                        onOpenVideoPlayer(article)
+                    } else {
+                        onOpenRead(article.title, article.origin, article.link, null)
+                    }
                 }
             )
         }
