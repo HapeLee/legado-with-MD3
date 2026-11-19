@@ -1,6 +1,7 @@
 package io.legado.app.utils
 
 import io.legado.app.domain.model.TextProjection
+import io.legado.app.help.book.isParagraphBubbleImageSrc
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import org.apache.commons.text.StringEscapeUtils
 import org.jsoup.Jsoup
@@ -165,19 +166,16 @@ object HtmlFormatter {
         for (m in formatImagePattern.findAll(keepImgHtml)) {
             var param = ""
             val before = sb.length
+            val src = m.groups[1]?.value?.let {
+                val urlMatch = AnalyzeUrl.paramPattern.find(it)
+                if (urlMatch != null) {
+                    param = ',' + it.substring(urlMatch.range.last + 1)
+                    it.substring(0, urlMatch.range.first)
+                } else it
+            } ?: m.groups[2]?.value ?: m.groups[3]!!.value
             sb.append(
-                keepImgHtml.substring(appendPos, m.range.first), "<img src=\"${
-                    NetworkUtils.getAbsoluteURL(
-                        redirectUrl,
-                        m.groups[1]?.value?.let {
-                            val urlMatch = AnalyzeUrl.paramPattern.find(it)
-                            if (urlMatch != null) {
-                                param = ',' + it.substring(urlMatch.range.last + 1)
-                                it.substring(0, urlMatch.range.first)
-                            } else it
-                        } ?: m.groups[2]?.value ?: m.groups[3]!!.value
-                    ) + param
-                }\">"
+                keepImgHtml.substring(appendPos, m.range.first),
+                "<img src=\"${resolveImageSrc(redirectUrl, src)}$param\">"
             )
             if (projection != null) edits += TextProjection.Edit(m.range.first, m.range.last + 1,
                 sb.length - before - (m.range.first - appendPos))
@@ -191,6 +189,15 @@ object HtmlFormatter {
         )
         projection?.replace(edits)
         return sb.toString()
+    }
+
+    /**
+     * 段评气泡（`dp:` / `bubble://`）在排版时按章节内容现算，没有可拼接的远程地址；
+     * 送进 URL 解析只会抛 `unknown protocol` 并按图片张数刷日志（#2593）。
+     */
+    private fun resolveImageSrc(redirectUrl: URL?, src: String): String {
+        if (isParagraphBubbleImageSrc(src)) return src
+        return NetworkUtils.getAbsoluteURL(redirectUrl, src)
     }
 
     /**

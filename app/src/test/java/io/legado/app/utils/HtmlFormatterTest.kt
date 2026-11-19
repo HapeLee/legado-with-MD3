@@ -1,9 +1,11 @@
 package io.legado.app.utils
 
+import io.legado.app.constant.AppLog
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.net.URL
 
 class HtmlFormatterTest {
 
@@ -90,6 +92,46 @@ class HtmlFormatterTest {
         )
 
         assertEquals("正文", result)
+    }
+
+    /**
+     * #2593：气泡地址没有远程资源，格式化正文时不能拿它拼 URL。
+     * 当前实现会进 `URL(base, "dp:4")` 抛 unknown protocol 并写一条 AppLog，
+     * 段评越多的章节刷得越多；这里只要求原样保留、不抛异常。
+     */
+    @Test
+    fun formatKeepImg_keepsNativeParagraphBubbleSrc() {
+        val bubble = "dp:4,{\"click\":\"jjParaOpen(2416557,2,1,4)\"}"
+        AppLog.clear()
+        val result = HtmlFormatter.formatKeepImg(
+            "正文<img src=\"$bubble\">",
+            URL("https://example.com/chapter/1")
+        )
+
+        assertTrue(result.contains("正文"))
+        assertTrue(result.contains(bubble))
+        assertFalse(AppLog.logs.any { it.second.contains("网址拼接出错") })
+    }
+
+    @Test
+    fun formatKeepImg_keepsBubbleSchemeSrc() {
+        val bubble = "bubble://paragraph?num=3"
+        val result = HtmlFormatter.formatKeepImg(
+            "正文<img src=\"$bubble\">",
+            URL("https://example.com/chapter/1")
+        )
+
+        assertTrue(result.contains(bubble))
+    }
+
+    @Test
+    fun formatKeepImg_stillResolvesRegularImageSrc() {
+        val result = HtmlFormatter.formatKeepImg(
+            "正文<img src=\"/images/a.jpg\">",
+            URL("https://example.com/chapter/1")
+        )
+
+        assertTrue(result.contains("src=\"https://example.com/images/a.jpg\""))
     }
 
     @Test
