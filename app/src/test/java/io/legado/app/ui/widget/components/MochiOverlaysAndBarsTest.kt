@@ -56,7 +56,7 @@ import io.legado.app.feature.settings.search.SettingsSearchTargetScope
 import io.legado.app.ui.config.themeConfig.ThemeConfigIntent
 import io.legado.app.ui.config.themeConfig.ThemeConfigScreen
 import io.legado.app.ui.config.themeConfig.ThemeConfigUiState
-import io.legado.app.ui.config.themeConfig.TopBottomBarSettingsSheet
+import io.legado.app.ui.config.themeConfig.TopBottomBarSettingsSection
 import io.legado.app.ui.theme.AppTheme
 import io.legado.app.ui.theme.LocalHasMiuixPopupHost
 import io.legado.app.ui.theme.LocalMochiBackdropRegistry
@@ -1650,12 +1650,9 @@ class MochiOverlaysAndBarsTest {
         val app = RuntimeEnvironment.getApplication()
         val theme = mutableStateOf(ThemeSettings(topBarButtonStyle = "liquid", mergeTopBarActions = true))
         show(glass = true, merged = true) {
-            TopBottomBarSettingsSheet(
-                show = true,
+            TopBottomBarSettingsSection(
                 appShell = AppShellSettings(composeEngine = "mochi"),
                 theme = theme.value,
-                isMiuixEngine = false,
-                onDismissRequest = {},
                 onIntent = { if (it is ThemeConfigIntent.UpdateTheme) theme.value = it.transform(theme.value) },
             )
         }

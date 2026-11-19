@@ -19,8 +19,9 @@ data class ThemeConfigUiState(
 
 sealed interface ThemeConfigSheet {
     data class BackgroundImage(val target: BackgroundImageTarget) : ThemeConfigSheet
-    data object MainNavigation : ThemeConfigSheet
-    data object TopBottomBar : ThemeConfigSheet
+
+    /** 导航栏自定义图标：仍以浮层编辑（每个目的地含两个图标槽）。 */
+    data object NavIcons : ThemeConfigSheet
     data object LauncherIcon : ThemeConfigSheet
     data object DividerColor : ThemeConfigSheet
     data class BaseCardBorderColor(val dark: Boolean) : ThemeConfigSheet

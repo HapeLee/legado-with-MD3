@@ -204,6 +204,36 @@ class ThemeConfigCouiThemeContractTest {
     }
 
     /**
+     * 「首页与导航」「顶栏与底栏」从浮层收进外观页：设置项必须留在页面里（与同页 SettingItem
+     * 系列同形），浮层入口只保留仍需整块编辑的导航图标。
+     */
+    @Test
+    fun mainNavigationAndBarSettingsAreInlinedInTheAppearancePage() {
+        val page = sourceOf(THEME_CONFIG)
+        assertFalse("首页与导航仍在用浮层承载", page.contains("ThemeConfigSheet.MainNavigation"))
+        assertFalse("顶栏与底栏仍在用浮层承载", page.contains("ThemeConfigSheet.TopBottomBar"))
+        assertTrue("首页与导航未内联渲染", page.contains("MainNavigationSettingsSection("))
+        assertTrue("顶栏与底栏未内联渲染", page.contains("TopBottomBarSettingsSection("))
+        assertTrue("导航图标入口丢失", page.contains("ThemeConfigSheet.NavIcons"))
+        assertFalse(
+            "旧浮层实现仍留在源码树",
+            repoContains(SHEET_MAIN_NAVIGATION) || repoContains(SHEET_TOP_BOTTOM_BAR),
+        )
+
+        val navigation = sourceOf(MAIN_NAVIGATION_SECTION)
+        assertTrue("默认主页未使用同页下拉项", navigation.contains("SearchableSetting(\"theme.default_home_page\")"))
+        assertTrue("导航标签模式未使用同页下拉项", navigation.contains("DropdownListSettingItem("))
+        assertTrue("导航项未使用同页开关", navigation.contains("SwitchSettingItem("))
+        assertTrue("导航项丢失拖拽排序", navigation.contains("rememberReorderableLazyListState"))
+
+        val bars = sourceOf(TOP_BOTTOM_BAR_SECTION)
+        assertTrue("折叠应用栏未使用同页开关", bars.contains("SwitchSettingItem("))
+        assertTrue("模糊/不透明度未使用同页滑块", bars.contains("SliderSettingItem("))
+        assertTrue("引擎档位未使用同页下拉项", bars.contains("DropdownListSettingItem("))
+        assertTrue("COUI 锁定悬浮底栏的禁用语义丢失", bars.contains("enabled = !isCoui"))
+    }
+
+    /**
      * COUI 的玻璃材质会把采样源图层画进自己的 patch：采样源一旦包含消费者自身，源图层就成为
      * 自己的子节点，hwui 在 prepareTree 里无限递归，直到 RenderThread 栈溢出（native 闪退）。
      * 因此多选栏只能用 AppScaffold 浮层槽位提供的正文源，不能自取窗口级菜单源（整页都在里面）。
@@ -302,11 +332,26 @@ class ThemeConfigCouiThemeContractTest {
 
     private fun sourceOf(path: String): String = repoFileOf("app/src/main/java/$path")
 
-    private fun repoFileOf(path: String): String {
+    private fun repoFileOf(path: String): String = repoPath(path).readText()
+
+    /** 只判断路径是否存在：被删掉的文件不能沿用 [repoPath] 的「找不到就抛错」语义。 */
+    private fun repoContains(path: String): Boolean {
+        var directory: File? = File("").absoluteFile
+        while (directory != null) {
+            if (File(directory, path).exists()) return true
+            val isRepoRoot = File(directory, "settings.gradle.kts").isFile &&
+                File(directory, "app/src/main/java").isDirectory
+            if (isRepoRoot) return false
+            directory = directory.parentFile
+        }
+        return false
+    }
+
+    private fun repoPath(path: String): File {
         var directory: File? = File("").absoluteFile
         while (directory != null) {
             val candidate = File(directory, path)
-            if (candidate.isFile) return candidate.readText()
+            if (candidate.isFile) return candidate
             directory = directory.parentFile
         }
         error("从 ${File("").absolutePath} 向上找不到 $path")
@@ -314,6 +359,14 @@ class ThemeConfigCouiThemeContractTest {
 
     private companion object {
         const val THEME_CONFIG = "io/legado/app/ui/config/themeConfig/ThemeConfigScreen.kt"
+        const val MAIN_NAVIGATION_SECTION =
+            "io/legado/app/ui/config/themeConfig/MainNavigationSettingsSection.kt"
+        const val TOP_BOTTOM_BAR_SECTION =
+            "io/legado/app/ui/config/themeConfig/TopBottomBarSettingsSection.kt"
+        const val SHEET_MAIN_NAVIGATION =
+            "app/src/main/java/io/legado/app/ui/config/themeConfig/MainNavigationSettingsSheet.kt"
+        const val SHEET_TOP_BOTTOM_BAR =
+            "app/src/main/java/io/legado/app/ui/config/themeConfig/TopBottomBarSettingsSheet.kt"
         const val SETTING_ITEM = "io/legado/app/ui/widget/components/settingItem/SettingItem.kt"
         const val LIST_SETTING_ITEM = "io/legado/app/ui/widget/components/settingItem/ListSettingItem.kt"
         const val APP_THEME = "io/legado/app/ui/theme/AppTheme.kt"

@@ -24,6 +24,7 @@ fun SwitchSettingItem(
     imageVector: ImageVector? = null,
     color: Color? = null,
     enabled: Boolean = true,
+    modifier: Modifier = Modifier,
     onCheckedChange: (Boolean) -> Unit
 ) {
     val composeEngine = LegadoTheme.composeEngine
@@ -36,12 +37,13 @@ fun SwitchSettingItem(
                 summary = description,
                 checked = checked,
                 onCheckedChange = onCheckedChange,
-                modifier = Modifier,
+                modifier = modifier,
                 enabled = enabled,
             )
         }
         ComposeEngine.Oxygen, ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             SettingItem(
+                modifier = modifier,
                 title = title,
                 description = description,
                 imageVector = imageVector,

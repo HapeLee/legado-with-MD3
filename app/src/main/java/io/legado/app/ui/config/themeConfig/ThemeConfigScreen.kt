@@ -429,15 +429,20 @@ fun ThemeConfigScreen(
                 }
 
                 SplicedColumnGroup(title = stringResource(R.string.main_activity)) {
-                    SearchableSetting("theme.main_navigation_settings") {
-                        ClickableSettingItem(
-                            title = stringResource(R.string.main_navigation_settings),
-                            description = stringResource(R.string.main_navigation_settings_summary),
-                            onClick = {
-                                onIntent(ThemeConfigIntent.ShowSheet(ThemeConfigSheet.MainNavigation))
-                            },
-                        )
-                    }
+                    MainNavigationSettingsSection(
+                        settings = appShell,
+                        onSetDefault = { onIntent(ThemeConfigIntent.SetDefaultHomePage(it)) },
+                        onSetLabelVisibilityMode = {
+                            onIntent(ThemeConfigIntent.SetLabelVisibilityMode(it))
+                        },
+                        onOpenNavIcons = {
+                            onIntent(ThemeConfigIntent.ShowSheet(ThemeConfigSheet.NavIcons))
+                        },
+                        onSetVisible = { route, visible ->
+                            onIntent(ThemeConfigIntent.SetMainDestinationVisible(route, visible))
+                        },
+                        onSetOrder = { onIntent(ThemeConfigIntent.SetMainNavigationOrder(it)) },
+                    )
                     SearchableSetting("theme.show_status") {
                         SwitchSettingItem(
                             title = stringResource(R.string.show_status),
@@ -459,15 +464,6 @@ fun ThemeConfigScreen(
                                     ThemeConfigIntent.SetSwipeAnimation(it)
                                 )
                             }
-                        )
-                    }
-                    SearchableSetting("theme.top_bottom_bar_settings") {
-                        ClickableSettingItem(
-                            title = stringResource(R.string.top_bottom_bar_settings),
-                            description = stringResource(R.string.top_bottom_bar_settings_summary),
-                            onClick = {
-                                onIntent(ThemeConfigIntent.ShowSheet(ThemeConfigSheet.TopBottomBar))
-                            },
                         )
                     }
                     SearchableSetting("theme.tabletInterface") {
@@ -492,6 +488,14 @@ fun ThemeConfigScreen(
                             onValueChange = { onIntent(ThemeConfigIntent.SetMultiPaneMode(it)) },
                         )
                     }
+                }
+
+                SplicedColumnGroup(title = stringResource(R.string.top_bottom_bar_settings)) {
+                    TopBottomBarSettingsSection(
+                        appShell = appShell,
+                        theme = theme,
+                        onIntent = onIntent,
+                    )
                 }
 
                 SplicedColumnGroup(title = stringResource(R.string.book_info_page)) {
@@ -1056,29 +1060,12 @@ fun ThemeConfigScreen(
         onRemoveDark = { removeImage(true) },
     )
 
-    MainNavigationSettingsSheet(
-        show = state.activeSheet == ThemeConfigSheet.MainNavigation,
+    NavIconManageSheet(
+        show = state.activeSheet == ThemeConfigSheet.NavIcons,
         settings = appShell,
         onDismissRequest = { onIntent(ThemeConfigIntent.DismissSheet) },
-        onSetVisible = { route, visible ->
-            onIntent(ThemeConfigIntent.SetMainDestinationVisible(route, visible))
-        },
-        onSetOrder = { onIntent(ThemeConfigIntent.SetMainNavigationOrder(it)) },
-        onSetDefault = { onIntent(ThemeConfigIntent.SetDefaultHomePage(it)) },
-        onRequestNavigationIcon = { onIntent(ThemeConfigIntent.RequestNavigationIcon(it)) },
-        onClearNavigationIcon = { onIntent(ThemeConfigIntent.SelectNavigationIcon(it, "")) },
-        onSetLabelVisibilityMode = {
-            onIntent(ThemeConfigIntent.SetLabelVisibilityMode(it))
-        },
-    )
-
-    TopBottomBarSettingsSheet(
-        show = state.activeSheet == ThemeConfigSheet.TopBottomBar,
-        appShell = appShell,
-        theme = theme,
-        isMiuixEngine = ThemeResolver.resolveComposeEngine(appShell.composeEngine) == ComposeEngine.Miuix,
-        onDismissRequest = { onIntent(ThemeConfigIntent.DismissSheet) },
-        onIntent = onIntent,
+        onSelectIcon = { onIntent(ThemeConfigIntent.RequestNavigationIcon(it)) },
+        onClearIcon = { onIntent(ThemeConfigIntent.SelectNavigationIcon(it, "")) },
     )
 
 
