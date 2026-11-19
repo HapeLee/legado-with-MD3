@@ -36,6 +36,11 @@ fun AppCheckbox(
     }
 
     when (composeEngine) {
+        ComposeEngine.Oxygen -> {
+            io.oxygenx.material3.ProvideMaterial3Content {
+                io.oxygenx.ui.basic.Checkbox(checked, onCheckedChange, if (onCheckedChange == null) semanticModifier else semanticModifier.minimumInteractiveComponentSize(), enabled)
+            }
+        }
         ComposeEngine.Miuix -> {
             MiuixCheckbox(
                 state = state,
@@ -100,7 +105,7 @@ fun AppTriStateCheckbox(
                 enabled = enabled
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
+        ComposeEngine.Oxygen, ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             TriStateCheckbox(
                 state = state,
                 onClick = onClick,

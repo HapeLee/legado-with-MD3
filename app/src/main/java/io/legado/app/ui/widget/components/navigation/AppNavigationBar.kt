@@ -6,6 +6,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import io.oxygenx.ui.navigation.NavigationBarItem as OxygenNavigationBarItem
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
@@ -60,7 +62,8 @@ fun AppNavigationBar(
     val opacity = (themeSettings.bottomBarOpacity.coerceIn(0, 100)) / 100f
     val customSecondaryColor = themeSettings.customColors(LegadoTheme.isDark).secondary
     val hasCustomSecondary = themeSettings.appTheme == "12" &&
-        themeSettings.enableDeepPersonalization && customSecondaryColor != 0
+        themeSettings.enableDeepPersonalization && customSecondaryColor != 0 &&
+        (LegadoTheme.composeEngine != ComposeEngine.Oxygen || themeSettings.useMiuixMonet)
     val hazeState = LocalHazeState.current
     val hazeModifier = if (hazeState != null) {
         Modifier.regularHazeEffect(hazeState)
@@ -69,6 +72,17 @@ fun AppNavigationBar(
     }
 
     when (LegadoTheme.composeEngine) {
+        ComposeEngine.Oxygen -> {
+            val baseColor = if (hasCustomSecondary) Color(customSecondaryColor)
+                else io.oxygenx.theme.OxygenTheme.colorScheme.surfaceContainer
+            io.oxygenx.material3.ProvideMaterial3Content {
+                io.oxygenx.ui.navigation.NavigationBar(
+                    modifier = modifier.navigationBarsPadding(),
+                    colors = io.oxygenx.ui.navigation.NavigationBarDefaults.colors(containerColor = baseColor.copy(alpha = baseColor.alpha * opacity)),
+                    content = content,
+                )
+            }
+        }
         ComposeEngine.Miuix -> {
             val baseColor =
                 if (hasCustomSecondary) {
@@ -132,6 +146,16 @@ fun RowScope.AppNavigationBarItem(
     m3AlwaysShowLabel: Boolean = true,
     useCustomIcon: Boolean = false,
 ) {
+    if (LegadoTheme.composeEngine == ComposeEngine.Oxygen) {
+        io.oxygenx.material3.ProvideMaterial3Content {
+            OxygenNavigationBarItem(
+                selected = selected, onClick = onClick, modifier = modifier,
+                label = if (m3ShowLabel && (m3AlwaysShowLabel || selected)) { { io.legado.app.ui.widget.components.text.AppText(labelString) } } else null,
+                icon = m3Icon,
+            )
+        }
+        return
+    }
     val isMiuix = LegadoTheme.composeEngine == ComposeEngine.Miuix
     val useCustomIconBox =
         useCustomIcon && LocalAppUiConfiguration.current.appShell.useFloatingBottomBar
@@ -179,7 +203,7 @@ fun RowScope.AppNavigationBarItem(
                 modifier = modifier
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
+        ComposeEngine.Oxygen, ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             ShortNavigationBarItem(
                 selected = selected,
                 onClick = onClick,

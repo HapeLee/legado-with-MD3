@@ -130,6 +130,20 @@ private fun BaseCard(
     } else {
         modifier
     }
+    if (LegadoTheme.composeEngine == ComposeEngine.Oxygen) {
+        io.oxygenx.material3.ProvideMaterial3Content {
+            io.oxygenx.ui.basic.Surface(
+                modifier = clickableModifier,
+                shape = resolvedShape,
+                color = if (isTransparent) Color.Transparent else resolvedContainerColor,
+                contentColor = contentColor ?: LegadoTheme.colorScheme.onSurface,
+                border = resolvedBorder,
+            ) {
+                BaseCardContent(shape = resolvedShape, useItemBackground = useItemBackground, content = content)
+            }
+        }
+        return
+    }
     Surface(
         modifier = clickableModifier,
         shape = resolvedShape,

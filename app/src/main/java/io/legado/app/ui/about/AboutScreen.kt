@@ -69,7 +69,7 @@ fun AboutScreen(
                 versionName = versionName,
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
+        ComposeEngine.Oxygen, ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             MaterialAboutScreen(
                 state = state,
                 onIntent = onIntent,

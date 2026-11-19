@@ -206,7 +206,7 @@ fun SplicedColumnGroup(
                         }
                     }
                 }
-                ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
+                ComposeEngine.Oxygen, ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()

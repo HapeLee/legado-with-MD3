@@ -150,6 +150,25 @@ private fun FloatingActionButtonByEngine(
     }
 
     when (LegadoTheme.composeEngine) {
+        ComposeEngine.Oxygen -> {
+            io.oxygenx.material3.ProvideMaterial3Content {
+                if (icon != null) {
+                    val defaults = io.oxygenx.ui.basic.FabDefaults.colors()
+                    io.oxygenx.ui.basic.FloatingActionButton(
+                        onClick, icon, tooltipText, modifier,
+                        colors = defaults.copy(
+                            containerColor = containerColor ?: defaults.containerColor,
+                            contentColor = contentColor ?: defaults.contentColor,
+                        ),
+                    )
+                } else {
+                    // The library's FAB is vector-based; retain arbitrary custom content.
+                    MaterialFloatingActionButton(modifier, onClick,
+                        containerColor ?: LegadoTheme.colorScheme.primaryContainer,
+                        contentColor ?: LegadoTheme.colorScheme.onPrimaryContainer, fabContent)
+                }
+            }
+        }
         ComposeEngine.Miuix -> {
             MiuixFloatingActionButton(
                 onClick = onClick,
@@ -286,7 +305,7 @@ fun AppFloatingActionButtonMenu(
                 }
             }
         }
-        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
+        ComposeEngine.Oxygen, ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             FloatingActionButtonMenu(
                 modifier = modifier,
                 expanded = expanded,

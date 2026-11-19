@@ -166,7 +166,7 @@ fun SearchScreen(
     val showSuggestionPanel = state.showSuggestions
     val latestQuery by rememberUpdatedState(state.query)
     val scrollBehavior = when (LegadoTheme.composeEngine) {
-        ComposeEngine.Miuix, ComposeEngine.Coui -> {
+        ComposeEngine.Oxygen, ComposeEngine.Miuix, ComposeEngine.Coui -> {
             GlassTopAppBarDefaults.defaultScrollBehavior()
         }
         ComposeEngine.Material, ComposeEngine.Mochi -> {
@@ -384,18 +384,9 @@ fun SearchScreen(
                         onQueryChange = { queryInput = it },
                         onSearch = submitSearch,
                         placeholder = searchLabel,
-                        trailingIcon = {
-                            if (queryInput.isNotEmpty()) {
-                                SmallPlainButton(
-                                    modifier = Modifier.padding(horizontal = 8.dp),
-                                    onClick = {
-                                        queryInput = ""
-                                        onIntent(SearchIntent.UpdateQuery(""))
-                                    },
-                                    icon = AppIcons.Close,
-                                    contentDescription = stringResource(R.string.clear)
-                                )
-                            }
+                        onClear = {
+                            queryInput = ""
+                            onIntent(SearchIntent.UpdateQuery(""))
                         },
                     )
                 }

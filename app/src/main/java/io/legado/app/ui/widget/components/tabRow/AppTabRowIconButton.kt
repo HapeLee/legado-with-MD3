@@ -100,7 +100,7 @@ fun AppTabRowIconButton(
             }
             return
         }
-        ComposeEngine.Material -> Unit
+        ComposeEngine.Oxygen, ComposeEngine.Material -> Unit
     }
     if (checked == null) {
         SmallOutlinedButton(onClick, buttonModifier, icon = icon, contentDescription = contentDescription)

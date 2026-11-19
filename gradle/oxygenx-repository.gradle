@@ -1,0 +1,33 @@
+// Prepare the checksum-pinned, unofficial OxygenX Maven snapshot without external credentials.
+import groovy.json.JsonSlurper
+import java.security.MessageDigest
+import java.util.zip.ZipFile
+
+def manifest = new JsonSlurper().parse(new File(settings.settingsDir, 'vendor/oxygenx/manifest.json'), 'UTF-8')
+def archive = new File(settings.settingsDir, "vendor/oxygenx/${manifest.archive}")
+def digest = MessageDigest.getInstance('SHA-256').digest(archive.bytes).encodeHex().toString()
+if (digest != manifest.sha256) {
+    throw new GradleException('OxygenX archive checksum mismatch; restore the pinned archive or update its manifest')
+}
+// Keep prepared dependencies outside build outputs, which a clean task can remove.
+def repository = new File(settings.settingsDir, ".gradle/oxygenx/${digest}/maven")
+def marker = new File(repository, '.complete')
+if (!marker.isFile()) {
+    repository.mkdirs()
+    new ZipFile(archive).withCloseable { zip ->
+        zip.entries().each { entry ->
+            def destination = new File(repository, entry.name).toPath().normalize()
+            if (!entry.name.startsWith('io/oxygenx/') || !destination.startsWith(repository.toPath())) {
+                throw new GradleException('Unexpected path in OxygenX Maven archive')
+            }
+            if (!entry.directory) {
+                destination.parent.toFile().mkdirs()
+                zip.getInputStream(entry).withCloseable { input ->
+                    destination.toFile().withOutputStream { output -> input.transferTo(output) }
+                }
+            }
+        }
+    }
+    marker.text = digest
+}
+settings.ext.oxygenxMavenRepository = repository

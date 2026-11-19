@@ -100,6 +100,7 @@ object ThemeResolver {
 
     fun resolveComposeEngine(value: String): ComposeEngine {
         return when {
+            value.equals("oxygen", ignoreCase = true) -> ComposeEngine.Oxygen
             value.equals(COMPOSE_ENGINE_MIUIX, ignoreCase = true) -> ComposeEngine.Miuix
             value.equals("mochi", ignoreCase = true) -> ComposeEngine.Mochi
             value.equals(COMPOSE_ENGINE_COUI, ignoreCase = true) && isCouiSupported() -> ComposeEngine.Coui

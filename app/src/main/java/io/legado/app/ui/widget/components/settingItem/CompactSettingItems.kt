@@ -104,7 +104,7 @@ fun CompactDropdownSettingItem(
                 )
             }
         }
-        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
+        ComposeEngine.Oxygen, ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             val currentEntry =
                 displayEntries.getOrNull(entryValues.indexOf(selectedValue)) ?: selectedValue
 
@@ -203,7 +203,7 @@ fun CompactSliderSettingItem(
                 }
             }
         }
-        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
+        ComposeEngine.Oxygen, ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             SettingItem(
                 title = title,
                 description = description,
@@ -274,7 +274,7 @@ fun CompactSwitchSettingItem(
                 enabled = enabled,
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
+        ComposeEngine.Oxygen, ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             SettingItem(
                 title = title,
                 description = description,
@@ -328,7 +328,7 @@ fun CompactClickableSettingItem(
                 onClick = onClick
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
+        ComposeEngine.Oxygen, ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             SettingItem(
                 title = title,
                 description = description,

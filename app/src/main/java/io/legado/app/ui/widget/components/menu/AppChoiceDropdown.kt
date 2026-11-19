@@ -147,7 +147,7 @@ fun AppChoiceDropdown(
             )
         }
 
-        ComposeEngine.Material -> MaterialChoice(
+        ComposeEngine.Oxygen, ComposeEngine.Material -> MaterialChoice(
             options, selectedId, onSelect, title, modifier, enabled,
             unavailableIds, onUnavailableSelected, anchor,
             embeddedExpanded, onDismissRequest, triggerShape, trigger,

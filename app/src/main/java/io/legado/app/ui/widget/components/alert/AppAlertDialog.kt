@@ -72,6 +72,37 @@ fun AppAlertDialog(
     onDismiss: (() -> Unit)? = null,
 ) {
     when (composeEngine) {
+        ComposeEngine.Oxygen -> {
+            io.oxygenx.material3.ProvideMaterial3Content {
+                if (show) {
+                    io.oxygenx.ui.basic.AlertDialog(
+                        onDismissRequest = onDismissRequest,
+                        modifier = modifier,
+                        title = title?.let { value -> { io.legado.app.ui.widget.components.text.AppText(value) } },
+                        text = if (text != null || content != null) {
+                            {
+                                ProvideAppDensity {
+                                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                                        text?.let { value -> SelectionContainer { io.legado.app.ui.widget.components.text.AppText(value) } }
+                                        content?.invoke()
+                                    }
+                                }
+                            }
+                        } else null,
+                        confirmButton = {
+                            onConfirm?.let { action ->
+                                io.oxygenx.ui.basic.TextButton(action, enabled = confirmEnabled) {
+                                    io.legado.app.ui.widget.components.text.AppText(confirmText)
+                                }
+                            }
+                        },
+                        dismissButton = onDismiss?.let { action ->
+                            { io.oxygenx.ui.basic.TextButton(action) { io.legado.app.ui.widget.components.text.AppText(dismissText) } }
+                        },
+                    )
+                }
+            }
+        }
         ComposeEngine.Miuix -> {
             val themeSettings = LocalAppUiConfiguration.current.theme
             // 开关打开后只走玻璃；无玻璃设施的独立窗口（如朗读悬浮窗）才退回窗口弹窗。

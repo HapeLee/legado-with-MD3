@@ -66,7 +66,7 @@ fun AppAnchoredPanel(
             }
         }
 
-        ComposeEngine.Material, ComposeEngine.Coui, ComposeEngine.Miuix -> {
+        ComposeEngine.Oxygen, ComposeEngine.Material, ComposeEngine.Coui, ComposeEngine.Miuix -> {
             val scope = remember(onExpandedChange) {
                 AppMenuTriggerScopeImpl(Modifier) { onExpandedChange(true) }
             }

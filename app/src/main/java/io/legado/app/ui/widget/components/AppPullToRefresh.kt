@@ -41,6 +41,16 @@ fun AppPullToRefresh(
     content: @Composable () -> Unit,
 ) {
     when (composeEngine) {
+        ComposeEngine.Oxygen -> io.oxygenx.material3.ProvideMaterial3Content {
+            io.oxygenx.ui.feedback.PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = onRefresh,
+                modifier = modifier,
+                enabled = enabled,
+                canRefresh = { scrollBehavior == null || scrollBehavior.collapsedFraction <= 0f },
+                indicatorTopPadding = topPadding,
+            ) { content() }
+        }
         ComposeEngine.Miuix -> {
             // Miuix 的 PullToRefresh 没有 enabled 参数，无法内部关闭手势，
             // 因此只能在 enabled=false 时整体退化成普通容器。

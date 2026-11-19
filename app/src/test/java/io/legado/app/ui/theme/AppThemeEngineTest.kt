@@ -163,6 +163,7 @@ class AppThemeEngineTest {
                 val dark = LegadoTheme.isDark
                 val primary = LegadoTheme.colorScheme.primary
                 val backend = when (engine) {
+                    ComposeEngine.Oxygen -> io.oxygenx.theme.OxygenTheme.colorScheme.primary
                     ComposeEngine.Material -> MaterialTheme.colorScheme.primary
                     ComposeEngine.Mochi -> MochiTheme.colorScheme.primary
                     ComposeEngine.Miuix -> MiuixTheme.colorScheme.primary
@@ -182,6 +183,8 @@ class AppThemeEngineTest {
 
         listOf(
             "material" to ComposeEngine.Material,
+            "oxygen" to ComposeEngine.Oxygen,
+            "OXYGEN" to ComposeEngine.Oxygen,
             "miuix" to ComposeEngine.Miuix,
             "MIUIX" to ComposeEngine.Miuix,
             "mochi" to ComposeEngine.Mochi,

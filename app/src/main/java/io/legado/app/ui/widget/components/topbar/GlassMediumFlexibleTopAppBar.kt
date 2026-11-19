@@ -52,7 +52,7 @@ fun GlassMediumFlexibleTopAppBar(
     useCharMode: Boolean = false,
     subtitle: String? = null,
     scrollBehavior: GlassTopAppBarScrollBehavior? = null,
-    navigationIcon: @Composable () -> Unit = {},
+    navigationIcon: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
     isContentScrolled: Boolean? = null,
     compactMiuixActions: Boolean = false,
@@ -62,11 +62,31 @@ fun GlassMediumFlexibleTopAppBar(
     val hazeState = LocalHazeState.current
     val themeSettings = LocalAppUiConfiguration.current.theme
     val composeEngine = LegadoTheme.composeEngine
+    if (composeEngine == ComposeEngine.Oxygen) {
+        io.oxygenx.material3.ProvideMaterial3Content {
+            Column(modifier.windowInsetsPadding(TopAppBarDefaults.windowInsets)) {
+                val label: @Composable () -> Unit = { io.legado.app.ui.widget.components.text.AppText(title) }
+                val secondary: (@Composable () -> Unit)? = subtitle?.takeIf(String::isNotBlank)?.let { value ->
+                    { io.legado.app.ui.widget.components.text.AppText(value) }
+                }
+                if (themeSettings.useFlexibleTopAppBar) {
+                    io.oxygenx.ui.navigation.LargeTopAppBar(
+                        title = label, subtitle = secondary, navigationIcon = navigationIcon, actions = actions,
+                        state = (scrollBehavior as? OxygenGlassScrollBehavior)?.oxygenState,
+                    )
+                } else {
+                    io.oxygenx.ui.navigation.TopAppBar(title = label, subtitle = secondary, navigationIcon = navigationIcon, actions = actions)
+                }
+                bottomContent?.invoke(this)
+            }
+        }
+        return
+    }
     if (composeEngine == ComposeEngine.Coui) {
         AppCouiTopBar(
             title = title,
             modifier = modifier,
-            navigationIcon = navigationIcon,
+            navigationIcon = navigationIcon ?: {},
             actions = actions,
             subtitle = subtitle,
             useCharMode = useCharMode,
@@ -79,7 +99,7 @@ fun GlassMediumFlexibleTopAppBar(
     if (composeEngine == ComposeEngine.Mochi) {
         Column(modifier) {
             AppMochiTitleBar(
-                title, subtitle = subtitle, navigationIcon = navigationIcon, actions = actions,
+                title, subtitle = subtitle, navigationIcon = navigationIcon ?: {}, actions = actions,
                 scrollBehavior = scrollBehavior, expandable = true,
             )
             bottomContent?.invoke(this)
@@ -96,7 +116,7 @@ fun GlassMediumFlexibleTopAppBar(
             contentModifier = contentModifier,
             subtitle = subtitleText.orEmpty(),
             scrollBehavior = miuixBehavior,
-            navigationIcon = navigationIcon,
+            navigationIcon = navigationIcon ?: {},
             actions = actions,
             bottomContent = { if (bottomContent != null) Column(content = bottomContent) },
             isContentScrolled = isContentScrolled,
@@ -108,7 +128,7 @@ fun GlassMediumFlexibleTopAppBar(
                         modifier = contentModifier,
                         title = title,
                         subtitle = subtitleText.orEmpty(),
-                        navigationIcon = navigationIcon,
+                        navigationIcon = navigationIcon ?: {},
                         actions = actions,
                         color = Color.Transparent,
                         defaultWindowInsetsPadding = false,
@@ -151,7 +171,7 @@ fun GlassMediumFlexibleTopAppBar(
                         AnimatedTextLine(text = text)
                     }
                 },
-                navigationIcon = navigationIcon,
+                navigationIcon = navigationIcon ?: {},
                 actions = {
                     Box(modifier = Modifier.padding(end = 12.dp)) {
                         TopBarActionsRow { actions() }
@@ -182,7 +202,7 @@ fun GlassMediumFlexibleTopAppBar(
                         }
                     }
                 },
-                navigationIcon = navigationIcon,
+                navigationIcon = navigationIcon ?: {},
                 actions = {
                     Box(modifier = Modifier.padding(end = 12.dp)) {
                         TopBarActionsRow { actions() }
@@ -213,7 +233,10 @@ object GlassTopAppBarDefaults {
         val configuration = LocalAppUiConfiguration.current
         val composeEngine = ThemeResolver.resolveComposeEngine(configuration.appShell.composeEngine)
 
-        return if (composeEngine == ComposeEngine.Miuix) {
+        return if (composeEngine == ComposeEngine.Oxygen && configuration.theme.useFlexibleTopAppBar) {
+            val state = io.oxygenx.ui.navigation.rememberTopAppBarState()
+            remember(state) { OxygenGlassScrollBehavior(state) }
+        } else if (composeEngine == ComposeEngine.Miuix) {
             val miuixBehavior = MiuixScrollBehavior()
             remember(miuixBehavior) { MiuixGlassScrollBehavior(miuixBehavior) }
         } else if (composeEngine == ComposeEngine.Coui && configuration.theme.useFlexibleTopAppBar) {

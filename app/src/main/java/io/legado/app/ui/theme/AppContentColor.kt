@@ -16,6 +16,7 @@ fun ProvideAppContentColor(
         MaterialLocalContentColor provides contentColor,
         MiuixLocalContentColor provides contentColor,
         MochiLocalContentColor provides contentColor,
+        io.oxygenx.theme.LocalContentColor provides contentColor,
         content = content
     )
 }

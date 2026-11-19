@@ -25,7 +25,7 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 fun GlassSmallTopAppBar(
     title: String,
     modifier: Modifier = Modifier,
-    navigationIcon: @Composable () -> Unit = {},
+    navigationIcon: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     if (LegadoTheme.composeEngine != ComposeEngine.Miuix) {
@@ -51,7 +51,7 @@ fun GlassSmallTopAppBar(
         ) {
             MiuixSmallTopAppBar(
                 title = title,
-                navigationIcon = navigationIcon,
+                navigationIcon = navigationIcon ?: {},
                 actions = { if (glass) MiuixGlassTopBarActions(content = actions) else actions() },
                 color = Color.Transparent,
                 navigationIconPadding = if (glass) MiuixGlassTopAppBarDefaults.HorizontalPadding

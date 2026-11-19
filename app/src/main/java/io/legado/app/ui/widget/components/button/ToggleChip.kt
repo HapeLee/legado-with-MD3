@@ -39,6 +39,20 @@ fun ToggleChip(
     uncheckedContentDescription: String = "未选择"
 ) {
     when (composeEngine) {
+        ComposeEngine.Oxygen -> {
+            io.oxygenx.material3.ProvideMaterial3Content {
+                io.oxygenx.ui.basic.Chip(
+                    onClick = onToggle,
+                    label = { Text(label) },
+                    modifier = modifier.semantics {
+                        toggleableState = ToggleableState(selected)
+                        stateDescription = if (selected) checkedContentDescription else uncheckedContentDescription
+                    },
+                    selected = selected,
+                    enabled = enabled,
+                )
+            }
+        }
         ComposeEngine.Miuix -> {
             val contentColor = MiuixTheme.colorScheme.onSurface
                 .copy(alpha = if (enabled) 1f else DISABLED_ALPHA)

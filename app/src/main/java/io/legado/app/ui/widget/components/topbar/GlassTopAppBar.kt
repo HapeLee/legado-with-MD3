@@ -31,17 +31,28 @@ import top.yukonga.miuix.kmp.basic.TopAppBar as MiuixTopAppBar
 fun GlassTopAppBar(
     title: String,
     modifier: Modifier = Modifier,
-    navigationIcon: @Composable () -> Unit = {},
+    navigationIcon: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val hazeState = LocalHazeState.current
     val composeEngine = LegadoTheme.composeEngine
+    if (composeEngine == ComposeEngine.Oxygen) {
+        io.oxygenx.material3.ProvideMaterial3Content {
+            io.oxygenx.ui.navigation.TopAppBar(
+                title = { io.legado.app.ui.widget.components.text.AppText(title) },
+                modifier = modifier.windowInsetsPadding(TopAppBarDefaults.windowInsets),
+                navigationIcon = navigationIcon,
+                actions = actions,
+            )
+        }
+        return
+    }
     if (composeEngine == ComposeEngine.Coui) {
-        AppCouiTopBar(title, modifier, navigationIcon, actions)
+        AppCouiTopBar(title, modifier, navigationIcon ?: {}, actions)
         return
     }
     if (composeEngine == ComposeEngine.Mochi) {
-        AppMochiTitleBar(title, modifier, navigationIcon = navigationIcon, actions = actions)
+        AppMochiTitleBar(title, modifier, navigationIcon = navigationIcon ?: {}, actions = actions)
         return
     }
     if (composeEngine == ComposeEngine.Miuix) {
@@ -50,14 +61,14 @@ fun GlassTopAppBar(
             title = title,
             modifier = modifier,
             contentModifier = contentModifier,
-            navigationIcon = navigationIcon,
+            navigationIcon = navigationIcon ?: {},
             actions = actions,
         ) {
             MiuixBlurredTopBar(modifier.background(GlassTopAppBarDefaults.getMiuixAppBarColor())) {
                 MiuixTopAppBar(
                     modifier = contentModifier,
                     title = title,
-                    navigationIcon = navigationIcon,
+                    navigationIcon = navigationIcon ?: {},
                     actions = actions,
                     color = Color.Transparent,
                     defaultWindowInsetsPadding = false,
@@ -80,7 +91,7 @@ fun GlassTopAppBar(
                     style = MaterialTheme.typography.titleLarge
                 )
             },
-            navigationIcon = navigationIcon,
+            navigationIcon = navigationIcon ?: {},
             actions = {
                 Box(modifier = Modifier.padding(end = 12.dp)) {
                     TopBarActionsRow { actions() }

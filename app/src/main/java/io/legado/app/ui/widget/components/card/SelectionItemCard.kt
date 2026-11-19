@@ -221,7 +221,7 @@ fun SelectionItemCardContent(
                     }
                 }
             }
-            ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
+            ComposeEngine.Oxygen, ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
                 ListItem(
                     // 同上：多选模式下清空内部容器语义，避免标题文本成为第二个焦点。
                     modifier = Modifier.weight(1f)

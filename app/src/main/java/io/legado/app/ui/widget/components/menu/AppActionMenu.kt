@@ -159,7 +159,7 @@ fun AppActionMenu(
             MiuixActions(groups, onAction, modifier, enabled, trigger)
         }
 
-        ComposeEngine.Material -> LegacyActions(
+        ComposeEngine.Oxygen, ComposeEngine.Material -> LegacyActions(
             groups, onAction, modifier, enabled, anchor, title, triggerShape,
             embeddedExpanded, onDismissRequest, trigger,
         )

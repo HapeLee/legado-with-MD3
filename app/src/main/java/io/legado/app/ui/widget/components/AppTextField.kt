@@ -21,6 +21,10 @@ import androidx.compose.material3.TextFieldLabelPosition
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.semantics
+import io.legado.app.R
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.TextLayoutResult
@@ -61,13 +65,46 @@ fun AppTextField(
     lineLimits: TextFieldLineLimits = TextFieldLineLimits.Default,
     onTextLayout: (Density.(getResult: () -> TextLayoutResult?) -> Unit)? = null,
     scrollState: ScrollState = rememberScrollState(),
-    shape: Shape = TextFieldDefaults.shape,
+    shape: Shape = appTextFieldShape(),
     contentPadding: PaddingValues? = null,
     interactionSource: MutableInteractionSource? = null,
 ) {
 
     // COUI / Miuix 都是「纯文本卡片」：没有 error 角色与框下辅助文字，isError / supportingText
     // 静默丢弃；需要错误提示的调用点自己画在卡片外。其余能力都已在适配层映射，因此不再降级到 Material。
+    if (LegadoTheme.composeEngine == ComposeEngine.Oxygen) {
+        io.oxygenx.material3.ProvideMaterial3Content {
+            // Oxygen labels are fixed above the editing row, regardless of M3 labelPosition.
+            io.oxygenx.ui.basic.TextField(
+                state = state,
+                modifier = modifier.oxygenInputSemantics(isError),
+                enabled = enabled,
+                readOnly = readOnly,
+                label = label?.let { { AppText(it) } },
+                placeholder = placeholder ?: placeholderText?.let { { AppText(it) } },
+                leadingIcon = leadingIcon,
+                trailingIcon = trailingIcon,
+                prefix = prefix,
+                suffix = suffix,
+                supportingText = supportingText,
+                isError = isError,
+                keyboardOptions = keyboardOptions,
+                shape = shape,
+                colors = oxygenFieldColors(backgroundColor),
+                interactionSource = interactionSource,
+
+                inputTransformation = inputTransformation,
+                outputTransformation = outputTransformation,
+                onKeyboardAction = onKeyboardAction,
+                lineLimits = lineLimits,
+                onTextLayout = onTextLayout,
+                scrollState = scrollState,
+                contentPadding = contentPadding ?: io.oxygenx.ui.basic.TextFieldDefaults.contentPadding,
+            )
+        }
+        return
+    }
+
     if (LegadoTheme.composeEngine == ComposeEngine.Coui) {
         AppCouiTextField(
             state = state,
@@ -125,7 +162,7 @@ fun AppTextField(
                 interactionSource = interactionSource
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
+        ComposeEngine.Oxygen, ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             val resolvedContentPadding =
                 contentPadding ?: if (label == null || labelPosition is TextFieldLabelPosition.Above) {
                     TextFieldDefaults.contentPaddingWithoutLabel()
@@ -201,9 +238,40 @@ fun AppTextField(
     singleLine: Boolean = false,
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     minLines: Int = 1,
-    shape: Shape = TextFieldDefaults.shape,
+    shape: Shape = appTextFieldShape(),
     interactionSource: MutableInteractionSource? = null,
 ) {
+
+    if (LegadoTheme.composeEngine == ComposeEngine.Oxygen) {
+        io.oxygenx.material3.ProvideMaterial3Content {
+            io.oxygenx.ui.basic.TextField(
+                value = value,
+                onValueChange = onValueChange,
+                modifier = modifier.oxygenInputSemantics(isError),
+                enabled = enabled,
+                readOnly = readOnly,
+                label = label?.let { { AppText(it) } },
+                placeholder = placeholder ?: placeholderText?.let { { AppText(it) } },
+                leadingIcon = leadingIcon,
+                trailingIcon = trailingIcon,
+                prefix = prefix,
+                suffix = suffix,
+                supportingText = supportingText,
+                isError = isError,
+                keyboardOptions = keyboardOptions,
+                shape = shape,
+                colors = oxygenFieldColors(backgroundColor),
+                interactionSource = interactionSource,
+
+                visualTransformation = visualTransformation,
+                keyboardActions = keyboardActions,
+                singleLine = singleLine,
+                maxLines = maxLines,
+                minLines = minLines,
+            )
+        }
+        return
+    }
 
     if (LegadoTheme.composeEngine == ComposeEngine.Coui) {
         AppCouiTextField(
@@ -259,7 +327,7 @@ fun AppTextField(
                 interactionSource = interactionSource
             )
         }
-        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
+        ComposeEngine.Oxygen, ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
             val resolvedColors = if (backgroundColor != Color.Unspecified) {
                 TextFieldDefaults.colors(
                     focusedContainerColor = backgroundColor,
@@ -326,7 +394,7 @@ fun AppTextFieldSurface(
     lineLimits: TextFieldLineLimits = TextFieldLineLimits.Default,
     onTextLayout: (Density.(getResult: () -> TextLayoutResult?) -> Unit)? = null,
     scrollState: ScrollState = rememberScrollState(),
-    shape: Shape = TextFieldDefaults.shape,
+    shape: Shape = appTextFieldShape(),
     contentPadding: PaddingValues? = null,
     interactionSource: MutableInteractionSource? = null,
 ) {
@@ -389,7 +457,7 @@ fun AppDenseTextField(
     lineLimits: TextFieldLineLimits = TextFieldLineLimits.Default,
     onTextLayout: (Density.(getResult: () -> TextLayoutResult?) -> Unit)? = null,
     scrollState: ScrollState = rememberScrollState(),
-    shape: Shape = TextFieldDefaults.shape,
+    shape: Shape = appTextFieldShape(),
     interactionSource: MutableInteractionSource? = null,
     miuixUseSearchBarInputField: Boolean = false,
     miuixSearchBarLabel: String = label ?: "",
@@ -481,7 +549,7 @@ fun AppTextFieldSurface(
     singleLine: Boolean = false,
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     minLines: Int = 1,
-    shape: Shape = TextFieldDefaults.shape,
+    shape: Shape = appTextFieldShape(),
     interactionSource: MutableInteractionSource? = null,
 ) {
     AppTextField(
@@ -542,3 +610,28 @@ internal fun mergeFieldSlots(
         }
     }
 }
+
+@Composable
+private fun oxygenFieldColors(background: Color): io.oxygenx.ui.basic.TextFieldColors {
+    val defaults = io.oxygenx.ui.basic.TextFieldDefaults.colors()
+    if (background == Color.Unspecified) return defaults
+    return defaults.copy(
+        containerColor = background,
+        disabledContainerColor = background,
+        indicatorColor = if (background == Color.Transparent) Color.Transparent else defaults.indicatorColor,
+        focusedIndicatorColor = if (background == Color.Transparent) Color.Transparent else defaults.focusedIndicatorColor,
+        disabledIndicatorColor = if (background == Color.Transparent) Color.Transparent else defaults.disabledIndicatorColor,
+    )
+}
+
+@Composable
+private fun Modifier.oxygenInputSemantics(isError: Boolean): Modifier {
+    if (!isError) return this
+    val message = stringResource(R.string.error)
+    return semantics { error(message) }
+}
+
+@Composable
+private fun appTextFieldShape(): Shape =
+    if (LegadoTheme.composeEngine == ComposeEngine.Oxygen) io.oxygenx.ui.basic.TextFieldDefaults.shape
+    else TextFieldDefaults.shape

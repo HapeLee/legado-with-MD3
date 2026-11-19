@@ -108,6 +108,16 @@ fun RoundDropdownMenu(
 ) {
     val popupContainerColor = LegadoTheme.colorScheme.surfaceContainer
     val engine = LegadoTheme.composeEngine
+    if (engine == ComposeEngine.Oxygen) {
+        io.oxygenx.material3.ProvideMaterial3Content {
+            io.oxygenx.ui.overlay.DropdownMenu(expanded, onDismissRequest, modifier) {
+                io.oxygenx.material3.ProvideMaterial3Content {
+                    ProvideAppDensity { content(onDismissRequest) }
+                }
+            }
+        }
+        return
+    }
     val glassOverlay = LocalAppGlassOverlay.current
 
     if (isMiuixGlassMenuAvailable()) {
@@ -284,7 +294,7 @@ fun RoundDropdownMenuLazy(
                 }
             }
         }
-        ComposeEngine.Material, ComposeEngine.Coui -> {
+        ComposeEngine.Oxygen, ComposeEngine.Material, ComposeEngine.Coui -> {
             val colorScheme = rememberOpaqueColorScheme()
             val popupContainerColor = if (LegadoTheme.composeEngine == ComposeEngine.Coui) {
                 CouiMenuDefaults.style().colors.container

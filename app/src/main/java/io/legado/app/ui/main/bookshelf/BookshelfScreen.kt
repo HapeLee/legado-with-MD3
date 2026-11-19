@@ -27,6 +27,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
@@ -39,6 +41,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
@@ -58,7 +61,6 @@ import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.GridView
@@ -67,7 +69,6 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.outlined.ViewCarousel
@@ -92,10 +93,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -104,6 +107,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
@@ -118,13 +122,14 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalBottomOverlayPadding
 import io.legado.app.ui.theme.adaptiveContentPaddingBookshelf
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
+import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SearchBar
+import io.legado.app.ui.widget.components.SelectionBottomBar
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.checkBox.AppCheckbox
@@ -151,7 +156,6 @@ import io.legado.app.ui.widget.components.menu.AppAction
 import io.legado.app.ui.widget.components.menu.AppActionGroup
 import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
-import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.theme.isMiuixHyperOs4Enabled
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
@@ -578,6 +582,9 @@ fun BookshelfScreen(
             onNavigateToSearch(uiState.searchKey.trim())
         }
     }
+    val hostBottomOverlayPadding = LocalBottomOverlayPadding.current
+    val density = LocalDensity.current
+    var selectionOverlayHeight by remember { mutableStateOf(0.dp) }
 
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -587,7 +594,7 @@ fun BookshelfScreen(
                 hostState = snackbarHostState,
                 modifier = Modifier
                     .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
-                    .padding(bottom = 72.dp)
+                    .padding(bottom = 72.dp.coerceAtLeast(selectionOverlayHeight))
             )
         },
         topBar = {
@@ -614,81 +621,7 @@ fun BookshelfScreen(
                         ?.let(onNavigateToSearch)
                 },
                 onClearSearch = { onIntent(BookshelfIntent.SetSearchKey("")) },
-                onExitEditMode = exitEditMode,
                 actions = {
-                    AnimatedVisibility(visible = isEditMode) {
-                        TopBarActionButton(
-                            onClick = { onIntent(BookshelfIntent.SelectAllVisible) },
-                            imageVector = Icons.Default.SelectAll,
-                            contentDescription = stringResource(R.string.select_all)
-                        )
-                    }
-                    AnimatedVisibility(visible = isEditMode) {
-                        TopBarActionButton(
-                            onClick = { onIntent(BookshelfIntent.InvertVisibleSelection) },
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = stringResource(R.string.revert_selection)
-                        )
-                    }
-                    AnimatedVisibility(visible = isEditMode) {
-                        TopBarActionButton(
-                            onClick = {
-                                if (selectedBookUrls.isNotEmpty()) {
-                                    onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.BatchDownloadConfirmDialog))
-                                }
-                            },
-                            imageVector = Icons.Default.Download,
-                            contentDescription = stringResource(R.string.action_download)
-                        )
-                    }
-                    AnimatedVisibility(visible = isEditMode) {
-                        TopBarActionButton(
-                            onClick = {
-                                if (selectedBookUrls.isNotEmpty()) {
-                                    onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.GroupSelectSheet))
-                                }
-                            },
-                            imageVector = Icons.Default.Bookmarks,
-                            contentDescription = stringResource(R.string.move_to_group)
-                        )
-                    }
-                    AnimatedVisibility(visible = isEditMode && uiState.privateAccess.hasPassword) {
-                        val selected = uiState.items.filter { it.book.bookUrl in selectedBookUrls }
-                        val targetPrivate = selected.none { it.isPrivate }
-                        TopBarActionButton(
-                            onClick = {
-                                if (selectedBookUrls.isNotEmpty()) {
-                                    onIntent(
-                                        BookshelfIntent.SetBooksPrivate(
-                                            selectedBookUrls,
-                                            targetPrivate
-                                        )
-                                    )
-                                }
-                            },
-                            imageVector = Icons.Default.Lock,
-                            contentDescription = stringResource(
-                                if (targetPrivate) {
-                                    R.string.private_mark_book
-                                } else {
-                                    R.string.private_unmark_book
-                                }
-                            )
-                        )
-                    }
-
-                    AnimatedVisibility(visible = isEditMode) {
-                        TopBarActionButton(
-                            onClick = {
-                                if (selectedBookUrls.isNotEmpty()) {
-                                    onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.DeleteBooksConfirmDialog))
-                                }
-                            },
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = stringResource(R.string.delete_selected)
-                        )
-                    }
-
                     if (!isEditMode) {
                         val moreActions = buildList {
                             if (showAlternateSearchInMenu) {
@@ -815,8 +748,19 @@ fun BookshelfScreen(
                     }
                 }
             )
-        }
+        },
+        overlay = {
+            BookshelfSelectionOverlay(
+                uiState = uiState,
+                onIntent = onIntent,
+                onExitEditMode = exitEditMode,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .onSizeChanged { selectionOverlayHeight = with(density) { it.height.toDp() } },
+            )
+        },
     ) { paddingValues ->
+        val bottomOverlayPadding = hostBottomOverlayPadding.coerceAtLeast(selectionOverlayHeight + 8.dp)
         // uiState 是普通参数而不是快照状态：用 remember { derivedStateOf { … } } 会把首次
         // 组合时的 uiState 永久缓存下来，之后分组开关（enableRefresh）改了也读不到，
         // 于是"允许下拉刷新"关掉后依然能下拉。这里直接读取，随重组刷新即可。
@@ -873,7 +817,7 @@ fun BookshelfScreen(
                                 .fillMaxSize()
                                 .padding(
                                     top = paddingValues.calculateTopPadding(),
-                                    bottom = 120.dp.coerceAtLeast(LocalBottomOverlayPadding.current)
+                                    bottom = 120.dp.coerceAtLeast(bottomOverlayPadding)
                                 ),
                             messageResId = R.string.bookshelf_empty
                         )
@@ -901,7 +845,7 @@ fun BookshelfScreen(
                         contentPadding = adaptiveContentPaddingBookshelf(
                             top = paddingValues.calculateTopPadding(),
                             bottom = (if (uiState.useRaisedBottomInset) 120.dp else 8.dp)
-                                .coerceAtLeast(LocalBottomOverlayPadding.current),
+                                .coerceAtLeast(bottomOverlayPadding),
                             horizontal = 4.dp
                         ),
                         verticalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
@@ -979,6 +923,7 @@ fun BookshelfScreen(
                             BookshelfPage(
                                 gridState = standaloneSearchGridState,
                                 paddingValues = paddingValues,
+                                bottomOverlayPadding = bottomOverlayPadding,
                                 books = uiState.items,
                                 uiState = uiState,
                                 selectedBookUrls = selectedBookUrls,
@@ -1039,6 +984,7 @@ fun BookshelfScreen(
                                         BookshelfPage(
                                             gridState = groupGridStates.getValue(group.groupId),
                                             paddingValues = paddingValues,
+                                            bottomOverlayPadding = bottomOverlayPadding,
                                             books = books,
                                             uiState = uiState,
                                             selectedBookUrls = selectedBookUrls,
@@ -1099,7 +1045,6 @@ fun BookshelfScreen(
                     .align(Alignment.TopCenter)
                     .padding(top = paddingValues.calculateTopPadding() + 6.dp),
             ) { summary ->
-                val closeDescription = stringResource(R.string.close)
                 Box {
                     NormalCard(
                         cornerRadius = 32.dp,
@@ -1107,22 +1052,9 @@ fun BookshelfScreen(
                         contentColor = LegadoTheme.colorScheme.onCardContainer
                     ) {
                         Row(
-                            modifier = Modifier.padding(all = 8.dp),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            TextCard(
-                                icon = AppIcons.Close,
-                                modifier = Modifier.semantics {
-                                    contentDescription = closeDescription
-                                    role = Role.Button
-                                },
-                                backgroundColor = LegadoTheme.colorScheme.surfaceContainerHighest,
-                                cornerRadius = 16.dp,
-                                verticalPadding = 8.dp,
-                                horizontalPadding = 8.dp,
-                                onClick = exitEditMode
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
                             AppText(
                                 text = stringResource(
                                     R.string.bookshelf_selected_count,
@@ -1139,8 +1071,8 @@ fun BookshelfScreen(
                                 }",
                                 style = LegadoTheme.typography.labelSmallEmphasized
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
                             if (!summary.groupName.isNullOrBlank()) {
+                                Spacer(modifier = Modifier.width(8.dp))
                                 TextCard(
                                     text = summary.groupName,
                                     textStyle = LegadoTheme.typography.labelSmallEmphasized,
@@ -1281,7 +1213,7 @@ internal fun toggleBookshelfFilter(
 }
 
 @Composable
-private fun BookshelfTopBar(
+internal fun BookshelfTopBar(
     uiState: BookshelfUiState,
     scrollBehavior: GlassTopAppBarScrollBehavior,
     isContentScrolled: Boolean,
@@ -1290,25 +1222,14 @@ private fun BookshelfTopBar(
     onSearchQueryChange: (String) -> Unit,
     onSearchSubmit: (String) -> Unit,
     onClearSearch: () -> Unit,
-    onExitEditMode: () -> Unit,
     actions: @Composable RowScope.() -> Unit = {},
     bottomContent: @Composable ColumnScope.() -> Unit = {}
 ) {
     val searchContentDescription = stringResource(R.string.search)
     val filterContentDescription = stringResource(R.string.bookshelf_filter)
     val searchFirst = uiState.settings.bookshelfSearchActionDirectToSearch
-    val exitEditModeDescription = stringResource(R.string.cancel_select)
     GlassMediumFlexibleTopAppBar(
         modifier = Modifier.fillMaxWidth(),
-        navigationIcon = {
-            if (uiState.isEditMode) {
-                TopBarNavigationButton(
-                    onClick = onExitEditMode,
-                    imageVector = AppIcons.Close,
-                    contentDescription = exitEditModeDescription
-                )
-            }
-        },
         title = if (uiState.isLoading) {
             stringResource(R.string.loading)
         } else {
@@ -1318,8 +1239,6 @@ private fun BookshelfTopBar(
         subtitle = uiState.subtitle,
         scrollBehavior = scrollBehavior,
         isContentScrolled = isContentScrolled,
-        // Selection can show seven actions. Preserve their space alongside the close button.
-        compactMiuixActions = uiState.isEditMode,
         actions = {
             TopBarActionButton(
                 onClick = onSearchClick,
@@ -1341,20 +1260,83 @@ private fun BookshelfTopBar(
                     query = uiState.searchKey,
                     onQueryChange = onSearchQueryChange,
                     onSearch = onSearchSubmit,
-                    trailingIcon = {
-                        if (uiState.searchKey.isNotEmpty()) {
-                            SmallPlainButton(
-                                modifier = Modifier.padding(horizontal = 4.dp),
-                                onClick = onClearSearch,
-                                icon = AppIcons.Close,
-                                contentDescription = stringResource(R.string.clear)
-                            )
-                        }
-                    }
+                    onClear = onClearSearch,
                 )
             }
             bottomContent()
         }
+    )
+}
+
+@Composable
+internal fun BookshelfSelectionOverlay(
+    uiState: BookshelfUiState,
+    onIntent: (BookshelfIntent) -> Unit,
+    onExitEditMode: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val hostBottomOverlayPadding = LocalBottomOverlayPadding.current
+    Box(modifier) {
+        AnimatedVisibility(
+            visible = uiState.isEditMode,
+            enter = slideInVertically { it } + fadeIn(),
+            exit = slideOutVertically { it } + fadeOut(),
+        ) {
+            BookshelfSelectionBar(
+                uiState = uiState,
+                onIntent = onIntent,
+                onExitEditMode = onExitEditMode,
+                // 父级浮动导航的留白已包含它实际使用的系统底部 inset。
+                modifier = Modifier
+                    .padding(bottom = hostBottomOverlayPadding + 16.dp)
+                    .consumeWindowInsets(PaddingValues(bottom = hostBottomOverlayPadding)),
+            )
+        }
+    }
+}
+
+@Composable
+private fun BookshelfSelectionBar(
+    uiState: BookshelfUiState,
+    onIntent: (BookshelfIntent) -> Unit,
+    onExitEditMode: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val selectedBookUrls = uiState.selectedBookUrls
+    val hasSelection = selectedBookUrls.isNotEmpty()
+    val download = if (hasSelection) {
+        ActionItem(stringResource(R.string.action_download), Icons.Default.Download) {
+            onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.BatchDownloadConfirmDialog))
+        }
+    } else null
+    val secondaryActions = buildList {
+        if (hasSelection) {
+            add(ActionItem(stringResource(R.string.move_to_group)) {
+                onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.GroupSelectSheet))
+            })
+            if (uiState.privateAccess.hasPassword) {
+                val makePrivate = uiState.items.none { it.isPrivate && it.book.bookUrl in selectedBookUrls }
+                val label = if (makePrivate) R.string.private_mark_book else R.string.private_unmark_book
+                add(ActionItem(stringResource(label)) {
+                    onIntent(BookshelfIntent.SetBooksPrivate(selectedBookUrls, makePrivate))
+                })
+            }
+            add(ActionItem(stringResource(R.string.delete_selected)) {
+                onIntent(BookshelfIntent.ShowOverlay(BookshelfOverlay.DeleteBooksConfirmDialog))
+            })
+        }
+    }
+    SelectionBottomBar(
+        modifier = modifier,
+        onSelectAll = { onIntent(BookshelfIntent.SelectAllVisible) },
+        onSelectInvert = { onIntent(BookshelfIntent.InvertVisibleSelection) },
+        primaryAction = ActionItem(
+            text = stringResource(R.string.cancel_select),
+            icon = AppIcons.Close,
+            onClick = onExitEditMode,
+        ),
+        secondaryActions = secondaryActions,
+        leadingAction = download,
     )
 }
 
@@ -1617,6 +1599,7 @@ private fun PrivateGroupLockedPage(
 fun BookshelfPage(
     gridState: LazyGridState,
     paddingValues: PaddingValues,
+    bottomOverlayPadding: Dp,
     books: ImmutableList<BookUiItem>,
     uiState: BookshelfUiState,
     selectedBookUrls: ImmutableSet<String>,
@@ -1645,7 +1628,7 @@ fun BookshelfPage(
                     .fillMaxSize()
                     .padding(
                         top = paddingValues.calculateTopPadding(),
-                        bottom = 120.dp.coerceAtLeast(LocalBottomOverlayPadding.current)
+                        bottom = 120.dp.coerceAtLeast(bottomOverlayPadding)
                     ),
                 message = stringResource(R.string.bookshelf_empty_global_search),
                 buttonText = stringResource(R.string.global_search),
@@ -1657,7 +1640,7 @@ fun BookshelfPage(
                     .fillMaxSize()
                     .padding(
                         top = paddingValues.calculateTopPadding(),
-                        bottom = 120.dp.coerceAtLeast(LocalBottomOverlayPadding.current)
+                        bottom = 120.dp.coerceAtLeast(bottomOverlayPadding)
                     ),
                 messageResId = R.string.bookshelf_empty
             )
@@ -1743,7 +1726,7 @@ fun BookshelfPage(
             contentPadding = adaptiveContentPaddingBookshelf(
                 top = paddingValues.calculateTopPadding(),
                 bottom = (if (uiState.useRaisedBottomInset) 120.dp else 8.dp)
-                    .coerceAtLeast(LocalBottomOverlayPadding.current),
+                    .coerceAtLeast(bottomOverlayPadding),
                 horizontal = 8.dp
             ),
             // 列表模式同样支持每行多本：卡片宽度被切分后，相邻卡片的边框会贴成一条线，

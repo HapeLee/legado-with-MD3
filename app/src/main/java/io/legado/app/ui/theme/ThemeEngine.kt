@@ -49,11 +49,14 @@ object ThemeEngine {
         customSeedColor: Int? = null,
         customContrast: String? = null,
         composeEngine: ComposeEngine = ComposeEngine.Material,
-        /** COUI 关闭「自定义主题色」时由引擎内置 CouiPresets 接管；开启时按 mode 正常解析。 */
+        /** Oxygen 默认系列 / COUI 的 Dynamic 内置预设；关闭此标记后按 mode 正常解析。 */
         useBuiltInPalette: Boolean = false,
     ): ColorScheme {
         val resolvedMode = resolveMode(mode = mode, forceOpaque = forceOpaque)
-        val baseColorScheme = if (
+        val useOxygenDefaults = composeEngine == ComposeEngine.Oxygen && useBuiltInPalette
+        val baseColorScheme = if (useOxygenDefaults) {
+            oxygenDefaultColorScheme(darkTheme)
+        } else if (
             composeEngine == ComposeEngine.Coui && useBuiltInPalette &&
             resolvedMode == AppThemeMode.Dynamic && ThemeResolver.isCouiSupported()
         ) {
@@ -70,9 +73,8 @@ object ThemeEngine {
             )
         }
 
-        return baseColorScheme
-            .applyAmoledIfNeeded(darkTheme = darkTheme, isAmoled = isAmoled)
-            .applyTransparentIfNeeded(mode = resolvedMode, forceOpaque = forceOpaque)
+        val colors = baseColorScheme.applyAmoledIfNeeded(darkTheme = darkTheme, isAmoled = isAmoled)
+        return if (useOxygenDefaults) colors else colors.applyTransparentIfNeeded(mode = resolvedMode, forceOpaque = forceOpaque)
     }
 
     private fun resolveMode(

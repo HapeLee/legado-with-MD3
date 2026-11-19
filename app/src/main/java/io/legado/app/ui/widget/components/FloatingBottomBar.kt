@@ -171,7 +171,7 @@ fun FloatingBottomBar(
     val mochiBackdrop = if (engine == ComposeEngine.Mochi && isBlurEnabled) LocalMochiBackdrop.current else null
     val customColors = themeSettings.customColors(LegadoTheme.isDark)
     val hasCustomColors = themeSettings.appTheme == "12" &&
-        themeSettings.enableDeepPersonalization
+        themeSettings.enableDeepPersonalization && (engine != ComposeEngine.Oxygen || themeSettings.useMiuixMonet)
     val accentColor = if (hasCustomColors && customColors.primary != 0) {
         Color(customColors.primary)
     } else {

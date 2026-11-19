@@ -32,7 +32,9 @@ fun AppIcon(
     modifier: Modifier = Modifier,
     tint: Color = Color.Unspecified,
 ) {
-    val defaultTintColor = LegadoTheme.colorScheme.onSurface
+    val defaultTintColor = if (LegadoTheme.composeEngine == io.legado.app.ui.theme.ComposeEngine.Oxygen) {
+        androidx.compose.material3.LocalContentColor.current
+    } else LegadoTheme.colorScheme.onSurface
     val finalTint = tint.takeOrElse { defaultTintColor }
 
     val colorFilter = remember(finalTint) {

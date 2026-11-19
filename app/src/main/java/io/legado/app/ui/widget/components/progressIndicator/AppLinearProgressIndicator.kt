@@ -13,6 +13,11 @@ fun AppLinearProgressIndicator(
     progress: Float? = null,
 ) {
     when (composeEngine) {
+        ComposeEngine.Oxygen -> {
+            io.oxygenx.material3.ProvideMaterial3Content {
+                io.oxygenx.ui.feedback.LinearProgressIndicator(modifier = modifier, progress = progress)
+            }
+        }
         ComposeEngine.Miuix -> {
             MiuixLinearProgressIndicator(
                 modifier = modifier,
