@@ -237,18 +237,7 @@ fun SearchContentScreen(
                         scrollState = listState,
                         onQueryChange = { onIntent(SearchContentIntent.UpdateQuery(it)) },
                         onSearch = { onIntent(SearchContentIntent.SubmitSearch(it)) },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                SmallPlainButton(
-                                    modifier = Modifier.padding(horizontal = 8.dp),
-                                    onClick = {
-                                        onIntent(SearchContentIntent.UpdateQuery(""))
-                                    },
-                                    icon = AppIcons.Close,
-                                    contentDescription = stringResource(R.string.clear)
-                                )
-                            }
-                        }
+                        onClear = { onIntent(SearchContentIntent.UpdateQuery("")) },
                     )
                 }
 

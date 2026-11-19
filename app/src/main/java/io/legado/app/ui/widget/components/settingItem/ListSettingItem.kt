@@ -130,7 +130,7 @@ fun DropdownListSettingItem(
                 }
             }
         }
-        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
+        ComposeEngine.Oxygen, ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
 
             val currentEntry =
                 displayEntries.getOrNull(entryValues.indexOf(selectedValue)) ?: selectedValue

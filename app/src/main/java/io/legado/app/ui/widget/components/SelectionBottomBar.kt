@@ -138,7 +138,7 @@ fun SelectionBottomBar(
             secondaryActions = secondaryActions,
             leadingAction = leadingAction,
         )
-        ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> MaterialSelectionBottomBar(
+        ComposeEngine.Oxygen, ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> MaterialSelectionBottomBar(
             modifier = safeModifier,
             onSelectAll = onSelectAll,
             onSelectInvert = onSelectInvert,

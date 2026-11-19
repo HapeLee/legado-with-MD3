@@ -21,6 +21,11 @@ fun AppRadioButton(
     enabled: Boolean = true
 ) {
     when (composeEngine) {
+        ComposeEngine.Oxygen -> {
+            io.oxygenx.material3.ProvideMaterial3Content {
+                io.oxygenx.ui.basic.RadioButton(selected, onClick, if (onClick == null) modifier else modifier.minimumInteractiveComponentSize(), enabled)
+            }
+        }
         ComposeEngine.Miuix -> {
             MiuixRadioButton(
                 selected = selected,

@@ -24,6 +24,11 @@ fun ActionChip(
     modifier: Modifier = Modifier,
 ) {
     when (LegadoTheme.composeEngine) {
+        ComposeEngine.Oxygen -> {
+            io.oxygenx.material3.ProvideMaterial3Content {
+                io.oxygenx.ui.basic.Chip(onClick, { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) }, modifier)
+            }
+        }
         ComposeEngine.Miuix -> {
             NormalCard(
                 modifier = modifier

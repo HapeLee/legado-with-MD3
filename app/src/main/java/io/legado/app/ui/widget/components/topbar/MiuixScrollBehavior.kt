@@ -14,6 +14,15 @@ interface GlassTopAppBarScrollBehavior {
     val collapsedFraction: Float
 }
 
+class OxygenGlassScrollBehavior(
+    val oxygenState: io.oxygenx.ui.navigation.TopAppBarState,
+) : GlassTopAppBarScrollBehavior {
+    override val nestedScrollConnection: NestedScrollConnection
+        get() = oxygenState.nestedScrollConnection
+    override val collapsedFraction: Float
+        get() = oxygenState.collapsedFraction
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 class M3GlassScrollBehavior(
     val m3Behavior: TopAppBarScrollBehavior

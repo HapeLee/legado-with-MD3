@@ -29,6 +29,11 @@ fun AppSlider(
         value = accessibilityValue,
     )
     when (composeEngine) {
+        ComposeEngine.Oxygen -> {
+            io.oxygenx.material3.ProvideMaterial3Content {
+                io.oxygenx.ui.basic.Slider(value, onValueChange, sliderModifier, enabled, valueRange, steps, onValueChangeFinished = onValueChangeFinished)
+            }
+        }
         ComposeEngine.Miuix -> {
             MiuixSlider(
                 value = value,

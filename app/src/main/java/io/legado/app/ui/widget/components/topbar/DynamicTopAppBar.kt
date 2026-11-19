@@ -90,8 +90,8 @@ fun <T> DynamicTopAppBar(
         },
         useCharMode = isSelecting || state.isLoading,
         subtitle = subtitle,
-        navigationIcon = {
-            if (isSelecting || onBackClick != null) {
+        navigationIcon = if (isSelecting || onBackClick != null) {
+            {
                 TopBarNavigationButton(
                     onClick = { if (isSelecting) onClearSelection() else onBackClick?.invoke() },
                     imageVector = if (isSelecting) AppIcons.Close else backNavigationIcon,
@@ -100,7 +100,7 @@ fun <T> DynamicTopAppBar(
                     )
                 )
             }
-        },
+        } else null,
         actions = {
             // 选择态默认收起整个 actions 区，只有显式声明的调用方才继续显示
             if (!isSelecting || keepActionsInSelection) {

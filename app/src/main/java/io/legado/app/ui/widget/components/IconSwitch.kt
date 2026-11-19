@@ -33,6 +33,11 @@ fun AdaptiveSwitch(
 ) {
     val composeEngine = LegadoTheme.composeEngine
     when (composeEngine) {
+        ComposeEngine.Oxygen -> {
+            io.oxygenx.material3.ProvideMaterial3Content {
+                io.oxygenx.ui.basic.Switch(checked, onCheckedChange, modifier, enabled)
+            }
+        }
         ComposeEngine.Miuix -> {
             MiuixSwitch(
                 checked = checked,
@@ -81,6 +86,11 @@ fun TinySwitch(
 ) {
     val composeEngine = LegadoTheme.composeEngine
     when (composeEngine) {
+        ComposeEngine.Oxygen -> {
+            io.oxygenx.material3.ProvideMaterial3Content {
+                io.oxygenx.ui.basic.Switch(checked, onCheckedChange, modifier.scale(0.9f), enabled)
+            }
+        }
         ComposeEngine.Miuix -> {
             MiuixSwitch(
                 checked = checked,

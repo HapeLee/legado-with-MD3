@@ -38,9 +38,13 @@ fun AppText(
     onTextLayout: ((TextLayoutResult) -> Unit)? = null,
     style: TextStyle? = null,
 ) {
-    val baseStyle = style ?: LegadoTheme.typography.bodyMedium
+    val baseStyle = style ?: if (LegadoTheme.composeEngine == io.legado.app.ui.theme.ComposeEngine.Oxygen) {
+        androidx.compose.material3.LocalTextStyle.current
+    } else LegadoTheme.typography.bodyMedium
 
-    val defaultTextColor = LegadoTheme.colorScheme.onSurface
+    val defaultTextColor = if (LegadoTheme.composeEngine == io.legado.app.ui.theme.ComposeEngine.Oxygen) {
+        androidx.compose.material3.LocalContentColor.current
+    } else LegadoTheme.colorScheme.onSurface
 
     val finalTextColor = color.takeOrElse {
         baseStyle.color.takeOrElse { defaultTextColor }
@@ -88,12 +92,14 @@ fun AppText(
     onTextLayout: ((TextLayoutResult) -> Unit)? = null,
     style: TextStyle? = null,
 ) {
-    // 1. 获取基础样式：如果外部没传 style，直接拿你自己封装的 LegadoTheme.typography.bodyMedium
-    // 这完美避开了 M3 的 LocalTextStyle，且自动适配 Miuix/M3 引擎！
-    val baseStyle = style ?: LegadoTheme.typography.bodyMedium
+    // Oxygen bridges its slot locals into M3; nearer retained M3 controls still win.
+    val baseStyle = style ?: if (LegadoTheme.composeEngine == io.legado.app.ui.theme.ComposeEngine.Oxygen) {
+        androidx.compose.material3.LocalTextStyle.current
+    } else LegadoTheme.typography.bodyMedium
 
-    // 2. 获取默认文本色：直接拿你自己封装的 LegadoTheme.colorScheme.onSurface
-    val defaultTextColor = LegadoTheme.colorScheme.onSurface
+    val defaultTextColor = if (LegadoTheme.composeEngine == io.legado.app.ui.theme.ComposeEngine.Oxygen) {
+        androidx.compose.material3.LocalContentColor.current
+    } else LegadoTheme.colorScheme.onSurface
 
     // 3. 颜色降级逻辑：传入的 color -> style 中的 color -> 主题默认色
     val finalTextColor = color.takeOrElse {

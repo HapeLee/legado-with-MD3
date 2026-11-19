@@ -122,6 +122,19 @@ private fun AppTabRowContent(
     }
 
     when (composeEngine) {
+        ComposeEngine.Oxygen -> {
+            io.oxygenx.material3.ProvideMaterial3Content {
+                io.oxygenx.ui.navigation.TabRow(modifier = modifier, scrollable = isScrollable) {
+                    tabTitles.forEachIndexed { index, title ->
+                        io.oxygenx.ui.navigation.Tab(
+                            selected = index == selectedTabIndex,
+                            onClick = { onTabSelected(index) },
+                            text = { AppText(title) },
+                        )
+                    }
+                }
+            }
+        }
         ComposeEngine.Miuix -> {
             val selectedIndex = selectedTabIndex.coerceIn(tabTitles.indices)
             if (useGlassTabs) {

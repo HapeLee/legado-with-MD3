@@ -1,5 +1,7 @@
 package io.legado.app.ui.widget.components.button
 
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.IconButton
@@ -35,6 +37,18 @@ fun AppIconButton(
 ) {
 
     when (LegadoTheme.composeEngine) {
+        ComposeEngine.Oxygen -> {
+            io.oxygenx.material3.ProvideMaterial3Content {
+                io.oxygenx.ui.basic.IconButton(
+                    onClick = onClick,
+                    modifier = modifier.clip(shape).background(if (enabled) colors.containerColor else colors.disabledContainerColor),
+                    enabled = enabled,
+                    contentColor = if (enabled) colors.contentColor else colors.disabledContentColor,
+                    interactionSource = interactionSource,
+                    content = content,
+                )
+            }
+        }
         ComposeEngine.Miuix -> {
             MiuixIconButton(
                 onClick = onClick,

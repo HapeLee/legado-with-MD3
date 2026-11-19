@@ -139,9 +139,9 @@ fun ThemeConfigScreen(
                 val isCouiEngine = remember(composeEngine) {
                     composeEngine == ComposeEngine.Coui
                 }
-                // Miuix / COUI 未启用自定义主题色时配色由引擎内置方案决定，
+                // Miuix / COUI / Oxygen 未启用自定义主题色时配色由引擎内置方案决定，
                 // 不显示项目自绘色板预览卡，也不提供主题配色列表。
-                val useBuiltInPaletteEngine = isMiuixEngine || isCouiEngine
+                val useBuiltInPaletteEngine = isMiuixEngine || isCouiEngine || composeEngine == ComposeEngine.Oxygen
                 val isDarkTheme = LegadoTheme.isDark
 
                 if (!useBuiltInPaletteEngine) {
@@ -198,7 +198,7 @@ fun ThemeConfigScreen(
                             )
                         }
 
-                        // Miuix / COUI 都提供「自定义主题色」：关闭时配色由引擎内置方案决定。
+                        // Miuix / COUI / Oxygen 都提供「自定义主题色」：关闭时配色由引擎内置方案决定。
                         if (useBuiltInPaletteEngine) {
                             SearchableSetting("theme.miuix_monet") {
                                 SwitchSettingItem(
@@ -299,8 +299,9 @@ fun ThemeConfigScreen(
                             appShell.composeEngine
                         }
                         val entries = stringArrayResource(R.array.composeEngine) +
-                            (if (couiSupported) "COUI" else stringResource(R.string.coui_theme_requires_android_14))
-                        val values = stringArrayResource(R.array.composeEngine_value) + coui
+                            (if (couiSupported) "COUI" else stringResource(R.string.coui_theme_requires_android_14)) +
+                            stringResource(R.string.oxygen_ui_engine)
+                        val values = stringArrayResource(R.array.composeEngine_value) + arrayOf(coui, "oxygen")
                         DropdownListSettingItem(
                             title = stringResource(R.string.compose_engine),
                             selectedValue = selectedValue,

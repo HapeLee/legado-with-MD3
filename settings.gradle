@@ -16,9 +16,20 @@ pluginManagement {
 plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
+apply from: 'gradle/oxygenx-repository.gradle'
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        exclusiveContent {
+            forRepository {
+                maven {
+                    name = 'pinnedOxygenx'
+                    url = uri(settings.ext.oxygenxMavenRepository)
+                }
+            }
+            filter { includeGroup('io.oxygenx') }
+        }
         // 固定 fork 只读取本项目生成的 Maven 产物，避免命中开发机旧包或回落到上游。
         // 首次构建运行 python scripts/prepare-ui-forks.py，CI 由公共 action 执行。
         exclusiveContent {

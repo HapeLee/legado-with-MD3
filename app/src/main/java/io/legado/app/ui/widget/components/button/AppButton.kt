@@ -22,6 +22,13 @@ fun PrimaryButton(
     text: String
 ) {
     when (composeEngine) {
+        ComposeEngine.Oxygen -> {
+            io.oxygenx.material3.ProvideMaterial3Content {
+                io.oxygenx.ui.basic.Button(onClick, modifier, enabled) {
+                    io.legado.app.ui.widget.components.text.AppText(text)
+                }
+            }
+        }
         ComposeEngine.Miuix -> {
             MiuixButton(
                 onClick = onClick,
@@ -55,6 +62,13 @@ fun SecondaryButton(
     text: String
 ) {
     when (composeEngine) {
+        ComposeEngine.Oxygen -> {
+            io.oxygenx.material3.ProvideMaterial3Content {
+                io.oxygenx.ui.basic.Button(onClick, modifier, enabled, colors = io.oxygenx.ui.basic.ButtonDefaults.secondaryColors()) {
+                    io.legado.app.ui.widget.components.text.AppText(text)
+                }
+            }
+        }
         ComposeEngine.Miuix -> {
             MiuixButton(
                 onClick = onClick,

@@ -35,11 +35,9 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.coui.rememberAppVerticalOverscrollEffect
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.SplicedColumnGroup
-import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import kotlinx.collections.immutable.toPersistentList
 import org.koin.androidx.compose.koinViewModel
@@ -55,7 +53,7 @@ fun SettingsSearchRouteScreen(
     val hasProgressiveBlurSetting = when (LegadoTheme.composeEngine) {
         ComposeEngine.Material -> true
         ComposeEngine.Miuix -> Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-        ComposeEngine.Mochi, ComposeEngine.Coui -> false
+        ComposeEngine.Oxygen, ComposeEngine.Mochi, ComposeEngine.Coui -> false
     }
     // 按当前配置解析文案，并在主题能力变化时更新可搜索条目。
     val index = remember(resources, configuration, hasProgressiveBlurSetting) {
@@ -128,13 +126,8 @@ fun SettingsSearchScreen(
                     query = state.query,
                     onQueryChange = { onIntent(SettingsSearchIntent.QueryChanged(it)) },
                     placeholder = stringResource(R.string.settings_search_scope),
-                    trailingIcon = {
-                        if (state.query.isNotEmpty()) TopBarActionButton(
-                            onClick = { onIntent(SettingsSearchIntent.QueryChanged("")) },
-                            imageVector = AppIcons.Close,
-                            contentDescription = stringResource(R.string.settings_search_clear),
-                        )
-                    },
+                    onClear = { onIntent(SettingsSearchIntent.QueryChanged("")) },
+                    clearDescription = stringResource(R.string.settings_search_clear),
                 )
             },
         )

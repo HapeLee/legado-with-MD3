@@ -70,7 +70,8 @@ fun AppScaffold(
     snackbarHost: @Composable () -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
     floatingActionButtonPosition: FabPosition = FabPosition.End,
-    contentColor: Color = contentColorFor(MiuixTheme.colorScheme.surface),
+    contentColor: Color = if (LegadoTheme.composeEngine == ComposeEngine.Oxygen) io.oxygenx.theme.OxygenTheme.colorScheme.onSurface
+        else contentColorFor(MiuixTheme.colorScheme.surface),
     contentWindowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
     alwaysDrawBehindBars: Boolean = false,
     /**
@@ -250,7 +251,7 @@ fun AppScaffold(
                 }
             }
 
-            ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
+            ComposeEngine.Oxygen, ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
                 Box(modifier = modifier.fillMaxSize()) {
                     if (mochiBackdrop == null && !mochiScrollBlur && couiBackdrop == null) {
                         Box(
