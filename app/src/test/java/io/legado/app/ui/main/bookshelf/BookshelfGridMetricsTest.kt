@@ -98,4 +98,36 @@ class BookshelfGridMetricsTest {
         assertEquals(5, metrics.columns)
         assertEquals(17, metrics.coverWidthDp)
     }
+
+    @Test
+    fun `沉浸网格去掉内边距且间距只有 1dp`() {
+        val metrics = resolveBookshelfGridMetrics(
+            availableWidthDp = 336f,
+            configuredColumns = 3,
+            configuredCoverWidthDp = 120,
+            fixedColumns = true,
+            fixedCoverWidth = false,
+            immersive = true,
+        )
+
+        // (336 - 2×1) / 3 = 111.3dp 单元格，卡片无内边距，封面直接铺满列宽
+        assertEquals(3, metrics.columns)
+        assertEquals(111, metrics.coverWidthDp)
+    }
+
+    @Test
+    fun `沉浸网格关闭固定列数时按 1dp 间距推算列数`() {
+        val metrics = resolveBookshelfGridMetrics(
+            availableWidthDp = 336f,
+            configuredColumns = 3,
+            configuredCoverWidthDp = 120,
+            fixedColumns = false,
+            fixedCoverWidth = false,
+            immersive = true,
+        )
+
+        // (336 + 1) / (120 + 1) = 2 列；(336 - 1) / 2 = 167.5dp 单元格
+        assertEquals(2, metrics.columns)
+        assertEquals(168, metrics.coverWidthDp)
+    }
 }

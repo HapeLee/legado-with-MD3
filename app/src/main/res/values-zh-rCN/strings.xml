@@ -2660,6 +2660,8 @@
     <string name="bookshelf_grid_fixed_columns_summary">关闭后按封面宽度自动计算列数</string>
     <string name="bookshelf_grid_fixed_cover_width">固定封面宽度</string>
     <string name="bookshelf_grid_fixed_cover_width_summary">关闭后封面铺满列宽，随列数自动缩放</string>
+    <string name="bookshelf_grid_immersive">沉浸网格</string>
+    <string name="bookshelf_grid_immersive_summary">封面间距 1dp，去掉左右屏幕边距与封面圆角（紧凑、仅封面样式生效）</string>
     <string name="day_card_bg_color">日间卡片背景颜色</string>
     <string name="night_card_bg_color">夜间卡片背景颜色</string>
     <string name="compact_details">精简详情</string>

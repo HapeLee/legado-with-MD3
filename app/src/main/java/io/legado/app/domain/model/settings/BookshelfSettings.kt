@@ -55,7 +55,18 @@ data class BookshelfSettings(
     val bookshelfGridFixedColumns: Boolean = true,
     /** 网格固定封面宽度；关闭后封面铺满列宽（两者至少开一个）。 */
     val bookshelfGridFixedCoverWidth: Boolean = true,
+    /**
+     * 网格沉浸模式：封面之间只留 1dp、去掉左右屏幕边距与封面圆角。
+     *
+     * 只在紧凑/仅封面样式下有效——标准样式封面下方还有书名，贴边排版会把标题裁掉，
+     * 判断口径统一走 [gridImmersiveActive]。
+     */
+    val bookshelfGridImmersive: Boolean = false,
     val bookshelfSearchActionDirectToSearch: Boolean = true,
     val autoRefreshBook: Boolean = false,
     val saveTabPosition: Long = BookGroup.IdAll,
-)
+) {
+    /** 沉浸网格是否真正生效：样式为紧凑(1)/仅封面(2)时才贴边排布。 */
+    val gridImmersiveActive: Boolean
+        get() = bookshelfGridImmersive && bookshelfGridLayout != 0
+}

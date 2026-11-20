@@ -403,6 +403,7 @@ object BackupConfig {
         PreferKey.bookshelfGridCoverWidth,
         PreferKey.bookshelfGridFixedColumns,
         PreferKey.bookshelfGridFixedCoverWidth,
+        PreferKey.bookshelfGridImmersive,
         PreferKey.bookshelfRefreshingLimit,
         PreferKey.bookshelfShowIntro,
         PreferKey.bookshelfShowTag,

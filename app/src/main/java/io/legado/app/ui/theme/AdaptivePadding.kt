@@ -113,15 +113,20 @@ fun adaptiveContentPadding(
 fun adaptiveContentPaddingBookshelf(
     top: Dp,
     bottom: Dp,
-    horizontal: Dp
+    horizontal: Dp,
+    /** 沉浸网格：左右贴到屏幕边（不下沉引擎默认边距），只保留上下内边距。 */
+    edgeToEdge: Boolean = false,
 ): PaddingValues {
     val adjustedTop = if (composeEngine == ComposeEngine.Miuix) top + 12.dp else top + 8.dp
-    val horizontal =
-        if (composeEngine == ComposeEngine.Miuix) 6.dp + horizontal else 4.dp + horizontal
+    val sidePadding = when {
+        edgeToEdge -> 0.dp
+        composeEngine == ComposeEngine.Miuix -> 6.dp + horizontal
+        else -> 4.dp + horizontal
+    }
     return PaddingValues(
         top = adjustedTop,
         bottom = bottom,
-        start = horizontal,
-        end = horizontal
+        start = sidePadding,
+        end = sidePadding
     )
 }

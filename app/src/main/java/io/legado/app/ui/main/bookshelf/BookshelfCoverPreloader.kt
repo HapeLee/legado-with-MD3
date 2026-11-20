@@ -44,6 +44,9 @@ private const val COVER_ITEM_PADDING_DP = 4
 /** 网格间距（[BookshelfScreen] 的 `Arrangement.spacedBy(8.dp)`）。 */
 private const val GRID_SPACING_DP = 8
 
+/** 沉浸网格间距（[BookshelfScreen] 的 `Arrangement.spacedBy(1.dp)`）。 */
+private const val IMMERSIVE_GRID_SPACING_DP = 1
+
 /** 网格内容左右内边距合计（M3 引擎 12dp×2，Miuix 14dp×2；取 M3 值误差只影响解码尺寸）。 */
 private const val GRID_CONTENT_HORIZONTAL_PADDING_DP = 24
 
@@ -135,16 +138,19 @@ internal fun resolveBookshelfGridMetrics(
     configuredCoverWidthDp: Int,
     fixedColumns: Boolean,
     fixedCoverWidth: Boolean,
+    /** 沉浸网格：卡片没有内边距、间距只有 1dp，封面铺满列宽。 */
+    immersive: Boolean = false,
 ): BookshelfGridMetrics {
-    val spacing = GRID_SPACING_DP.toFloat()
-    val minCellWidth = configuredCoverWidthDp + 2 * COVER_ITEM_PADDING_DP
+    val spacing = (if (immersive) IMMERSIVE_GRID_SPACING_DP else GRID_SPACING_DP).toFloat()
+    val itemPadding = if (immersive) 0 else COVER_ITEM_PADDING_DP
+    val minCellWidth = configuredCoverWidthDp + 2 * itemPadding
     val columns = if (fixedColumns) {
         configuredColumns.coerceAtLeast(1)
     } else {
         ((availableWidthDp + spacing) / (minCellWidth + spacing)).toInt().coerceAtLeast(1)
     }
     val cellWidth = (availableWidthDp - (columns - 1) * spacing) / columns
-    val filledCoverWidth = (cellWidth - 2 * COVER_ITEM_PADDING_DP).roundToInt().coerceAtLeast(1)
+    val filledCoverWidth = (cellWidth - 2 * itemPadding).roundToInt().coerceAtLeast(1)
     return BookshelfGridMetrics(
         columns = columns,
         coverWidthDp = if (fixedCoverWidth) {
@@ -320,13 +326,16 @@ class BookshelfCoverPreloader(
             settings.bookshelfLayoutGridPortrait
         }
         val displayMetrics = application.resources.displayMetrics
+        // 沉浸网格的封面铺满列宽：预热尺寸必须跟着铺满口径走，否则缓存图会被放大发虚
+        val immersive = grid && settings.gridImmersiveActive
         val gridMetrics = resolveBookshelfGridMetrics(
             availableWidthDp = displayMetrics.widthPixels / displayMetrics.density -
-                    GRID_CONTENT_HORIZONTAL_PADDING_DP,
+                    if (immersive) 0 else GRID_CONTENT_HORIZONTAL_PADDING_DP,
             configuredColumns = configuredColumns,
             configuredCoverWidthDp = settings.bookshelfGridCoverWidth,
             fixedColumns = settings.bookshelfGridFixedColumns,
-            fixedCoverWidth = settings.bookshelfGridFixedCoverWidth,
+            fixedCoverWidth = settings.bookshelfGridFixedCoverWidth && !immersive,
+            immersive = immersive,
         )
         val limit = if (grid) {
             (gridMetrics.columns * ESTIMATED_VISIBLE_ROWS).coerceIn(1, MAX_PRELOAD_BOOKS)

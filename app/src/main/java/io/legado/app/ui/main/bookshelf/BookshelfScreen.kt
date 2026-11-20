@@ -918,8 +918,13 @@ fun BookshelfScreen(
                         if (bookshelfFolderLayoutMode == 0) bookshelfFolderLayoutList else bookshelfFolderLayoutGrid
                     val isGridMode = bookshelfFolderLayoutMode != 0
                     // 分组网格与书籍网格共用同一套尺寸开关，避免同一开关在两层页面表现不一致
+                    val folderImmersive = isGridMode && uiState.settings.gridImmersiveActive
+                    val folderSpacing = if (folderImmersive) 1.dp else 8.dp
                     val folderCells = if (isGridMode && !uiState.settings.bookshelfGridFixedColumns) {
-                        GridCells.Adaptive(minSize = (uiState.settings.bookshelfGridCoverWidth + 8).dp)
+                        GridCells.Adaptive(
+                            minSize = (uiState.settings.bookshelfGridCoverWidth +
+                                    if (folderImmersive) 0 else 8).dp
+                        )
                     } else {
                         GridCells.Fixed(folderColumns.coerceAtLeast(1))
                     }
@@ -937,10 +942,11 @@ fun BookshelfScreen(
                             top = paddingValues.calculateTopPadding(),
                             bottom = (if (uiState.useRaisedBottomInset) 120.dp else 8.dp)
                                 .coerceAtLeast(bottomOverlayPadding),
-                            horizontal = 4.dp
+                            horizontal = if (folderImmersive) 0.dp else 4.dp,
+                            edgeToEdge = folderImmersive,
                         ),
-                        verticalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
-                        horizontalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
+                        verticalArrangement = Arrangement.spacedBy(if (isGridMode) folderSpacing else 0.dp),
+                        horizontalArrangement = Arrangement.spacedBy(if (isGridMode) folderSpacing else 0.dp),
                         showFastScroll = uiState.settings.showBookshelfFastScroller
                     ) {
                         itemsIndexed(
@@ -985,6 +991,7 @@ fun BookshelfScreen(
                                     previewBooks = previewBooks,
                                     countText = countText,
                                     gridStyle = uiState.settings.bookshelfGridLayout,
+                                    immersive = folderImmersive,
                                     titleSmallFont = uiState.settings.bookshelfTitleSmallFont,
                                     titleCenter = uiState.settings.bookshelfTitleCenter,
                                     titleMaxLines = uiState.settings.bookshelfTitleMaxLines,
@@ -1758,13 +1765,17 @@ fun BookshelfPage(
     }
     val columns = if (bookshelfLayoutMode == 0) bookshelfLayoutList else bookshelfLayoutGrid
     val isGridMode = bookshelfLayoutMode != 0
-    // 关闭「固定列数」时列数由封面宽度推出：单元格最小宽度 = 封面 + 左右各 4dp 内边距。
+    val bookItemGridStyle = uiState.settings.bookshelfGridLayout
+    // 沉浸网格：仅紧凑/仅封面样式生效——封面之间只留 1dp，左右直接贴屏幕边，封面不带圆角
+    val immersiveGrid = isGridMode && uiState.settings.gridImmersiveActive
+    val gridSpacing = if (immersiveGrid) 1.dp else 8.dp
+    // 关闭「固定列数」时列数由封面宽度推出：单元格最小宽度 = 封面 + 左右内边距（沉浸模式下无内边距）。
+    val coverItemPadding = if (immersiveGrid) 0 else 4
     val gridCells = if (isGridMode && !uiState.settings.bookshelfGridFixedColumns) {
-        GridCells.Adaptive(minSize = (uiState.settings.bookshelfGridCoverWidth + 8).dp)
+        GridCells.Adaptive(minSize = (uiState.settings.bookshelfGridCoverWidth + coverItemPadding * 2).dp)
     } else {
         GridCells.Fixed(columns.coerceAtLeast(1))
     }
-    val bookItemGridStyle = uiState.settings.bookshelfGridLayout
     val bookItemIsCompact = uiState.settings.bookshelfLayoutCompact
     val bookItemTitleSmallFont = uiState.settings.bookshelfTitleSmallFont
     val bookItemTitleCenter = uiState.settings.bookshelfTitleCenter
@@ -1818,12 +1829,14 @@ fun BookshelfPage(
                 top = paddingValues.calculateTopPadding(),
                 bottom = (if (uiState.useRaisedBottomInset) 120.dp else 8.dp)
                     .coerceAtLeast(bottomOverlayPadding),
-                horizontal = 8.dp
+                horizontal = if (immersiveGrid) 0.dp else 8.dp,
+                edgeToEdge = immersiveGrid,
             ),
             // 列表模式同样支持每行多本：卡片宽度被切分后，相邻卡片的边框会贴成一条线，
-            // 所以水平方向也要留间距，取与网格一致的 8dp（垂直方向由卡片自身 4dp 内边距提供）。
-            verticalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            // 所以水平方向也要留间距，取与网格一致的间距（垂直方向由卡片自身 4dp 内边距提供）。
+            // 沉浸网格下卡片不再留内边距，间距收窄到 1dp 就是封面之间唯一的间隙。
+            verticalArrangement = Arrangement.spacedBy(if (isGridMode) gridSpacing else 0.dp),
+            horizontalArrangement = Arrangement.spacedBy(gridSpacing),
             showFastScroll = showFastScroll
         ) {
             itemsIndexed(displayBooks, key = { _, item -> item.book.bookUrl }) { index, bookUi ->
@@ -1883,6 +1896,7 @@ fun BookshelfPage(
                         layoutMode = bookshelfLayoutMode,
                         isSelected = isSelected,
                         gridStyle = bookItemGridStyle,
+                        immersive = immersiveGrid,
                         isCompact = bookItemIsCompact,
                         isUpdating = uiState.updatingBooks.contains(bookUi.book.bookUrl),
                         locked = bookLocked,

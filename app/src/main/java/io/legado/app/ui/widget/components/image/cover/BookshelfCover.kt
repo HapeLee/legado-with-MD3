@@ -29,6 +29,13 @@ fun BookshelfCover(
     name: String?,
     author: String?,
     path: String?,
+    /**
+     * 封面圆角，透传给 [CoilBookCover]。
+     *
+     * 圆角与裁切都在封面组件内部完成（背景、阴影、clip 同源），外层再裁一次不会生效，
+     * 所以沉浸网格必须从这一层把 0.dp 传下去。
+     */
+    radius: Dp = 4.dp,
     modifier: Modifier = Modifier,
     coverModifier: Modifier = Modifier.fillMaxWidth(),
     isUpdating: Boolean = false,
@@ -54,6 +61,7 @@ fun BookshelfCover(
             name = name,
             author = author,
             path = path,
+            radius = radius,
             modifier = coverModifier,
             sourceOrigin = sourceOrigin,
             bookUrl = bookUrl,
