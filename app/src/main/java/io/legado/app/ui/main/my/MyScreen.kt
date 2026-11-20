@@ -52,6 +52,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.ui.file.FileManageActivity
+import io.legado.app.ui.main.LocalMainPageIndex
+import io.legado.app.ui.main.LocalMainPagerTopBarHost
+import io.legado.app.ui.main.MainPagerPageChromeEffect
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.theme.LocalBottomOverlayPadding
 import io.legado.app.ui.widget.components.AppScaffold
@@ -118,16 +121,36 @@ fun MyScreen(
     onNavigate: (PrefClickEvent) -> Unit,
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
+    val pagerTopBarHost = LocalMainPagerTopBarHost.current
+    val mainPageIndex = LocalMainPageIndex.current
+    if (pagerTopBarHost != null) {
+        MainPagerPageChromeEffect(
+            host = pagerTopBarHost,
+            pageIndex = mainPageIndex,
+            subtitle = null,
+            actions = {},
+        )
+    }
     AppScaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        contentWindowInsets = WindowInsets.systemBars
-            .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
+        modifier = if (pagerTopBarHost != null) {
+            Modifier
+        } else {
+            Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
+        },
+        contentWindowInsets = if (pagerTopBarHost != null) {
+            WindowInsets(0)
+        } else {
+            WindowInsets.systemBars
+                .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)
+        },
         topBar = {
-            GlassMediumFlexibleTopAppBar(
-                title = stringResource(R.string.my),
-                actions = {},
-                scrollBehavior = scrollBehavior
-            )
+            if (pagerTopBarHost == null) {
+                GlassMediumFlexibleTopAppBar(
+                    title = stringResource(R.string.my),
+                    actions = {},
+                    scrollBehavior = scrollBehavior
+                )
+            }
         }
     ) { padding ->
         Column(

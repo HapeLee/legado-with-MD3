@@ -22,7 +22,11 @@ class TopBarMenuIdContractTest {
     fun migratedMenusUseDeclarativeGroupsOnly() {
         MIGRATED.forEach { path ->
             val source = sourceOf(path)
-            assertTrue("$path 缺少 menuGroups", source.contains("menuGroups = persistentListOf("))
+            // 允许把菜单提取成局部 val（`menuGroups = rssMenuGroups`），但仍要求声明式构造。
+            val hasInlineGroups = source.contains("menuGroups = persistentListOf(")
+            val hasExtractedGroups = Regex("""menuGroups = \w+,""").containsMatchIn(source) &&
+                source.contains("persistentListOf(")
+            assertTrue("$path 缺少 menuGroups", hasInlineGroups || hasExtractedGroups)
             assertFalse(
                 "$path 仍传 dropDownMenuContent；TopBarActionMenu 会静默忽略它",
                 source.contains("dropDownMenuContent"),

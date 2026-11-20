@@ -108,6 +108,7 @@ private fun buildMainUiState(
         destinations = destinations.toImmutableList(),
         defaultHomePage = appShell.defaultHomePage,
         showBottomView = appShell.showBottomView,
+        usePagerTopBar = appShell.usePagerTopBar,
         useFloatingBottomBar = appShell.useFloatingBottomBar,
         useFloatingBottomBarLiquidGlass = appShell.useFloatingBottomBarLiquidGlass,
         labelVisibilityMode = appShell.labelVisibilityMode,

@@ -1,11 +1,11 @@
 {
-  "version": "0.0.1",
-  "versionCode": 2,
-  "commit": "2696093d28c2904e86b44eb3b54ee33addca8e53",
-  "dirty": true,
+  "version": "0.0.2-local.9",
+  "versionCode": 11,
+  "commit": "ef4b6ac76c509f0620c93aca63aec42a8e67932c",
+  "dirty": false,
   "signingCertificateSha256": "ddc9ebf7c8a739e8ebb21903ee4363bc94eba114af33b05068431f9c04dcbb96",
   "unofficial": true,
   "apiStability": "experimental",
-  "archive": "OxygenX-0.0.1-maven.zip",
-  "sha256": "dcc6a98fceed8fc87474ffd4c8f185fd3ddd49becf4ee23e600b0c668c4a58c1"
+  "archive": "OxygenX-0.0.2-local.9-maven.zip",
+  "sha256": "5c3758fc4ad73fbf9602d947bee518ff62bad5bf5260776cf47409f3886af99c"
 }

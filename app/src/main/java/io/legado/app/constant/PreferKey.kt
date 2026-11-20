@@ -317,6 +317,7 @@ object PreferKey {
     const val themePref = "themePref"
     const val bookshelfSortOrder = "bookshelfSortOrder"
     const val showBottomView = "showBottomView"
+    const val usePagerTopBar = "usePagerTopBar"
     const val useFloatingBottomBar = "useFloatingBottomBar"
     const val useFloatingBottomBarLiquidGlass = "useFloatingBottomBarLiquidGlass"
     const val mangaScrollMode = "mangaScrollMode"

@@ -1941,6 +1941,8 @@
     <string name="custom_mode">自定义模式</string>
     <string name="be_swiped">仍可滑动切换页面</string>
     <string name="show_bottom_nav">显示导航栏</string>
+    <string name="use_pager_top_bar">横划顶栏</string>
+    <string name="use_pager_top_bar_summary">主页面使用 OxygenX 横划顶栏，并隐藏底部导航栏</string>
     <string name="floating_bottom_bar">悬浮底栏</string>
     <string name="floating_bottom_bar_summary">底部导航栏使用悬浮胶囊样式</string>
     <string name="coui_floating_bottom_bar_summary">COUI 的底部导航固定使用悬浮样式</string>

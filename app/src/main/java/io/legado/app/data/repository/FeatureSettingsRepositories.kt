@@ -299,6 +299,7 @@ internal fun Preferences.toAppShellSettings(): AppShellSettings = AppShellSettin
     textAnimationLevel = TextAnimationLevel.fromStoredValue(compatDsString(PreferKey.textAnimationLevel)),
     readerSharedElementEnabled = compatDsBoolean(PreferKey.readerSharedElementEnabled) ?: true,
     showBottomView = compatDsBoolean(PreferKey.showBottomView) ?: true,
+    usePagerTopBar = compatDsBoolean(PreferKey.usePagerTopBar) ?: false,
     useFloatingBottomBar = compatDsBoolean(PreferKey.useFloatingBottomBar) ?: false,
     useFloatingBottomBarLiquidGlass =
         compatDsBoolean(PreferKey.useFloatingBottomBarLiquidGlass) ?: false,
@@ -336,6 +337,7 @@ internal fun AppShellSettings.toPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.textAnimationLevel to textAnimationLevel.storedValue,
     PreferKey.readerSharedElementEnabled to readerSharedElementEnabled,
     PreferKey.showBottomView to showBottomView,
+    PreferKey.usePagerTopBar to usePagerTopBar,
     PreferKey.useFloatingBottomBar to useFloatingBottomBar,
     PreferKey.useFloatingBottomBarLiquidGlass to useFloatingBottomBarLiquidGlass,
     PreferKey.tabletInterface to tabletInterface,

@@ -9,6 +9,7 @@ data class MainUiState(
     val destinations: ImmutableList<MainDestination> = MainDestination.mainDestinations,
     val defaultHomePage: String = "bookshelf",
     val showBottomView: Boolean = true,
+    val usePagerTopBar: Boolean = false,
     val useFloatingBottomBar: Boolean = false,
     val useFloatingBottomBarLiquidGlass: Boolean = false,
     val labelVisibilityMode: String = "auto",

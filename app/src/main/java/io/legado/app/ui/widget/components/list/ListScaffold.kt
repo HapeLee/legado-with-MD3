@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -86,11 +87,24 @@ fun <T> ListScaffold(
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     contentWindowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
     scrollBehavior: GlassTopAppBarScrollBehavior? = null,
+    /** 主页面横划顶栏接管时替换 [DynamicTopAppBar]；为空时保持原有顶栏。 */
+    topBarOverride: (@Composable () -> Unit)? = null,
+    /** 顶栏接管时使用的收拢连接（横划顶栏自己的 TopAppBarState）。 */
+    topBarNestedScrollConnection: NestedScrollConnection? = null,
     content: @Composable (PaddingValues) -> Unit
 ) {
     val scrollBehavior = scrollBehavior ?: GlassTopAppBarDefaults.defaultScrollBehavior()
     AppScaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = if (topBarOverride != null) {
+            // 顶栏被主壳接管时不再挂本页顶栏的收拢连接，滚动由主壳统一驱动。
+            if (topBarNestedScrollConnection != null) {
+                Modifier.nestedScroll(topBarNestedScrollConnection)
+            } else {
+                Modifier
+            }
+        } else {
+            Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
+        },
         snackbarHost = {
             SnackbarHost(
                 hostState = snackbarHostState,
@@ -99,6 +113,10 @@ fun <T> ListScaffold(
             )
         },
         topBar = {
+            if (topBarOverride != null) {
+                topBarOverride()
+                return@AppScaffold
+            }
             DynamicTopAppBar(
                 title = title,
                 subtitle = subtitle,

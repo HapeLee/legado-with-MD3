@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
@@ -91,6 +92,9 @@ import io.legado.app.lib.permission.Permissions
 import io.legado.app.lib.permission.PermissionsCompat
 import io.legado.app.ui.config.backupConfig.BackupOptionSheet
 import io.legado.app.ui.config.backupConfig.RestoreOptionSheet
+import io.legado.app.ui.main.LocalMainPageIndex
+import io.legado.app.ui.main.LocalMainPagerTopBarHost
+import io.legado.app.ui.main.MainPagerPageChromeEffect
 import io.legado.app.ui.main.homepage.HomepageFeedActions
 import io.legado.app.ui.main.homepage.HomepageManageActions
 import io.legado.app.ui.main.homepage.HomepageModuleFeed
@@ -402,6 +406,8 @@ fun HomeScreen(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
+    val pagerTopBarHost = LocalMainPagerTopBarHost.current
+    val mainPageIndex = LocalMainPageIndex.current
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -435,70 +441,88 @@ fun HomeScreen(
         }
     }
 
+    val homeTopBarActions: @Composable RowScope.() -> Unit = {
+        TopBarActionButton(
+            onClick = onToggleHomepageManage,
+            imageVector = AppIcons.Settings,
+            contentDescription = stringResource(R.string.homepage_module_manage),
+        )
+        AppActionMenu(
+            groups = persistentListOf(
+                AppActionGroup(
+                    id = "home_settings",
+                    actions = persistentListOf(
+                        AppAction(
+                            "dashboard_settings",
+                            stringResource(R.string.home_dashboard_settings),
+                        ),
+                    ),
+                ),
+                AppActionGroup(
+                    id = "home_pages",
+                    actions = selectedSets.mapIndexed { index, source ->
+                        AppAction(
+                            id = "page:$index",
+                            label = source.sourceName,
+                            selected = index == pagerState.currentPage,
+                        )
+                    }.toImmutableList(),
+                ),
+            ),
+            onAction = { id ->
+                when {
+                    id == "dashboard_settings" ->
+                        onIntent(HomeIntent.DashboardSettingsClick)
+                    id.startsWith("page:") -> {
+                        val index = id.removePrefix("page:").toIntOrNull()
+                        if (index != null && index in selectedSets.indices) {
+                            scope.launch { pagerState.animateScrollToPage(index) }
+                        }
+                    }
+                }
+            },
+        ) {
+            AppIcon(
+                imageVector = AppIcons.MoreVert,
+                contentDescription = stringResource(R.string.more_menu),
+                modifier = this.modifier,
+            )
+        }
+    }
+
+    if (pagerTopBarHost != null) {
+        MainPagerPageChromeEffect(
+            host = pagerTopBarHost,
+            pageIndex = mainPageIndex,
+            subtitle = currentPageSourceName,
+            actions = homeTopBarActions,
+        )
+    }
+
     AppScaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = if (pagerTopBarHost != null) {
+            Modifier
+        } else {
+            Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
+        },
         contentWindowInsets = WindowInsets(0),
         topBar = {
-            GlassMediumFlexibleTopAppBar(
-                title = stringResource(R.string.home),
-                subtitle = currentPageSourceName,
-                scrollBehavior = scrollBehavior,
-                actions = {
-                    TopBarActionButton(
-                        onClick = onToggleHomepageManage,
-                        imageVector = AppIcons.Settings,
-                        contentDescription = stringResource(R.string.homepage_module_manage),
-                    )
-                    AppActionMenu(
-                        groups = persistentListOf(
-                            AppActionGroup(
-                                id = "home_settings",
-                                actions = persistentListOf(
-                                    AppAction(
-                                        "dashboard_settings",
-                                        stringResource(R.string.home_dashboard_settings),
-                                    ),
-                                ),
-                            ),
-                            AppActionGroup(
-                                id = "home_pages",
-                                actions = selectedSets.mapIndexed { index, source ->
-                                    AppAction(
-                                        id = "page:$index",
-                                        label = source.sourceName,
-                                        selected = index == pagerState.currentPage,
-                                    )
-                                }.toImmutableList(),
-                            ),
-                        ),
-                        onAction = { id ->
-                            when {
-                                id == "dashboard_settings" ->
-                                    onIntent(HomeIntent.DashboardSettingsClick)
-                                id.startsWith("page:") -> {
-                                    val index = id.removePrefix("page:").toIntOrNull()
-                                    if (index != null && index in selectedSets.indices) {
-                                        scope.launch { pagerState.animateScrollToPage(index) }
-                                    }
-                                }
-                            }
-                        },
-                    ) {
-                        AppIcon(
-                            imageVector = AppIcons.MoreVert,
-                            contentDescription = stringResource(R.string.more_menu),
-                            modifier = this.modifier,
-                        )
-                    }
-                },
-            )
+            if (pagerTopBarHost == null) {
+                GlassMediumFlexibleTopAppBar(
+                    title = stringResource(R.string.home),
+                    subtitle = currentPageSourceName,
+                    scrollBehavior = scrollBehavior,
+                    actions = homeTopBarActions,
+                )
+            }
         },
     ) { paddingValues ->
         AppPullToRefresh(
             isRefreshing = homepageState.isRefreshing,
             onRefresh = onRefreshHomepage,
             modifier = Modifier.fillMaxSize(),
-            scrollBehavior = scrollBehavior,
+            // 横划顶栏由 OxygenX 自己处理收拢，宿主不再把旧顶栏的收拢进度交给刷新门控。
+            scrollBehavior = if (pagerTopBarHost != null) null else scrollBehavior,
         ) {
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                 val dashboardScrollState = rememberScrollState()

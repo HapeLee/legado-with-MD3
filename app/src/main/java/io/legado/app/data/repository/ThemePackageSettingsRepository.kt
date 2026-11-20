@@ -81,6 +81,7 @@ class ThemePackageSettingsRepository : ThemePackageSettingsGateway {
         showStatusBar = boolean(PreferKey.showStatusBar, true),
         swipeAnimation = boolean(PreferKey.swipeAnimation, true),
         showBottomView = boolean(PreferKey.showBottomView, true),
+        usePagerTopBar = boolean(PreferKey.usePagerTopBar, false),
         useFloatingBottomBar = boolean(PreferKey.useFloatingBottomBar, false),
         useFloatingBottomBarLiquidGlass = boolean(
             PreferKey.useFloatingBottomBarLiquidGlass,
@@ -228,6 +229,7 @@ internal fun ThemeExportData.toPreferenceValues(): Map<String, Any?> {
                 PreferKey.showStatusBar to data.showStatusBar,
                 PreferKey.swipeAnimation to data.swipeAnimation,
                 PreferKey.showBottomView to data.showBottomView,
+                PreferKey.usePagerTopBar to data.usePagerTopBar,
                 PreferKey.useFloatingBottomBar to data.useFloatingBottomBar,
                 PreferKey.useFloatingBottomBarLiquidGlass to data.useFloatingBottomBarLiquidGlass,
                 PreferKey.tabletInterface to data.tabletInterface,

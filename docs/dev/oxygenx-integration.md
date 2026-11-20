@@ -151,3 +151,20 @@ Core / Comic 各 4 项定向验证通过，包括实际布局字号、行高、�
 普通和折叠顶栏使用 74dp 高度，18sp / 24sp 标题，字体和字重由宿主 M3 titleLarge 提供。紧凑导航图形用 16dp 画布，宿主 TopBarNavigationButton 读取槽位尺寸，导航触摸目标为 48dp，紧凑内容中心下移 4dp。展开标题沿用 displayMedium，书架操作和菜单沿用既有尺寸。
 
 LE2100 同机复拍栏高为 208px，catalog 折叠「设置」墨迹 96×45px，系统 95×45px。Core / Comic 各 5 项字形、按钮与刷新回归通过，双 Debug APK 和架构门禁通过。日志为 build/oxygenx-le2100-calibration-final.log。本地快照 SHA-256 为 `a0cc6eefbf5902a70a30204466479c9aa19c26cfc031e28d239aedb0949be2c3`。
+
+## 主页面接入横划顶栏
+
+`PagerTopBar` 上移到主壳只渲染一条，避免横划时顶栏跟着页面平移、以及多实例叠加重绘。启用条件是 Oxygen 引擎加外观设置里的「横划顶栏」开关（`usePagerTopBar`）；开启后主页底栏与横向侧栏自动隐藏，播放胶囊锚点回到全局胶囊。
+
+- `MainScreen` 持有 `MainPagerTopBarHost`，经 `LocalMainPagerTopBarHost` 下发给五个主页面；页面用 `MainPagerPageChromeEffect` 注册副标题、操作区与顶栏下方内容，自身不再渲染顶栏。
+- 标题与副标题必须显式读取 `OxygenTheme.textStyle` / `OxygenTheme.contentColor`。Oxygen 与 M3 的 `LocalTextStyle`、`LocalContentColor` 是两套不同的 CompositionLocal，混用会让 displayMedium 退化成正文字号、副标题丢失 onSurfaceVariant。
+- 发现的源列表模式也把顶栏交给主壳（模式切换、搜索、分组菜单进入操作区，内联搜索进顶栏下方内容槽）。顶栏不能按页消失：高度从 208dp 掉到 0 会让 pager 重新测量并掐断横划手势。
+- 横划模式下书架分组页签、发现分类页签移到页面底部（子页 `AppScaffold.bottomBar`），有分组/分类时才显示，进出走 `slideInVertically + fadeIn` / `slideOutVertically + fadeOut`，并自己处理导航栏 inset。订阅与书架的内联搜索仍留在顶栏下方内容槽；旧顶栏模式（关闭开关或其他引擎）保持页签在顶栏下方。catalog 的顶栏没有这一层。
+
+## 横划顶栏按页居中和收拢副标题（2026-11-20）
+
+OxygenX `PagerTopBar` 按每页实测内容高度将标题和副标题作为一组居中。没有副标题时单独居中标题。收拢态共用标准 `TopAppBar` 的 74dp 高度和内容纵向偏移，单双行的底部留白与同形态的标准栏对齐。横划指示器位于栏内顶部。
+
+`MainPagerTopBar` 使用 `hideSubtitleOnCollapse = false`，让有副标题的页面收拢后仍显示两行。库原有重载继续在收拢前半程淡出副标题。Catalog 横划示例展示有副标题和无副标题的页面，并在收拢后保留副标题。Legado 使用锁定制品 `0.0.2-local.4`。
+
+定向回归对比标准栏与折叠横划栏的单行、双行高度和底部留白，并覆盖展开态居中、收拢态副标题绘制与横划中间帧。OxygenX `check` 和 Catalog Android 构建通过。Legado Core、Comic 的定向回归、Debug 打包和架构门禁通过。真机视觉和性能尚未复测。

@@ -66,6 +66,7 @@ sealed interface ThemeConfigIntent {
     data class SetShowStatusBar(val visible: Boolean) : ThemeConfigIntent
     data class SetSwipeAnimation(val enabled: Boolean) : ThemeConfigIntent
     data class SetShowBottomView(val visible: Boolean) : ThemeConfigIntent
+    data class SetUsePagerTopBar(val enabled: Boolean) : ThemeConfigIntent
     data class SetUseFloatingBottomBar(val enabled: Boolean) : ThemeConfigIntent
     data class SetUseFloatingBottomBarLiquidGlass(val enabled: Boolean) : ThemeConfigIntent
     data class SetTabletInterface(val value: String) : ThemeConfigIntent

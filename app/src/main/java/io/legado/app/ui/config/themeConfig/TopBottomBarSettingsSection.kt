@@ -88,50 +88,63 @@ fun TopBottomBarSettingsSection(
                 )
             }
         }
-        SearchableSetting("theme.show_bottom_nav") {
-            SwitchSettingItem(
-                title = stringResource(R.string.show_bottom_nav),
-                description = stringResource(R.string.be_swiped),
-                checked = appShell.showBottomView,
-                onCheckedChange = { onIntent(ThemeConfigIntent.SetShowBottomView(it)) },
-            )
+        if (engine == ComposeEngine.Oxygen) {
+            SearchableSetting("theme.use_pager_top_bar") {
+                SwitchSettingItem(
+                    title = stringResource(R.string.use_pager_top_bar),
+                    description = stringResource(R.string.use_pager_top_bar_summary),
+                    checked = appShell.usePagerTopBar,
+                    onCheckedChange = { onIntent(ThemeConfigIntent.SetUsePagerTopBar(it)) },
+                )
+            }
         }
-        SearchableSetting("theme.floating_bottom_bar") {
-            SwitchSettingItem(
-                title = stringResource(R.string.floating_bottom_bar),
-                description = stringResource(
-                    if (isCoui) R.string.coui_floating_bottom_bar_summary
-                    else R.string.floating_bottom_bar_summary,
-                ),
-                checked = useFloatingBottomBar,
-                enabled = !isCoui,
-                onCheckedChange = { onIntent(ThemeConfigIntent.SetUseFloatingBottomBar(it)) },
-            )
-        }
-        AnimatedVisibility(visible = useFloatingBottomBar) {
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                SearchableSetting("theme.floating_bottom_bar_liquid_glass") {
-                    SwitchSettingItem(
-                        title = stringResource(R.string.floating_bottom_bar_liquid_glass),
-                        description = stringResource(R.string.floating_bottom_bar_liquid_glass_summary),
-                        checked = appShell.useFloatingBottomBarLiquidGlass,
-                        onCheckedChange = {
-                            onIntent(ThemeConfigIntent.SetUseFloatingBottomBarLiquidGlass(it))
-                        },
-                    )
-                }
-                if (engine != ComposeEngine.Mochi && !isCoui) {
-                    SearchableSetting("theme.theme_config_bottom_bar_lens_radius") {
-                        SliderSettingItem(
-                            title = stringResource(R.string.theme_config_bottom_bar_lens_radius),
-                            description = stringResource(R.string.theme_config_bottom_bar_lens_radius_summary),
-                            value = theme.bottomBarLensRadius,
-                            defaultValue = 24f,
-                            valueRange = 0f..50f,
-                            onValueChange = { value ->
-                                updateTheme { current -> current.copy(bottomBarLensRadius = value) }
+        // 横划顶栏接管主页导航后底栏必然隐藏，相关开关与底栏参数不再有意义。
+        if (engine != ComposeEngine.Oxygen || !appShell.usePagerTopBar) {
+            SearchableSetting("theme.show_bottom_nav") {
+                SwitchSettingItem(
+                    title = stringResource(R.string.show_bottom_nav),
+                    description = stringResource(R.string.be_swiped),
+                    checked = appShell.showBottomView,
+                    onCheckedChange = { onIntent(ThemeConfigIntent.SetShowBottomView(it)) },
+                )
+            }
+            SearchableSetting("theme.floating_bottom_bar") {
+                SwitchSettingItem(
+                    title = stringResource(R.string.floating_bottom_bar),
+                    description = stringResource(
+                        if (isCoui) R.string.coui_floating_bottom_bar_summary
+                        else R.string.floating_bottom_bar_summary,
+                    ),
+                    checked = useFloatingBottomBar,
+                    enabled = !isCoui,
+                    onCheckedChange = { onIntent(ThemeConfigIntent.SetUseFloatingBottomBar(it)) },
+                )
+            }
+            AnimatedVisibility(visible = useFloatingBottomBar) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    SearchableSetting("theme.floating_bottom_bar_liquid_glass") {
+                        SwitchSettingItem(
+                            title = stringResource(R.string.floating_bottom_bar_liquid_glass),
+                            description = stringResource(R.string.floating_bottom_bar_liquid_glass_summary),
+                            checked = appShell.useFloatingBottomBarLiquidGlass,
+                            onCheckedChange = {
+                                onIntent(ThemeConfigIntent.SetUseFloatingBottomBarLiquidGlass(it))
                             },
                         )
+                    }
+                    if (engine != ComposeEngine.Mochi && !isCoui) {
+                        SearchableSetting("theme.theme_config_bottom_bar_lens_radius") {
+                            SliderSettingItem(
+                                title = stringResource(R.string.theme_config_bottom_bar_lens_radius),
+                                description = stringResource(R.string.theme_config_bottom_bar_lens_radius_summary),
+                                value = theme.bottomBarLensRadius,
+                                defaultValue = 24f,
+                                valueRange = 0f..50f,
+                                onValueChange = { value ->
+                                    updateTheme { current -> current.copy(bottomBarLensRadius = value) }
+                                },
+                            )
+                        }
                     }
                 }
             }

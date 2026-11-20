@@ -1997,6 +1997,8 @@
     <string name="custom_mode">Custom Mode</string>
     <string name="be_swiped">Pages can still be swiped</string>
     <string name="show_bottom_nav">Show Navigation Bar</string>
+    <string name="use_pager_top_bar">Horizontal Pager Top Bar</string>
+    <string name="use_pager_top_bar_summary">Use OxygenX pager top bar for the main pages and hide the bottom navigation bar</string>
     <string name="floating_bottom_bar">Floating Bottom Bar</string>
     <string name="floating_bottom_bar_summary">Use a detached capsule style for the bottom navigation bar</string>
     <string name="coui_floating_bottom_bar_summary">COUI always uses a floating bottom bar when bottom navigation is shown</string>

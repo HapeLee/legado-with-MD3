@@ -8,6 +8,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -64,10 +69,16 @@ import io.legado.app.ui.widget.components.menu.AppActionMenu
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import io.legado.app.ui.main.LocalMainPageIndex
+import io.legado.app.ui.main.LocalMainPagerTopBarHost
+import io.legado.app.ui.main.MainPagerPageChromeEffect
+import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.image.sourceIcon.SourceIcon
 import io.legado.app.ui.widget.components.list.ListScaffold
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
@@ -163,6 +174,76 @@ fun RssScreen(
     val sourceToDelete = remember(sourceToDeleteUrl, state.items) {
         state.items.firstOrNull { it.sourceUrl == sourceToDeleteUrl }
     }
+    val pagerTopBarHost = LocalMainPagerTopBarHost.current
+    val mainPageIndex = LocalMainPageIndex.current
+    val allGroupLabel = stringResource(R.string.all)
+    val rssMenuGroups = persistentListOf(
+        AppActionGroup(
+            id = "rss_manage",
+            actions = persistentListOf(
+                AppAction("source_manage", stringResource(R.string.rss_feed_management)),
+            ),
+        ),
+        AppActionGroup(
+            id = "rss_groups",
+            actions = buildList {
+                add(AppAction("group:", allGroupLabel))
+                state.groups.forEach { group ->
+                    add(AppAction("group:$group", group))
+                }
+            }.toImmutableList(),
+        ),
+    )
+    val onRssMenuAction: (String) -> Unit = { id ->
+        when {
+            id == "source_manage" -> onIntent(RssIntent.OpenSourceManage)
+            id.startsWith("group:") ->
+                onIntent(RssIntent.SetGroup(id.removePrefix("group:")))
+        }
+    }
+    if (pagerTopBarHost != null) {
+        MainPagerPageChromeEffect(
+            host = pagerTopBarHost,
+            pageIndex = mainPageIndex,
+            subtitle = state.group.ifEmpty { allGroupLabel },
+            actions = {
+                TopBarActionButton(
+                    onClick = { onIntent(RssIntent.ToggleSearch(!state.isSearch)) },
+                    imageVector = AppIcons.Search,
+                    contentDescription = stringResource(R.string.search),
+                )
+                AppActionMenu(
+                    groups = rssMenuGroups,
+                    onAction = onRssMenuAction,
+                ) {
+                    AppIcon(
+                        imageVector = AppIcons.MoreVert,
+                        contentDescription = stringResource(R.string.more_menu),
+                        modifier = this.modifier,
+                    )
+                }
+            },
+            bottomContent = {
+                AnimatedVisibility(
+                    visible = state.isSearch,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut(),
+                ) {
+                    SearchBar(
+                        query = state.searchKey,
+                        onQueryChange = { onIntent(RssIntent.Search(it)) },
+                        onSearch = { onIntent(RssIntent.Search(it)) },
+                        placeholder = stringResource(R.string.search_rss_source),
+                        onClear = { onIntent(RssIntent.Search("")) },
+                    )
+                }
+            },
+        )
+    }
+    // 横划模式下主壳已经渲染顶栏，这里只保留一个空顶栏占位，避免出现两层顶栏。
+    val rssTopBarOverride: (@Composable () -> Unit)? = if (pagerTopBarHost != null) {
+        {}
+    } else null
 
     ListScaffold(
             title = stringResource(R.string.rss),
@@ -172,23 +253,7 @@ fun RssScreen(
             onSearchToggle = { onIntent(RssIntent.ToggleSearch(it)) },
             onSearchQueryChange = { onIntent(RssIntent.Search(it)) },
             searchPlaceholder = stringResource(R.string.search_rss_source),
-            menuGroups = persistentListOf(
-                AppActionGroup(
-                    id = "rss_manage",
-                    actions = persistentListOf(
-                        AppAction("source_manage", stringResource(R.string.rss_feed_management)),
-                    ),
-                ),
-                AppActionGroup(
-                    id = "rss_groups",
-                    actions = buildList {
-                        add(AppAction("group:", stringResource(R.string.all)))
-                        state.groups.forEach { group ->
-                            add(AppAction("group:$group", group))
-                        }
-                    }.toImmutableList(),
-                ),
-            ),
+            menuGroups = rssMenuGroups,
             onMenuAction = { id ->
                 when {
                     id == "source_manage" -> onIntent(RssIntent.OpenSourceManage)
@@ -196,7 +261,8 @@ fun RssScreen(
                         onIntent(RssIntent.SetGroup(id.removePrefix("group:")))
                 }
             },
-            contentWindowInsets = WindowInsets(0)
+            contentWindowInsets = WindowInsets(0),
+            topBarOverride = rssTopBarOverride,
         ) { paddingValues ->
             LazyVerticalGrid(
                 overscrollEffect = rememberAppVerticalOverscrollEffect(),

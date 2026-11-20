@@ -128,6 +128,9 @@ class ThemeConfigViewModel(
             is ThemeConfigIntent.SetShowBottomView -> updateAppShell {
                 it.copy(showBottomView = intent.visible)
             }
+            is ThemeConfigIntent.SetUsePagerTopBar -> updateAppShell {
+                it.copy(usePagerTopBar = intent.enabled)
+            }
             is ThemeConfigIntent.SetUseFloatingBottomBar -> updateAppShell {
                 it.copy(useFloatingBottomBar = intent.enabled)
             }

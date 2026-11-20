@@ -1990,6 +1990,8 @@
     <string name="custom_mode">自訂模式</string>
     <string name="be_swiped">仍可滑動翻頁</string>
     <string name="show_bottom_nav">顯示導航欄</string>
+    <string name="use_pager_top_bar">橫劃頂欄</string>
+    <string name="use_pager_top_bar_summary">主頁面使用 OxygenX 橫劃頂欄，並隱藏底部導航欄</string>
     <string name="floating_bottom_bar">懸浮底欄</string>
     <string name="floating_bottom_bar_summary">底部導航欄使用獨立膠囊樣式</string>
     <string name="coui_floating_bottom_bar_summary">COUI 的底部導覽固定使用懸浮樣式</string>

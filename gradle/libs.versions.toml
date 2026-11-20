@@ -1,5 +1,5 @@
 [versions]
-oxygenx = "0.0.1"
+oxygenx = "0.0.2-local.9"
 mlkitText = "16.0.1"
 onnxruntime = "1.28.0"
 

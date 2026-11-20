@@ -96,7 +96,9 @@ class OxygenTypographyTest {
         assertEquals(16.dp, iconWidth("Standard back"))
         assertEquals(24.dp, iconWidth("Page back"))
         assertEquals(FontWeight.Normal, layout("Standard title").fontWeight)
-        assertEquals(45.sp, layout("Page title").fontSize)
+        // 大顶栏展开标题走 OxygenX `type.appbar.expanded.title`（资源 op_app_bar_expand_text_size
+        // 96px ÷ 2 = 48sp，行高沿用 displayMedium 的 52sp）。
+        assertEquals(48.sp, layout("Page title").fontSize)
         assertEquals(52.sp, layout("Page title").lineHeight)
         compose.runOnIdle {
             assertEquals(22.sp, standardRoleSize)

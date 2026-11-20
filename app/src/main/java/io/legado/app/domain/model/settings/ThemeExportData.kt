@@ -67,6 +67,7 @@ data class ThemeExportData(
     val showStatusBar: Boolean = true,
     val swipeAnimation: Boolean = true,
     val showBottomView: Boolean = true,
+    val usePagerTopBar: Boolean = false,
     val useFloatingBottomBar: Boolean = false,
     val useFloatingBottomBarLiquidGlass: Boolean = false,
     val tabletInterface: String = "auto",
