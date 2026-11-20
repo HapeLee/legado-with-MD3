@@ -549,7 +549,8 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
         return CueSpeechState(
             engineId = voice.engineId,
             voiceName = voice.speakerId,
-            rate = rate,
+            // null = 跟随系统（未显式覆盖引擎语速），与 appliedSpeechRate 的 -1f 哨兵对齐
+            rate = rate ?: -1f,
             pitch = pitch,
         )
     }
@@ -688,19 +689,22 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
     }
 
     /** 这一句要的语速/音高：角色自带预设优先，其余落到全局语速与变声器。 */
-    private fun presetForCue(index: Int, voice: ReadAloudVoice): Pair<Float, Float> {
+    private fun presetForCue(index: Int, voice: ReadAloudVoice): Pair<Float?, Float> {
         val config = runCatching {
             GSON.fromJson(voice.traitsJson, SystemTtsVoiceConfig::class.java)
         }.getOrNull() ?: SystemTtsVoiceConfig()
+        // 跟随系统时返回 null：引擎保持自己的默认速率（即系统设置里的 TTS 语速），
+        // 显式 setSpeechRate 会把它覆盖掉，所以这里绝不能兜底成 1f。
         val globalRate = if (ReadConfig.ttsFollowSys) {
-            1f
+            null
         } else {
             (speechRateSetting + 5) / 10f
         }
         // 角色的变声器：直读路径没有自己的播放器，只能用引擎的音高/语速这一层
         val cue = playbackQueue.cues.getOrNull(index)
         val effect = VoiceEffectStore.ofSpeech(cue?.voiceEffect, cue?.characterId)
-        return VoiceEffectAudio.speedOf(effect, config.speechRate ?: globalRate) to
+        val baseRate = config.speechRate ?: globalRate
+        return baseRate?.let { VoiceEffectAudio.speedOf(effect, it) } to
             VoiceEffectAudio.pitchOf(effect, config.pitch ?: 1f)
     }
 
@@ -717,8 +721,9 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
         }
         val (rate, pitch) = presetForCue(nowSpeak, voice)
         val tts = textToSpeech ?: return
-        // 同一角色的连续两句算出的是同一个值，就别再发两次 binder 调用堆在切换边界上
-        if (rate != appliedSpeechRate) {
+        // 同一角色的连续两句算出的是同一个值，就别再发两次 binder 调用堆在切换边界上；
+        // rate 为 null 表示跟随系统，绝不能显式下发，否则会覆盖引擎的系统语速默认值
+        if (rate != null && rate != appliedSpeechRate) {
             appliedSpeechRate = rate
             tts.setSpeechRate(rate)
         }
@@ -730,10 +735,15 @@ class TTSReadAloudService : BaseReadAloudService(), KoinComponent {
 
     private fun applyDefaultPreset() {
         val tts = textToSpeech ?: return
-        val rate = if (ReadConfig.ttsFollowSys) 1f else (speechRateSetting + 5) / 10f
-        if (rate != appliedSpeechRate) {
-            appliedSpeechRate = rate
-            tts.setSpeechRate(rate)
+        // 跟随系统时不调用 setSpeechRate：引擎默认速率就是系统设置里的 TTS 语速，
+        // 显式下发 1f 会把系统滑杆的设置覆盖掉。若之前下发过自定义语速，
+        // 切换开关会经 upSpeechRate(reset=true) 重建引擎来恢复默认。
+        if (!ReadConfig.ttsFollowSys) {
+            val rate = (speechRateSetting + 5) / 10f
+            if (rate != appliedSpeechRate) {
+                appliedSpeechRate = rate
+                tts.setSpeechRate(rate)
+            }
         }
         if (appliedPitch != 1f) {
             appliedPitch = 1f
