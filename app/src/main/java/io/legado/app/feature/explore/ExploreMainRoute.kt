@@ -6,18 +6,11 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
@@ -51,6 +44,7 @@ import io.legado.app.ui.book.search.SearchScope
 import io.legado.app.ui.main.LocalMainPageIndex
 import io.legado.app.ui.main.LocalMainPagerBottomBarState
 import io.legado.app.ui.main.LocalMainPagerTopBarHost
+import io.legado.app.ui.main.MainPagerBottomTabBar
 import io.legado.app.ui.main.MainPagerPageChromeEffect
 import io.legado.app.ui.main.explore.ExploreIntent
 import io.legado.app.ui.main.explore.ExploreRouteScreen
@@ -172,18 +166,10 @@ fun ExploreMainRoute(
                 bottomBar = {
                     // 横划模式把分类页签移到页面底部；源列表模式没有分类页签。
                     if (pagerTopBarHost != null && state.showContent) {
-                        AnimatedVisibility(
+                        MainPagerBottomTabBar(
                             visible = kinds.isNotEmpty() && pagerBottomBarState?.hidden != true,
-                            enter = slideInVertically { it } + fadeIn(),
-                            exit = slideOutVertically { it } + fadeOut(),
                         ) {
-                            Column(
-                                modifier = Modifier.windowInsetsPadding(
-                                    WindowInsets.navigationBars.only(WindowInsetsSides.Bottom)
-                                )
-                            ) {
-                                exploreKindTabs()
-                            }
+                            exploreKindTabs()
                         }
                     }
                 },

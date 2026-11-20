@@ -121,6 +121,7 @@ import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.main.LocalMainPageIndex
 import io.legado.app.ui.main.LocalMainPagerBottomBarState
 import io.legado.app.ui.main.LocalMainPagerTopBarHost
+import io.legado.app.ui.main.MainPagerBottomTabBar
 import io.legado.app.ui.main.MainPagerPageChromeEffect
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalBottomOverlayPadding
@@ -822,21 +823,13 @@ fun BookshelfScreen(
         bottomBar = {
             // 横划模式把分组页签移到页面底部；没有分组或处于多选时按需隐藏。
             if (pagerTopBarHost != null) {
-                AnimatedVisibility(
+                MainPagerBottomTabBar(
                     visible = bookGroupStyle == 0 &&
                         uiState.groups.isNotEmpty() &&
                         !uiState.isEditMode &&
                         pagerBottomBarState?.hidden != true,
-                    enter = slideInVertically { it } + fadeIn(),
-                    exit = slideOutVertically { it } + fadeOut(),
                 ) {
-                    Column(
-                        modifier = Modifier.windowInsetsPadding(
-                            WindowInsets.navigationBars.only(WindowInsetsSides.Bottom)
-                        )
-                    ) {
-                        bookshelfGroupTabs()
-                    }
+                    bookshelfGroupTabs()
                 }
             }
         },
