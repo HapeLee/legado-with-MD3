@@ -148,6 +148,12 @@
 		<item>@string/adjust_chapter_index</item>
 	</string-array>
 
+	<string-array name="bookmark_badge_position_title">
+		<item>@string/bookmark_badge_position_top_start</item>
+		<item>@string/bookmark_badge_position_top_end</item>
+		<item>@string/bookmark_badge_position_custom</item>
+	</string-array>
+
 	<string-array name="brightness_bar_mode_title">
 		<item>@string/brightness_bar_off</item>
 		<item>@string/brightness_bar_horizontal</item>

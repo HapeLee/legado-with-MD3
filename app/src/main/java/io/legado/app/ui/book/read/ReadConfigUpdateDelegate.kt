@@ -656,6 +656,40 @@ class ReadConfigUpdateDelegate(
                     )
                 }
             }
+            is ConfigUpdate.BookmarkBadgePosition -> {
+                scope.launch {
+                    readSettingsRepository.update { it.copy(bookmarkBadgePosition = update.value) }
+                    // 等写入落地再发 UpdateStyle，否则重建页面时读到的还是旧锚点
+                    readSettingsRepository.preferences.first {
+                        it.bookmarkBadgePosition == update.value
+                    }
+                    host.emitEffect(
+                        ReadBookEffect.UpdateReaderConfig(setOf(ConfigUpdateAction.UpdateStyle))
+                    )
+                }
+            }
+            is ConfigUpdate.BookmarkBadgeOffsetX -> {
+                scope.launch {
+                    readSettingsRepository.update { it.copy(bookmarkBadgeOffsetX = update.value) }
+                    readSettingsRepository.preferences.first {
+                        it.bookmarkBadgeOffsetX == update.value
+                    }
+                    host.emitEffect(
+                        ReadBookEffect.UpdateReaderConfig(setOf(ConfigUpdateAction.UpdateStyle))
+                    )
+                }
+            }
+            is ConfigUpdate.BookmarkBadgeOffsetY -> {
+                scope.launch {
+                    readSettingsRepository.update { it.copy(bookmarkBadgeOffsetY = update.value) }
+                    readSettingsRepository.preferences.first {
+                        it.bookmarkBadgeOffsetY == update.value
+                    }
+                    host.emitEffect(
+                        ReadBookEffect.UpdateReaderConfig(setOf(ConfigUpdateAction.UpdateStyle))
+                    )
+                }
+            }
             is ConfigUpdate.ParagraphCommentHeight -> {
                 scope.launch {
                     readSettingsRepository.update { it.copy(paragraphCommentHeightPercent = update.percent) }

@@ -34,11 +34,11 @@ class ReadSettingsMappingTest {
     }
 
     @Test
-    fun `gateway 持久化映射覆盖 ReadSettings 全部 117 个字段`() {
+    fun `gateway 持久化映射覆盖 ReadSettings 全部 120 个字段`() {
         val actualKeys = ReadSettings().toGatewayPrefMap().keys
         val expectedKeys = ReadSettings().expectedGatewayPrefMap().keys
 
-        assertEquals(117, actualKeys.size)
+        assertEquals(120, actualKeys.size)
         assertEquals(expectedKeys, actualKeys)
     }
 
@@ -237,6 +237,9 @@ private fun readSettingsMappingSamples(): List<ReadSettings> {
         base.copy(swipeToAddBookmark = true),
         base.copy(bookmarkBadgeImage = "badge.svg"),
         base.copy(bookmarkBadgeSize = 24),
+        base.copy(bookmarkBadgePosition = "custom"),
+        base.copy(bookmarkBadgeOffsetX = 48),
+        base.copy(bookmarkBadgeOffsetY = 120),
         base.copy(sliderVibrator = true),
         base.copy(selectVibrator = true),
         base.copy(autoChangeSource = false),
@@ -284,6 +287,9 @@ private fun ReadSettings.expectedGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.swipeToAddBookmark to swipeToAddBookmark,
     PreferKey.bookmarkBadgeImage to bookmarkBadgeImage,
     PreferKey.bookmarkBadgeSize to bookmarkBadgeSize,
+    PreferKey.bookmarkBadgePosition to bookmarkBadgePosition,
+    PreferKey.bookmarkBadgeOffsetX to bookmarkBadgeOffsetX,
+    PreferKey.bookmarkBadgeOffsetY to bookmarkBadgeOffsetY,
     PreferKey.pageTouchSlop to pageTouchSlop,
     PreferKey.sliderVibrator to sliderVibrator,
     PreferKey.selectVibrator to selectVibrator,

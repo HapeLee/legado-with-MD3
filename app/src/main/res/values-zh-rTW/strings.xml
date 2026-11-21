@@ -310,6 +310,13 @@
     <string name="bookmark_badge_custom">自訂圖片</string>
     <string name="bookmark_badge_reset">恢復預設書籤角標</string>
     <string name="bookmark_badge_size">角標大小</string>
+    <string name="bookmark_badge_position">角標位置</string>
+    <string name="bookmark_badge_position_top_start">左上角</string>
+    <string name="bookmark_badge_position_top_end">右上角</string>
+    <string name="bookmark_badge_position_custom">自訂</string>
+    <string name="bookmark_badge_offset_x">水平偏移</string>
+    <string name="bookmark_badge_offset_y">垂直偏移</string>
+    <string name="bookmark_badge_offset_origin">以正文區左上角為原點</string>
     <string name="menu_mark">筆記</string>
     <string name="bookmark_mark">劃線標記</string>
     <string name="bookmark_mark_selection">選中文字</string>

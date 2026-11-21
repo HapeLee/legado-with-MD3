@@ -7,6 +7,7 @@ import io.legado.app.constant.AppConst.timeFormat
 import io.legado.app.constant.ReadTipType
 import io.legado.app.domain.gateway.ReadSettingsGateway
 import io.legado.app.feature.reader.core.model.ReaderBookmarkBadge
+import io.legado.app.feature.reader.core.model.ReaderBookmarkBadgePosition
 import io.legado.app.feature.reader.core.model.ReaderPage
 import io.legado.app.feature.reader.core.model.ReaderPageDecoration
 import io.legado.app.feature.reader.core.model.ReaderPageTip
@@ -163,8 +164,15 @@ object LegacyReaderPageDecorationFactory : KoinComponent {
                 // subtracting the body top padding yields the header bottom edge (viewport top when header is off).
                 headerBottomPx = page.contentTopPx - ReadBookConfig.paddingTop.dpToPx(),
                 contentRightPaddingPx = ReadBookConfig.paddingRight.dpToPx(),
+                contentLeftPaddingPx = ReadBookConfig.paddingLeft.dpToPx(),
+                pageHeightPx = page.heightPx,
                 density = appCtx.resources.displayMetrics.density,
                 sizeDp = settings.bookmarkBadgeSize,
+                position = ReaderBookmarkBadgePosition.fromPreference(
+                    settings.bookmarkBadgePosition,
+                ),
+                offsetXDp = settings.bookmarkBadgeOffsetX,
+                offsetYDp = settings.bookmarkBadgeOffsetY,
                 imageSource = settings.bookmarkBadgeImage,
                 imageVersion = settings.bookmarkBadgeImage.takeIf { hasBookmark && it.isNotBlank() }
                     ?.let { File(it).let { file -> "${file.lastModified()}:${file.length()}" } }.orEmpty(),

@@ -73,6 +73,12 @@
         <item>chapter</item>
     </string-array>
 
+    <string-array name="bookmark_badge_position_value">
+        <item>topStart</item>
+        <item>topEnd</item>
+        <item>custom</item>
+    </string-array>
+
     <string-array name="brightness_bar_mode_value">
         <item>0</item>
         <item>1</item>

@@ -400,6 +400,9 @@ class ReadSettingsRepository(
             swipeToAddBookmark = compatDsValue(Keys.SwipeToAddBookmark, false),
             bookmarkBadgeImage = compatDsValue(Keys.BookmarkBadgeImage, ""),
             bookmarkBadgeSize = compatDsValue(Keys.BookmarkBadgeSize, 10),
+            bookmarkBadgePosition = compatDsValue(Keys.BookmarkBadgePosition, "topEnd"),
+            bookmarkBadgeOffsetX = compatDsValue(Keys.BookmarkBadgeOffsetX, 0),
+            bookmarkBadgeOffsetY = compatDsValue(Keys.BookmarkBadgeOffsetY, 0),
             pageTouchSlop = compatDsValue(Keys.PageTouchSlop, 0),
             sliderVibrator = compatDsValue(Keys.SliderVibrator, false),
             useNewTocSheet = compatDsValue(Keys.UseNewTocSheet, true),
@@ -529,6 +532,9 @@ class ReadSettingsRepository(
         val SwipeToAddBookmark = booleanPreferencesKey(PreferKey.swipeToAddBookmark)
         val BookmarkBadgeImage = stringPreferencesKey(PreferKey.bookmarkBadgeImage)
         val BookmarkBadgeSize = intPreferencesKey(PreferKey.bookmarkBadgeSize)
+        val BookmarkBadgePosition = stringPreferencesKey(PreferKey.bookmarkBadgePosition)
+        val BookmarkBadgeOffsetX = intPreferencesKey(PreferKey.bookmarkBadgeOffsetX)
+        val BookmarkBadgeOffsetY = intPreferencesKey(PreferKey.bookmarkBadgeOffsetY)
         val PageTouchSlop = intPreferencesKey(PreferKey.pageTouchSlop)
         val SliderVibrator = booleanPreferencesKey(PreferKey.sliderVibrator)
         val UseNewTocSheet = booleanPreferencesKey(PreferKey.useNewTocSheet)
@@ -668,6 +674,9 @@ internal fun ReadSettings.toGatewayPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.swipeToAddBookmark to swipeToAddBookmark,
     PreferKey.bookmarkBadgeImage to bookmarkBadgeImage,
     PreferKey.bookmarkBadgeSize to bookmarkBadgeSize,
+    PreferKey.bookmarkBadgePosition to bookmarkBadgePosition,
+    PreferKey.bookmarkBadgeOffsetX to bookmarkBadgeOffsetX,
+    PreferKey.bookmarkBadgeOffsetY to bookmarkBadgeOffsetY,
     PreferKey.pageTouchSlop to pageTouchSlop,
     PreferKey.sliderVibrator to sliderVibrator,
     PreferKey.useNewTocSheet to useNewTocSheet,

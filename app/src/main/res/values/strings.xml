@@ -408,6 +408,13 @@
     <string name="bookmark_badge_custom">Custom image</string>
     <string name="bookmark_badge_reset">Reset bookmark badge</string>
     <string name="bookmark_badge_size">Badge size</string>
+    <string name="bookmark_badge_position">Badge position</string>
+    <string name="bookmark_badge_position_top_start">Top left</string>
+    <string name="bookmark_badge_position_top_end">Top right</string>
+    <string name="bookmark_badge_position_custom">Custom</string>
+    <string name="bookmark_badge_offset_x">Horizontal offset</string>
+    <string name="bookmark_badge_offset_y">Vertical offset</string>
+    <string name="bookmark_badge_offset_origin">Measured from the top-left corner of the text area</string>
     <string name="menu_mark">Mark line</string>
     <string name="bookmark_mark">Mark line</string>
     <string name="bookmark_mark_selection">Selected text</string>

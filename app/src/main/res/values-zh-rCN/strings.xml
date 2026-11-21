@@ -377,6 +377,13 @@
     <string name="bookmark_badge_custom">自定义图片</string>
     <string name="bookmark_badge_reset">恢复默认书签角标</string>
     <string name="bookmark_badge_size">角标大小</string>
+    <string name="bookmark_badge_position">角标位置</string>
+    <string name="bookmark_badge_position_top_start">左上角</string>
+    <string name="bookmark_badge_position_top_end">右上角</string>
+    <string name="bookmark_badge_position_custom">自定义</string>
+    <string name="bookmark_badge_offset_x">水平偏移</string>
+    <string name="bookmark_badge_offset_y">垂直偏移</string>
+    <string name="bookmark_badge_offset_origin">以正文区左上角为原点</string>
     <string name="menu_mark">笔记</string>
     <string name="bookmark_mark">划线标记</string>
     <string name="bookmark_mark_selection">选中文本</string>
