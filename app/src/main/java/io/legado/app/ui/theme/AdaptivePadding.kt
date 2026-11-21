@@ -109,6 +109,32 @@ fun adaptiveContentPadding(
     )
 }
 
+/**
+ * 书籍封面上可见区域内缩的量（非沉浸），与 `BookshelfItemCover` 的 padding 同源。
+ *
+ * 口径是「封面到屏幕边的距离」，所以网格内容边距必须减掉这一层：
+ * 直接把 contentPadding 当封面边距会凭空多出 4dp；以后封面为水波纹再扩边也只改这里。
+ */
+internal val BookshelfCoverInnerInset: Dp = 4.dp
+
+/**
+ * 书架书籍封面到屏幕边缘的目标距离：Material / Mochi / Oxygen 16dp，Miuix / Coui 12dp。
+ */
+@Composable
+fun bookshelfCoverScreenMargin(): Dp = when (composeEngine) {
+    ComposeEngine.Miuix, ComposeEngine.Coui -> 12.dp
+    else -> 16.dp
+}
+
+/**
+ * 书籍网格左右内容边距 = 封面目标边距 − 封面自身内边距。
+ *
+ * 书架里所有「铺到屏幕边、但内容仍要和封面像素对齐」的东西（就地展开的系列抽屉等）
+ * 都必须取这一份口径，不要自己重算引擎分支。
+ */
+@Composable
+fun bookshelfCoverGridSidePadding(): Dp = bookshelfCoverScreenMargin() - BookshelfCoverInnerInset
+
 @Composable
 fun adaptiveContentPaddingBookshelf(
     top: Dp,
@@ -123,6 +149,29 @@ fun adaptiveContentPaddingBookshelf(
         composeEngine == ComposeEngine.Miuix -> 6.dp + horizontal
         else -> 4.dp + horizontal
     }
+    return PaddingValues(
+        top = adjustedTop,
+        bottom = bottom,
+        start = sidePadding,
+        end = sidePadding
+    )
+}
+
+/**
+ * 书籍网格的 contentPadding。
+ *
+ * 与 [adaptiveContentPaddingBookshelf] 的差别只在左右：这里按「封面到屏幕边的目标距离」推导，
+ * 而不是「引擎基础偏移 + horizontal」——后者在 Miuix/Coui 下会让封面离屏幕偏大。
+ */
+@Composable
+fun adaptiveContentPaddingBookshelfCoverGrid(
+    top: Dp,
+    bottom: Dp,
+    /** 沉浸网格：封面贴屏幕边，不留左右边距 */
+    immersive: Boolean = false,
+): PaddingValues {
+    val adjustedTop = if (composeEngine == ComposeEngine.Miuix) top + 12.dp else top + 8.dp
+    val sidePadding = if (immersive) 0.dp else bookshelfCoverGridSidePadding()
     return PaddingValues(
         top = adjustedTop,
         bottom = bottom,

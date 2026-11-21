@@ -62,6 +62,13 @@ data class Book(
     override var kind: String? = null,
     // 分类信息(用户修改)
     var customTag: String? = null,
+    // 所属收纳系列名，null 表示未收纳。同一系列的书共享这个值，是书架折叠收纳的唯一归属键；
+    // 用名字而不是单独建表，是为了让 bookshelf.json 备份/恢复天然带着系列结构。
+    // 必须可空：Gson 恢复旧备份时缺这个字段会写入 null，非空类型会在 Room 插入时崩掉。
+    var seriesId: String? = null,
+    // 系列内卷序（从 0 开始，仅 seriesId 非空时有意义）
+    @ColumnInfo(defaultValue = "0")
+    var seriesOrder: Int = 0,
     // 封面Url(书源获取)
     var coverUrl: String? = null,
     // 封面Url(用户修改)
@@ -143,6 +150,7 @@ data class Book(
         intro = intro?.take(5000)
         listIntro = listIntro?.take(5000)
         customTag = customTag?.take(1000)
+        seriesId = seriesId?.take(200)
         customIntro = customIntro?.take(5000)
         remark = remark?.take(1000)
         latestChapterTitle = latestChapterTitle?.take(200)
@@ -425,6 +433,8 @@ data class Book(
         newBook.customCoverUrl = customCoverUrl
         newBook.customIntro = customIntro
         newBook.customTag = customTag
+        newBook.seriesId = seriesId
+        newBook.seriesOrder = seriesOrder
         newBook.canUpdate = canUpdate
         newBook.disableReadRecord = disableReadRecord
         if (config.fixedType) {

@@ -3,6 +3,7 @@ package io.legado.app.ui.widget.components.button.series
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
@@ -23,7 +24,9 @@ fun MediumPlainButton(
     selected: Boolean = false,
     icon: ImageVector? = null,
     text: String? = null,
-    tint: androidx.compose.ui.graphics.Color = LegadoTheme.colorScheme.onSurface,
+    tint: Color = LegadoTheme.colorScheme.onSurface,
+    /** 自定义容器底色；null 时为透明 */
+    containerColor: Color? = null,
     contentDescription: String? = null
 ) {
     SeriesButton(
@@ -33,7 +36,8 @@ fun MediumPlainButton(
         selected = selected,
         onLongClick = onLongClick,
         size = if (text == null) MediumSeriesIconButtonSize else null,
-        contentColor = tint
+        contentColor = tint,
+        containerColor = containerColor
     ) { contentColor ->
         SeriesButtonContent(
             icon = icon,

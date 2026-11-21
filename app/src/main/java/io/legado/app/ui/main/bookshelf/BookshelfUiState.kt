@@ -49,6 +49,11 @@ sealed interface BookshelfOverlay {
     data class GroupEditSheet(val groupId: Long) : BookshelfOverlay
     data object BatchDownloadConfirmDialog : BookshelfOverlay
     data object DeleteBooksConfirmDialog : BookshelfOverlay
+
+    /** 把选中的书收纳为一个系列；[bookUrls] 已按书架顺序排列，决定系列内卷序 */
+    data class SeriesCreate(val bookUrls: List<String>) : BookshelfOverlay
+    data class SeriesRename(val seriesName: String) : BookshelfOverlay
+    data class SeriesDissolve(val seriesName: String, val memberCount: Int) : BookshelfOverlay
 }
 
 sealed interface BookshelfIntent {
@@ -109,6 +114,23 @@ sealed interface BookshelfIntent {
     /** 待打开的私密书已经处理完，清空挂起目标 */
     data object ConsumePendingOpenBook : BookshelfIntent
 
+    // ── 书架折叠收纳（同系列多卷） ──
+
+    /** [bookUrls] 顺序即系列卷序 */
+    data class CreateSeries(val name: String, val bookUrls: List<String>) : BookshelfIntent
+    data class RenameSeries(val oldName: String, val newName: String) : BookshelfIntent
+    data class DissolveSeries(val seriesName: String) : BookshelfIntent
+    data class RemoveBooksFromSeries(val bookUrls: Set<String>) : BookshelfIntent
+
+    /** 长按系列选「管理书籍」：进入编辑态并选中系列成员，底栏即可移出或再收纳 */
+    data class EditSeries(val bookUrls: Set<String>) : BookshelfIntent
+
+    /** 设置/重置系列独立封面；[cover] 为 null 表示恢复成员封面拼贴 */
+    data class SetSeriesCover(val seriesName: String, val cover: String?) : BookshelfIntent
+
+    /** 展开/收起就地抽屉；null 表示全部收起 */
+    data class SetExpandedSeries(val seriesName: String?) : BookshelfIntent
+
 }
 
 sealed interface BookshelfEffect {
@@ -158,6 +180,16 @@ data class BookshelfUiState(
     val draggingBooks: ImmutableList<BookUiItem>? = null,
     val pendingSavedBooks: ImmutableList<BookUiItem>? = null,
     val visibleGroupBooks: ImmutableMap<Long, ImmutableList<BookUiItem>> = persistentMapOf(),
+    /** 系列名 → 独立封面路径；没有独立封面的系列用成员封面拼贴 */
+    val seriesCovers: ImmutableMap<String, String> = persistentMapOf(),
+
+    /**
+     * 当前就地展开的系列名。
+     *
+     * 放在 UiState 而不是 Screen 的 rememberSaveable：打开阅读器再回来时书架 Composable
+     * 会重建，本地可保存状态会丢，抽屉就"自己收起"了。
+     */
+    val expandedSeriesName: String? = null,
     val settings: BookshelfSettings = BookshelfSettings(),
     val useRaisedBottomInset: Boolean = false,
     val enableCustomTagColors: Boolean = false,

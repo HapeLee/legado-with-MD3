@@ -15,6 +15,7 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookMarking
+import io.legado.app.data.entities.BookSeries
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.DictRule
@@ -174,6 +175,14 @@ object Restore : KoinComponent {
         if (BackupConfig.dbIsNotIgnored("bookGroup")) {
             fileToListT<BookGroup>(path, "bookGroup.json")?.let {
                 appDb.bookGroupDao.replaceAll(it)
+            }
+        }
+        // 系列独立封面：旧备份里没有这个文件，取不到时保持现有封面不动
+        if (BackupConfig.dbIsNotIgnored("bookSeries")) {
+            fileToListT<BookSeries>(path, "bookSeries.json")?.let { seriesList ->
+                // Gson 反序列化不走构造器，缺字段时 name 可能是 null，主键为空的行直接跳过
+                seriesList.filter { !it.name.isNullOrBlank() }
+                    .forEach { appDb.bookSeriesDao.upsert(it) }
             }
         }
         if (BackupConfig.dbIsNotIgnored("bookSource")) {

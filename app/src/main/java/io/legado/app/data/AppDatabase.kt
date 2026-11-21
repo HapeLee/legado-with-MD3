@@ -22,6 +22,7 @@ import io.legado.app.data.dao.BookDao
 import io.legado.app.data.dao.BookGroupDao
 import io.legado.app.data.dao.BookKnowledgeDao
 import io.legado.app.data.dao.BookMarkingDao
+import io.legado.app.data.dao.BookSeriesDao
 import io.legado.app.data.dao.BookSourceDao
 import io.legado.app.data.dao.BookmarkDao
 import io.legado.app.data.dao.CacheDao
@@ -82,6 +83,7 @@ import io.legado.app.data.entities.BookKnowledgeEntry
 import io.legado.app.data.entities.BookMarking
 import io.legado.app.data.entities.ReadAloudAudioDownload
 import io.legado.app.data.entities.BookOutlineNode
+import io.legado.app.data.entities.BookSeries
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.BookVoiceBindingEntity
@@ -136,9 +138,9 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 135,
+    version = 137,
     exportSchema = true,
-    entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
+    entities = [Book::class, BookSeries::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
         RssSource::class, Bookmark::class, RssArticle::class,
         RssReadRecord::class, ReadRecordDetail::class, ReadRecordSession::class,
@@ -286,11 +288,18 @@ val appDb by lazy {
         // highlight_rules 新增四列夜间颜色：可空（null = 跟随白天那一栏），老规则读回来
         // 四列都是 NULL，解析口径见 HighlightRule.colorsFor。
         AutoMigration(from = 134, to = 135),
+        // books 新增 seriesId / seriesOrder 两列：书架折叠收纳（同系列多卷）的归属与卷序，
+        // 默认空串 + 0 = 未收纳，老数据读回来与旧行为一致。
+        AutoMigration(from = 135, to = 136),
+        // 新增 book_series 表：折叠收纳系列的独立封面（系列归属仍在 books.seriesId）。
+        // 纯建表，AutoMigration 可以处理。
+        AutoMigration(from = 136, to = 137),
     ]
 )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract val bookDao: BookDao
+    abstract val bookSeriesDao: BookSeriesDao
     abstract val bookGroupDao: BookGroupDao
     abstract val bookSourceDao: BookSourceDao
     abstract val bookChapterDao: BookChapterDao

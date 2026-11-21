@@ -3,6 +3,7 @@ package io.legado.app.ui.widget.components.button.series
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
@@ -26,6 +27,12 @@ fun MediumTonalButton(
     selected: Boolean = false,
     icon: ImageVector? = null,
     text: String? = null,
+    /** 图标/文字颜色；默认与 Tonal 容器配套 */
+    contentColor: Color = LegadoTheme.colorScheme.onSurfaceVariant,
+    /** 自定义容器底色；null = 按 Tonal 取 surfaceContainerLow */
+    containerColor: Color? = null,
+    selectedContainerColor: Color = LegadoTheme.colorScheme.primaryContainer,
+    selectedContentColor: Color = LegadoTheme.colorScheme.onPrimaryContainer,
     contentDescription: String? = null
 ) {
     SeriesButton(
@@ -36,7 +43,11 @@ fun MediumTonalButton(
         onLongClick = onLongClick,
         enforceMinimumInteractiveSize = false,
         size = if (text == null) MediumSeriesIconButtonSize else null,
-        style = SeriesIconButtonStyle.Tonal
+        style = SeriesIconButtonStyle.Tonal,
+        contentColor = contentColor,
+        containerColor = containerColor,
+        selectedContainerColor = selectedContainerColor,
+        selectedContentColor = selectedContentColor
     ) { contentColor ->
         SeriesButtonContent(
             icon = icon,

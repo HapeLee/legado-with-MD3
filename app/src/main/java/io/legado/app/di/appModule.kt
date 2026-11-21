@@ -228,6 +228,7 @@ import io.legado.app.domain.usecase.StartBookSourceCheckUseCase
 import io.legado.app.domain.usecase.SyncHttpTtsCatalogUseCase
 import io.legado.app.domain.usecase.SyncReadAloudVoicesUseCase
 import io.legado.app.domain.usecase.TranslateChapterUseCase
+import io.legado.app.domain.usecase.BookshelfSeriesUseCase
 import io.legado.app.domain.usecase.UpdateBooksGroupUseCase
 import io.legado.app.domain.usecase.UploadReadingProgressUseCase
 import io.legado.app.domain.usecase.VerifyBookmarkTargetUseCase
@@ -364,6 +365,7 @@ val appModule = module {
 
     single { get<AppDatabase>().readRecordDao }
     single { get<AppDatabase>().bookDao }
+    single { get<AppDatabase>().bookSeriesDao }
     single { get<AppDatabase>().bookChapterDao }
     single { get<AppDatabase>().bookGroupDao }
     single { get<AppDatabase>().bookSourceDao }
@@ -496,6 +498,7 @@ val appModule = module {
     single { HomeDashboardUseCase(get(), Clock.System) }
     singleOf(::RemoveBookGroupAssignmentUseCase)
     singleOf(::UpdateBooksGroupUseCase)
+    singleOf(::BookshelfSeriesUseCase)
     singleOf(::UploadReadingProgressUseCase)
     singleOf(::ResolveBookShelfStateUseCase)
     singleOf(::RefreshTocUseCase)
@@ -545,7 +548,7 @@ val appModule = module {
     single<WebDavBackupGateway> { WebDavBackupRepository() }
     single<ReadingProgressGateway> { WebDavReadingProgressRepository() }
     single<HomepageModulesGateway> { HomepageModulesRepository(get(), get()) }
-    single<BookDomainRepository> { BookDomainRepositoryImpl(get(), get()) }
+    single<BookDomainRepository> { BookDomainRepositoryImpl(get(), get(), get()) }
     single<BookContentProcessGateway> { BookContentProcessRepository(get()) }
     single<BookMarkingGateway> { BookMarkingRepository(get()) }
     single<BookKnowledgeGateway> { BookKnowledgeRepository(get()) }

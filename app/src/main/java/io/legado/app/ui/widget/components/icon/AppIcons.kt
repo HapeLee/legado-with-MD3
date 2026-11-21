@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.LocationSearching
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.MoreVert
@@ -309,6 +310,13 @@ object AppIcons {
         get() = when (engine) {
             ComposeEngine.Oxygen -> MaterialSymbols.OpenInNew
             else -> Icons.Default.OpenInNew
+        }
+
+    val ExpandLess: ImageVector
+        @Composable
+        get() = when (engine) {
+            ComposeEngine.Oxygen -> MaterialSymbols.ExpandLess
+            else -> Icons.Default.KeyboardArrowUp
         }
 
     val ExpandMore: ImageVector

@@ -61,6 +61,7 @@ import io.legado.app.R
 import io.legado.app.constant.BookType
 import io.legado.app.domain.model.settings.BookshelfSettings
 import io.legado.app.ui.config.themeConfig.TagColorPair
+import io.legado.app.ui.theme.BookshelfCoverInnerInset
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.NormalCard
@@ -298,7 +299,7 @@ private fun BookshelfItemCover(
     val shape = if (immersive) RectangleShape else RoundedCornerShape(4.dp)
     Box(
         modifier = Modifier
-            .padding(if (immersive) 0.dp else 4.dp)
+            .padding(if (immersive) 0.dp else BookshelfCoverInnerInset)
             .fillMaxWidth()
             .aspectRatio(5f / 7f)
             .then(if (coverShadow) Modifier.shadow(4.dp, shape) else Modifier)
@@ -725,6 +726,8 @@ fun BookItem(
     coverShadow: Boolean = false,
     isSearchMode: Boolean = false,
     searchKey: String = "",
+    /** 选择模式：系列卡被拆成单本，封面左下角补一个系列归属标签 */
+    isEditMode: Boolean = false,
     /** 私密书籍且尚未解锁：只渲染模糊封面与占位内容，不渲染任何真实文字 */
     locked: Boolean = false,
     sharedTransitionScope: SharedTransitionScope? = null,
@@ -811,6 +814,13 @@ fun BookItem(
     } else {
         null
     }
+    // 系列归属标签只在选择模式补：普通态由系列卡本身表达归属，
+    // 单本左下角仍留给来源/类型，避免和原有信息抢位置
+    val seriesLabel = if (isEditMode) {
+        book.seriesId?.takeIf { it.isNotBlank() }
+    } else {
+        null
+    }
 
     val cover: @Composable (Modifier) -> Unit = { coverModifier ->
         Box(modifier = coverModifier) {
@@ -833,7 +843,11 @@ fun BookItem(
                 // 锁定态不露未读角标与来源标签：它们都是真实信息
                 badgeText = if (locked) null else if (layoutMode != 0) unreadText else null,
                 showBadgeDot = !locked && showUpdateBadge,
-                leftBottomText = if (locked) null else matchedSourceLabel ?: bookTypeLabel,
+                leftBottomText = if (locked) {
+                    null
+                } else {
+                    matchedSourceLabel ?: seriesLabel ?: bookTypeLabel
+                },
                 showLoadingPlaceholder = true,
                 // 模糊与"已隐藏"叠加层都交给封面组件在**共享元素节点内部**渲染。
                 // 这是关键：转场时 overlay 只搬运 sharedBounds 节点自己的内容，

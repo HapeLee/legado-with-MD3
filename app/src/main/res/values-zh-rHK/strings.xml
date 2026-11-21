@@ -3125,4 +3125,25 @@
     <string name="hyper_os4_components">HyperOS 4 風格元件</string>
     <string name="hyper_os4_components_summary">在 Miuix 主題下使用玻璃頂欄、標籤頁與下拉選單。需要 Android 13 與系統模糊支援。</string>
     <string name="paragraph_comment_height_percent">%1$d%%</string>
+    <!-- 書架折疊收納（同系列多卷） -->
+    <string name="bookshelf_series_count">%1$d 卷</string>
+    <string name="bookshelf_series_create">收納為系列</string>
+    <string name="bookshelf_series_remove">移出系列</string>
+    <string name="bookshelf_series_rename">重新命名系列</string>
+    <string name="bookshelf_series_dissolve">解散系列</string>
+    <string name="bookshelf_series_dissolve_message">解散「%1$s」後，%2$d 本書會回到書架，確定嗎？</string>
+    <string name="bookshelf_series_name_label">系列名</string>
+    <string name="bookshelf_series_name_empty">系列名不能為空</string>
+    <string name="bookshelf_series_name_conflict">已存在同名系列</string>
+    <string name="bookshelf_series_created">已將 %2$d 本收納為「%1$s」</string>
+    <string name="bookshelf_series_dissolved">已解散「%1$s」</string>
+    <string name="bookshelf_series_removed">已將 %1$d 本移出系列</string>
+    <string name="bookshelf_series_manage">管理系列書籍</string>
+    <string name="bookshelf_series_count_read">%1$d 卷 · 已讀 %2$d</string>
+    <string name="bookshelf_series_progress_summary">已讀 %1$d/%2$d</string>
+    <string name="bookshelf_series_reading_volume">在讀第 %1$d 卷</string>
+    <string name="bookshelf_series_collapse">收合</string>
+    <string name="bookshelf_series_pick_cover">設定封面</string>
+    <string name="bookshelf_series_reset_cover">恢復卷封面</string>
+    <string name="bookshelf_series">書籍系列</string>
 </resources>
