@@ -235,18 +235,22 @@ class ContentProcessor private constructor(
                     removeTitle(match.range.last + 1)
                     sameTitleRemoved = true
                 } else if (useReplace && book.getUseReplaceRule(settings.replaceEnableDefault)) {
-                    title = Regex.escape(
-                        chapter.getDisplayTitle(
-                            contentReplaceRules,
-                            chineseConvert = false,
-                            chineseConverterType = settings.chineseConverterType,
-                        )
+                    // 标题规则改写后的标题才是正文开头可能出现的形式（Arc 同此）。
+                    // 标题被规则清空时 Regex.escape("") 会得到零长度正则并必然命中，
+                    // 把正文首段误判成重复标题，所以先判空。
+                    val replacedTitle = chapter.getDisplayTitle(
+                        getTitleReplaceRules(),
+                        chineseConvert = false,
+                        chineseConverterType = settings.chineseConverterType,
                     )
-                    match = Regex("^(\\s|\\p{P}|${name})*${title}(\\s)*")
-                        .find(mContent)
-                    if (match != null) {
-                        removeTitle(match.range.last + 1)
-                        sameTitleRemoved = true
+                    if (replacedTitle.isNotBlank()) {
+                        title = Regex.escape(replacedTitle)
+                        match = Regex("^(\\s|\\p{P}|${name})*${title}(\\s)*")
+                            .find(mContent)
+                        if (match != null) {
+                            removeTitle(match.range.last + 1)
+                            sameTitleRemoved = true
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -284,6 +288,10 @@ class ContentProcessor private constructor(
                 mContent = if (settings.adaptSpecialStyle) MixedContentSegments.transform(mContent,
                     plain = ::trimLines, rich = { it }) else trimLines(mContent)
                 projection?.let { check(it.bindWhitespace(beforeTrim, mContent)) }
+                // 图片标签与分页标记不属于正文文字：规则跑之前换成占位符，跑完原样还原。
+                // 有呈现投影时不介入，占位符会让 TextProjection 的坐标失配。
+                val specialTokens = if (projection == null) SpecialContentProtector.protect(mContent) else null
+                if (specialTokens != null) mContent = specialTokens.content
                 getContentReplaceRules().forEach { item ->
                     if (item.pattern.isEmpty()) {
                         return@forEach
@@ -302,9 +310,15 @@ class ContentProcessor private constructor(
                             projection?.replace(edits)
                             result
                         } else text.replaceMapped(item.pattern, item.replacement, projection)
+                        // <usehtml> 段里的正文以前整天跳过规则，同一章会出现「普通段落已替换、
+                        // 带样式的段落还是原文」。这里只替换标签外的文本，标签与属性
+                        // （href/id/src/style）原样保留；有呈现投影时不碰，避免逐节点替换
+                        // 打乱呈现映射（该路径下呈现与语义的对应关系由 TextProjection 维护）。
+                        fun replaceRichText(html: String): String = if (projection != null) html
+                        else MixedContentSegments.transformPlainText(html, ::replaceText)
                         val tmp = if (settings.adaptSpecialStyle) MixedContentSegments.transform(mContent,
                             plain = ::replaceText,
-                            rich = { it }) else replaceText(mContent)
+                            rich = ::replaceRichText) else replaceText(mContent)
                         if (mContent != tmp) {
                             effectiveReplaceRules.add(item)
                             mContent = tmp
@@ -321,6 +335,7 @@ class ContentProcessor private constructor(
                         appCtx.toastOnUi("替换净化: 规则 ${item.name}替换出错")
                     }
                 }
+                if (specialTokens != null) mContent = specialTokens.restore(mContent)
             }
             val contentProcesses = appDb.bookContentProcessDao.getForChapterSync(
                 bookUrl = book.bookUrl,

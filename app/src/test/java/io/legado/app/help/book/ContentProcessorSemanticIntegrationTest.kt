@@ -365,7 +365,7 @@ class ContentProcessorSemanticIntegrationTest {
         }
     }
 
-    @Test fun existingOnlineHtmlUsesTheLegacyReplacementBoundaryForEitherStyleSetting() = runBlocking {
+    @Test fun richParagraphBodyIsReplacedButTagsAndAttributesStay() = runBlocking {
         fixture.database.replaceRuleDao.insert(ReplaceRule(id = 201, pattern = "天气", replacement = "气候", isRegex = false, order = 0))
         fixture.database.replaceRuleDao.insert(ReplaceRule(id = 202, pattern = "气候", replacement =
             "@js:chapter.putVariable('runs', String(parseInt(chapter.getVariable('runs') || '0') + 1)); '气候';", order = 1))
@@ -377,8 +377,9 @@ class ContentProcessorSemanticIntegrationTest {
                 "plain天气\n<usehtml><p><a href='target.xhtml'>今天天气很好</a></p></usehtml>",
                 includeTitle = false, paragraphIndent = "")
             assertTrue(source(result).semanticContent.contains("plain气候"))
-            assertEquals(if (enabled) "1" else "2", chapter.getVariable("runs"))
-            assertTrue(result.toString().contains(if (enabled) "今天天气很好" else "今天气候很好"))
+            // <usehtml> 段里的正文同样要过规则：普通段落与带样式的段落不能一半替换一半原文。
+            assertEquals(2, chapter.getVariable("runs").toInt())
+            assertTrue(result.toString().contains("今天气候很好"))
             assertTrue(result.toString().contains("target.xhtml"))
         }
     }
@@ -403,6 +404,53 @@ class ContentProcessorSemanticIntegrationTest {
         val result = ContentProcessor.get(book).getContent(book, chapter, raw, includeTitle = false, paragraphIndent = "")
         assertEquals(listOf(raw), result.textList)
         assertTrue(result.effectiveReplaceRules!!.isEmpty())
+    }
+
+    @Test fun replacementInsideRichParagraphKeepsTagsAndAttributes() {
+        fixture.database.replaceRuleDao.insert(ReplaceRule(id = 301, pattern = "鲁迅", replacement = "周樟寿", isRegex = false, order = 0))
+        val raw = "鲁迅说\n<usehtml><p><a id='鲁迅' href='鲁迅.xhtml'>鲁迅<b>鲁迅</b></a></p></usehtml>\n鲁迅又来了"
+        val result = ContentProcessor.get(book).getContent(book, chapter, raw, includeTitle = false, paragraphIndent = "")
+        val text = result.textList.joinToString("\n")
+        // 正文（含富文本段内的文本节点）全部替换，只有属性值保持原样。
+        assertEquals(2, Regex("鲁迅").findAll(text).count())
+        assertTrue(text.contains("周樟寿说"))
+        assertTrue(text.contains("周樟寿又来了"))
+        assertTrue(text.contains("周樟寿<b>周樟寿</b>"))
+        assertTrue(text.contains("id='鲁迅'"))
+        assertTrue(text.contains("href='鲁迅.xhtml'"))
+        assertEquals(listOf("鲁迅"), result.effectiveReplaceRules!!.map { it.pattern })
+    }
+
+    @Test fun replacementDoesNotTouchImageTagsOrPageBreaks() {
+        fixture.database.replaceRuleDao.insert(ReplaceRule(id = 401, pattern = "鲁迅", replacement = "周樟寿", isRegex = false, order = 0))
+        val raw = "鲁迅说\n[newpage]\n<img src=\"鲁迅.jpg\">鲁迅走"
+        val result = ContentProcessor.get(book).getContent(book, chapter, raw, includeTitle = false, paragraphIndent = "")
+        assertEquals(
+            listOf("周樟寿说", "[newpage]", "<img src=\"鲁迅.jpg\">周樟寿走"),
+            result.textList,
+        )
+    }
+
+    @Test fun duplicateTitleIsMatchedAfterTitleRulesRewriteIt() {
+        book.setUseReplaceRule(true)
+        fixture.database.replaceRuleDao.insert(ReplaceRule(id = 501, pattern = "第(\\d+)章 鲁迅",
+            replacement = "第123章 周樟寿", isRegex = true, scopeTitle = true, order = 0))
+        chapter.title = "第1章 鲁迅"
+        val result = ContentProcessor.get(book).getContent(book, chapter,
+            "第123章 周樟寿\n正文首段", includeTitle = false, paragraphIndent = "")
+        assertTrue(result.sameTitleRemoved)
+        assertEquals(listOf("正文首段"), result.textList)
+    }
+
+    @Test fun blankDisplayTitleDoesNotCountAsRemovedDuplicate() {
+        book.setUseReplaceRule(true)
+        fixture.database.replaceRuleDao.insert(ReplaceRule(id = 601, pattern = ".*", replacement = "",
+            isRegex = true, scopeTitle = true, scopeContent = false, order = 0))
+        chapter.title = "第1章 鲁迅"
+        val result = ContentProcessor.get(book).getContent(book, chapter,
+            "正文首段", includeTitle = false, paragraphIndent = "")
+        assertFalse(result.sameTitleRemoved)
+        assertEquals(listOf("正文首段"), result.textList)
     }
 
     @Test fun resegmentationUsesTheLegacyStyleBoundary() = runBlocking {
