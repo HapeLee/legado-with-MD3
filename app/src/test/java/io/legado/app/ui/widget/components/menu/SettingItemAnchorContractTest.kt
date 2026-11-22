@@ -92,7 +92,12 @@ class SettingItemAnchorContractTest {
     /**
      * COUI 通过 `AppMenuTriggerScope.modifier` 把 `couiMenuAnchor` 注入 trigger；纯展示
      * trigger 不透传 `this.modifier` 就没有注册锚点的节点，弹层同样退回窗口原点。
-     * `MediumTonalButton` 的 KDoc 明确要求透传，`CloudTtsScreen` 的 5 处是正确样本。
+     * `MediumTonalButton` 的 KDoc 明确要求透传。
+     *
+     * 首页模块管理的头部触发器已迁到 `AppModalBottomSheet` 的声明式 `SheetAction`：按钮由
+     * 面板头部按引擎渲染，调用点不再手画纯展示 trigger。这里反向锁住迁移结果，避免又手画
+     * 一个忘记透传 modifier 的 trigger。云 TTS 只有面板头部迁走，编辑器里的表单下拉仍是
+     * `AppChoiceDropdown` + 纯展示 `MediumTonalButton`，继续受本契约约束。
      * 静态契约只保证 modifier 到位，不证明弹层在场上的实际像素位置。
      */
     @Test
@@ -101,15 +106,13 @@ class SettingItemAnchorContractTest {
             "COUI 分支须继续把锚点注入 scope.modifier",
             sourceOf(APP_CHOICE).contains("modifier = Modifier.couiMenuAnchor(couiAnchor)"),
         )
-        listOf(
-            "io/legado/app/ui/main/homepage/HomepageModuleManageSheet.kt",
-            "io/legado/app/ui/book/readaloud/cloudtts/CloudTtsScreen.kt",
-        ).forEach { path ->
-            val blocks = Regex("MediumTonalButton\\((.*?)\\)", RegexOption.DOT_MATCHES_ALL)
-                .findAll(sourceOf(path))
-                .map { it.groupValues[1] }
-                .filter { it.contains("onClick = null") }
-                .toList()
+        val homepage = sourceOf("io/legado/app/ui/main/homepage/HomepageModuleManageSheet.kt")
+        assertTrue(
+            "首页模块管理不应再有手画的纯展示 trigger：头部按钮交给声明式 SheetAction",
+            pureDisplayTriggerBlocks(homepage).isEmpty(),
+        )
+        listOf("io/legado/app/ui/book/readaloud/cloudtts/CloudTtsScreen.kt").forEach { path ->
+            val blocks = pureDisplayTriggerBlocks(sourceOf(path))
             assertTrue("$path 应有纯展示 MediumTonalButton trigger", blocks.isNotEmpty())
             blocks.forEach { block ->
                 assertTrue(
@@ -119,6 +122,13 @@ class SettingItemAnchorContractTest {
             }
         }
     }
+
+    private fun pureDisplayTriggerBlocks(source: String): List<String> =
+        Regex("MediumTonalButton\\((.*?)\\)", RegexOption.DOT_MATCHES_ALL)
+            .findAll(source)
+            .map { it.groupValues[1] }
+            .filter { it.contains("onClick = null") }
+            .toList()
 
     /** 三个设置行包装器不再走 `CouiSettingMenu`：它的 `Menu` 拿整行 bounds，弹层从行左端展开。 */
     @Test

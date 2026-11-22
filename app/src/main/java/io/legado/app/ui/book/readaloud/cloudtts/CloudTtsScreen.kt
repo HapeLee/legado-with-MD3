@@ -77,6 +77,8 @@ import io.legado.app.ui.widget.components.menu.AppMenuAnchor
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.OptionCard
 import io.legado.app.ui.widget.components.modalBottomSheet.OptionSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetMenuAction
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
@@ -629,20 +631,16 @@ fun CloudTtsScreen(
         data = state.activeDialog as? CloudTtsDialog.Error,
         onDismissRequest = { onIntent(CloudTtsIntent.DismissError) },
         title = stringResource(R.string.cloud_tts_error),
-        startAction = {
-            MediumTonalButton(
-                onClick = { onIntent(CloudTtsIntent.DismissError) },
-                icon = Icons.Default.Close,
-                contentDescription = stringResource(R.string.close),
-            )
-        },
-        endAction = {
-            MediumTonalButton(
-                onClick = { onIntent(CloudTtsIntent.CopyError) },
-                icon = Icons.Default.ContentCopy,
-                contentDescription = stringResource(R.string.cloud_tts_copy_error),
-            )
-        },
+        startSheetAction = SheetAction(
+            onClick = { onIntent(CloudTtsIntent.DismissError) },
+            icon = Icons.Default.Close,
+            contentDescription = stringResource(R.string.close),
+        ),
+        endSheetAction = SheetAction(
+            onClick = { onIntent(CloudTtsIntent.CopyError) },
+            icon = Icons.Default.ContentCopy,
+            contentDescription = stringResource(R.string.cloud_tts_copy_error),
+        ),
     ) { error ->
         AppText(
             text = error.message,
@@ -699,20 +697,15 @@ private fun HttpTtsEditorSheet(
         show = value != null,
         onDismissRequest = { onIntent(CloudTtsIntent.DismissHttpTtsEditor) },
         title = stringResource(R.string.speak_engine),
-        startAction = {
-            AppActionMenu(
-                groups = persistentListOf(
-                    AppActionGroup(
-                        id = "http_tts_clipboard",
-                        actions = persistentListOf(
-                            AppAction("copy_text", stringResource(R.string.copy_text)),
-                            AppAction("paste_source", stringResource(R.string.paste_source)),
-                        ),
-                    ),
-                ),
-                onAction = { id ->
-                    when (id) {
-                        "copy_text" -> scope.launch {
+        startSheetAction = SheetAction(
+            icon = Icons.Default.MoreVert,
+            contentDescription = stringResource(R.string.more_menu),
+            menu = persistentListOf(
+                SheetMenuAction(
+                    id = "copy_text",
+                    label = stringResource(R.string.copy_text),
+                    onClick = {
+                        scope.launch {
                             clipboard.setClipEntry(
                                 ClipEntry(
                                     ClipData.newPlainText(
@@ -722,7 +715,13 @@ private fun HttpTtsEditorSheet(
                                 )
                             )
                         }
-                        "paste_source" -> scope.launch {
+                    },
+                ),
+                SheetMenuAction(
+                    id = "paste_source",
+                    label = stringResource(R.string.paste_source),
+                    onClick = {
+                        scope.launch {
                             val text = clipboard.getClipEntry()?.clipData
                                 ?.getItemAt(0)?.coerceToText(context)?.toString()
                                 ?: return@launch
@@ -738,23 +737,15 @@ private fun HttpTtsEditorSheet(
                                 speed = (imported.speed ?: 5).toFloat()
                             }
                         }
-                    }
-                },
-            ) {
-                AppIcon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = stringResource(R.string.more_menu),
-                    modifier = this.modifier,
-                )
-            }
-        },
-        endAction = {
-            MediumTonalButton(
-                onClick = { onIntent(CloudTtsIntent.SaveHttpTts(current())) },
-                icon = Icons.Default.Save,
-                contentDescription = stringResource(R.string.save),
-            )
-        },
+                    },
+                ),
+            ),
+        ),
+        endSheetAction = SheetAction(
+            onClick = { onIntent(CloudTtsIntent.SaveHttpTts(current())) },
+            icon = Icons.Default.Save,
+            contentDescription = stringResource(R.string.save),
+        ),
     ) {
         LazyColumn(
             modifier = Modifier
@@ -871,20 +862,16 @@ private fun CloudTtsEngineEditorSheet(
             if (editor?.editingEngineId == null) R.string.cloud_tts_add_engine
             else R.string.cloud_tts_edit_engine
         ),
-        startAction = {
-            MediumTonalButton(
-                onClick = { onIntent(CloudTtsIntent.DismissEngineEditor) },
-                icon = Icons.Default.Close,
-                contentDescription = stringResource(R.string.cancel),
-            )
-        },
-        endAction = {
-            MediumTonalButton(
-                onClick = { onIntent(CloudTtsIntent.Save) },
-                icon = Icons.Default.Check,
-                contentDescription = stringResource(R.string.save),
-            )
-        },
+        startSheetAction = SheetAction(
+            onClick = { onIntent(CloudTtsIntent.DismissEngineEditor) },
+            icon = Icons.Default.Close,
+            contentDescription = stringResource(R.string.cancel),
+        ),
+        endSheetAction = SheetAction(
+            onClick = { onIntent(CloudTtsIntent.Save) },
+            icon = Icons.Default.Check,
+            contentDescription = stringResource(R.string.save),
+        ),
     ) { currentEditor ->
         CloudTtsEngineEditorContent(state, currentEditor, onIntent)
     }
@@ -1087,21 +1074,17 @@ private fun TtsVoicePresetEditorSheet(
             if (editor?.editingVoiceId == null) R.string.cloud_tts_add_voice
             else R.string.cloud_tts_edit_voice
         ),
-        startAction = {
-            MediumTonalButton(
-                onClick = { onIntent(CloudTtsIntent.DismissVoiceEditor) },
-                icon = Icons.Default.Close,
-                contentDescription = stringResource(R.string.cancel),
-            )
-        },
-        endAction = {
-            MediumTonalButton(
-                onClick = { onIntent(CloudTtsIntent.Save) },
-                enabled = editor?.voiceId?.isNotBlank() == true,
-                icon = Icons.Default.Check,
-                contentDescription = stringResource(R.string.save),
-            )
-        },
+        startSheetAction = SheetAction(
+            onClick = { onIntent(CloudTtsIntent.DismissVoiceEditor) },
+            icon = Icons.Default.Close,
+            contentDescription = stringResource(R.string.cancel),
+        ),
+        endSheetAction = SheetAction(
+            onClick = { onIntent(CloudTtsIntent.Save) },
+            icon = Icons.Default.Check,
+            enabled = editor?.voiceId?.isNotBlank() == true,
+            contentDescription = stringResource(R.string.save),
+        ),
     ) { currentEditor ->
         TtsVoicePresetEditorContent(state, currentEditor, onIntent)
     }
@@ -1351,13 +1334,11 @@ private fun VoiceEnginePickerSheet(
         show = show,
         onDismissRequest = { onIntent(CloudTtsIntent.DismissVoiceEnginePicker) },
         title = stringResource(R.string.cloud_tts_select_engine),
-        startAction = {
-            MediumTonalButton(
-                onClick = { onIntent(CloudTtsIntent.DismissVoiceEnginePicker) },
-                icon = Icons.Default.Close,
-                contentDescription = stringResource(R.string.cancel),
-            )
-        },
+        startSheetAction = SheetAction(
+            onClick = { onIntent(CloudTtsIntent.DismissVoiceEnginePicker) },
+            icon = Icons.Default.Close,
+            contentDescription = stringResource(R.string.cancel),
+        ),
     ) {
         LazyColumn(Modifier.fillMaxWidth()) {
             items(

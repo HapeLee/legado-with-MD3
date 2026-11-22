@@ -45,6 +45,11 @@ class MenuTriggerShapeContractTest {
      * 几何固定的 compact 触发必须与 trigger 自己画的容器同源裁剪。
      * 受 `BaseCard` 主题圆角动态覆盖的卡片不在此列：那些不能硬编码一个固定 dp，
      * 需要另做「卡片把 resolvedShape 暴露给入口」的设计。
+     *
+     * 首页模块管理的头部触发器已迁到 `AppModalBottomSheet` 的声明式 `SheetAction`：按钮由
+     * 面板头部按引擎渲染，调用点不再自画 compact 容器，也就不存在需要同步的 `triggerShape`。
+     * 云 TTS 只有面板头部迁走，编辑器里的表单下拉仍是 `AppChoiceDropdown(compact = true)`，
+     * 继续受本契约约束。
      */
     @Test
     fun fixedGeometryCompactTriggersDeclareMatchingShape() {
@@ -53,7 +58,12 @@ class MenuTriggerShapeContractTest {
             "SeriesButton 默认形状已变，MediumTonalButton 的裁剪值需同步",
             sourceOf(SERIES_BUTTON).contains("shape: Shape = $seriesShape"),
         )
-        listOf(HOMEPAGE_MANAGE, CLOUD_TTS).forEach { path ->
+        val homepage = sourceOf(HOMEPAGE_MANAGE)
+        assertFalse(
+            "$HOMEPAGE_MANAGE 不应再手画 compact 触发器：头部按钮交给声明式 SheetAction",
+            Regex("compact = true").containsMatchIn(homepage) || homepage.contains("triggerShape ="),
+        )
+        listOf(CLOUD_TTS).forEach { path ->
             val source = sourceOf(path)
             val compactCount = Regex("compact = true").findAll(source).count()
             val shapeCount = Regex("triggerShape = $seriesShape").findAll(source).count()
