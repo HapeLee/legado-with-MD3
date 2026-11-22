@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import com.itos.coui.theme.CouiColorScheme
 import com.itos.coui.theme.CouiPresets
 import com.itos.coui.theme.CouiTheme
+import com.itos.coui.topappbar.ProvideCouiTopAppBarBlur
 import io.legado.app.R
 import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.domain.model.settings.AppUiConfiguration
@@ -458,6 +459,9 @@ class AppThemeEngineTest {
 
     @Test
     @Config(sdk = [34])
+    // COUI 面板材质走 Kawase RuntimeShader，Robolectric 的 NATIVE 解析不了该 shader；
+    // LEGACY 只跳过绘制，语义、点击与排版照常，和 CouiAlertDialogTest 同口径。
+    @GraphicsMode(GraphicsMode.Mode.LEGACY)
     fun couiSheetDropdownsOpenAndCommitIndependently() {
         RuntimeEnvironment.getApplication().injectAsAppCtx()
         val tiny = mutableStateOf("initial")
@@ -510,6 +514,10 @@ class AppThemeEngineTest {
                     theme = ThemeSettings(enableBlur = blur.value),
                 ),
             ) {
+                // 上游 alpha16 起顶栏默认走 Compose 渐变模糊，其 AGSL 在 Robolectric 下
+                // 编译失败（'color' is not a valid layout qualifier）；本测试验证外壳采样与
+                // 动作透传，与模糊实现无关，显式退回 COUI 后端。
+                ProvideCouiTopAppBarBlur(useComposeBlur = false) {
                 val behavior = GlassTopAppBarDefaults.defaultScrollBehavior()
                 SideEffect { scrollBehavior = behavior }
                 val actions: @Composable RowScope.() -> Unit = {
@@ -530,6 +538,7 @@ class AppThemeEngineTest {
                     val receivesSource = LocalAppCouiTopBarHost.current?.backdrop != null
                     SideEffect { bodyReceivesSource = receivesSource }
                     Box(Modifier.fillMaxSize().padding(padding))
+                }
                 }
             }
         }
@@ -574,6 +583,8 @@ class AppThemeEngineTest {
                     theme = ThemeSettings(enableBlur = blur.value),
                 ),
             ) {
+                // 同上：Robolectric 无法编译上游新 Compose 渐变模糊的 AGSL，退回 COUI 后端。
+                ProvideCouiTopAppBarBlur(useComposeBlur = false) {
                 val checked = remember { mutableStateOf(false) }
                 AppScaffold(topBar = {
                     GlassSmallTopAppBar("Page", actions = {
@@ -594,6 +605,7 @@ class AppThemeEngineTest {
                         )
                     })
                 }) { padding -> Box(Modifier.fillMaxSize().padding(padding)) }
+                }
             }
         }
 
