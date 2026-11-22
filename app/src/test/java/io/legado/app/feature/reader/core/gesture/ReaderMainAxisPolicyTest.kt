@@ -27,6 +27,19 @@ class ReaderMainAxisPolicyTest {
     }
 
     @Test
+    fun `scroll claims a diagonal drag once its vertical component passes slop`() {
+        val slop = 24f
+        // 斜滑 |dx| >= |dy|：Y 分量过了 slop 就认领为纵向滚动（修的就是这个落空）。
+        assertTrue(ReaderMainAxisPolicy.isVerticalScroll(-30f, slop))
+        assertTrue(ReaderMainAxisPolicy.isVerticalScroll(24f, slop))
+        // 纯纵滑照常认领；纯横滑 Y 分量到不了 slop，仍不认领。
+        assertTrue(ReaderMainAxisPolicy.isVerticalScroll(100f, slop))
+        assertFalse(ReaderMainAxisPolicy.isVerticalScroll(5f, slop))
+        assertFalse(ReaderMainAxisPolicy.isVerticalScroll(0f, slop))
+        assertFalse(ReaderMainAxisPolicy.isVerticalScroll(-23f, slop))
+    }
+
+    @Test
     fun `equal axes do not start vertical scrolling`() {
         assertFalse(ReaderMainAxisPolicy.isVerticalDominant(16f, -16f))
     }
