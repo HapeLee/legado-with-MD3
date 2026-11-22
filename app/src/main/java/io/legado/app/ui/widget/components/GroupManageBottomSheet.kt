@@ -45,6 +45,7 @@ import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.checkBox.AppCheckbox
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.settingItem.SettingItem
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -121,46 +122,40 @@ fun GroupManageBottomSheet(
         stringResource(R.string.group_manage)
     }
 
-    val startAction: @Composable (() -> Unit)? = if (inSelectionMode) {
-        {
-            MediumTonalButton(
-                onClick = {
-                    inSelectionMode = false
-                    selectedGroups = emptySet()
-                },
-                icon = Icons.Default.Close,
-                contentDescription = stringResource(R.string.cancel)
-            )
-        }
+    val startSheetAction = if (inSelectionMode) {
+        SheetAction(
+            onClick = {
+                inSelectionMode = false
+                selectedGroups = emptySet()
+            },
+            icon = Icons.Default.Close,
+            contentDescription = stringResource(R.string.cancel),
+        )
     } else null
 
-    val endAction: @Composable (() -> Unit)? = if (inSelectionMode) {
-        {
-            MediumTonalButton(
-                onClick = {
-                    selectedGroups = if (selectedGroups.size == groups.size) {
-                        emptySet()
-                    } else {
-                        groups.toSet()
-                    }
-                },
-                icon = Icons.Default.SelectAll,
-                contentDescription = if (selectedGroups.size == groups.size && groups.isNotEmpty()) {
-                    stringResource(R.string.deselect_all)
+    val endSheetAction = when {
+        inSelectionMode -> SheetAction(
+            onClick = {
+                selectedGroups = if (selectedGroups.size == groups.size) {
+                    emptySet()
                 } else {
-                    stringResource(R.string.select_all)
+                    groups.toSet()
                 }
-            )
-        }
-    } else if (groups.isNotEmpty()) {
-        {
-            MediumTonalButton(
-                onClick = { inSelectionMode = true },
-                icon = Icons.Default.Checklist,
-                contentDescription = stringResource(R.string.selection_mode)
-            )
-        }
-    } else null
+            },
+            icon = Icons.Default.SelectAll,
+            contentDescription = if (selectedGroups.size == groups.size && groups.isNotEmpty()) {
+                stringResource(R.string.deselect_all)
+            } else {
+                stringResource(R.string.select_all)
+            },
+        )
+        groups.isNotEmpty() -> SheetAction(
+            onClick = { inSelectionMode = true },
+            icon = Icons.Default.Checklist,
+            contentDescription = stringResource(R.string.selection_mode),
+        )
+        else -> null
+    }
 
     AppModalBottomSheet(
         show = show,
@@ -170,8 +165,8 @@ fun GroupManageBottomSheet(
             onDismissRequest()
         },
         title = titleText,
-        startAction = startAction,
-        endAction = endAction,
+        startSheetAction = startSheetAction,
+        endSheetAction = endSheetAction,
     ) {
         BackHandler(enabled = show && inSelectionMode) {
             inSelectionMode = false

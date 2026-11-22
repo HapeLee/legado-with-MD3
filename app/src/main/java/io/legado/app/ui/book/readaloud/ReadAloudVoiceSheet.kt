@@ -35,10 +35,10 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.book.readaloud.player.ReadAloudVoiceItemUi
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.collections.immutable.ImmutableList
@@ -83,14 +83,12 @@ fun ReadAloudVoiceSheet(
         } else {
             stringResource(R.string.cloud_tts_select_voice)
         },
-        startAction = selectedGroup?.let {
-            {
-                MediumTonalButton(
-                    onClick = { selectedEngineKey = null },
-                    icon = AppIcons.Back,
-                    contentDescription = stringResource(R.string.back),
-                )
-            }
+        startSheetAction = selectedGroup?.let {
+            SheetAction(
+                onClick = { selectedEngineKey = null },
+                icon = AppIcons.Back,
+                contentDescription = stringResource(R.string.back),
+            )
         },
     ) {
         // 二级页接管返回：先回到引擎列表，不关闭整个 sheet。与首页模块管理一致，

@@ -35,10 +35,10 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.CompactSwitchSettingItem
 import io.legado.app.utils.FileUtils
@@ -60,28 +60,20 @@ fun GroupEditSheet(
     viewModel: GroupViewModel = koinViewModel()
 ) {
     var coverPath by remember(group) { mutableStateOf(group?.cover) }
+    var showDeleteDialog by remember(group) { mutableStateOf(false) }
+    val deletableGroup = group?.takeIf { it.groupId > 0 || it.groupId == Long.MIN_VALUE }
 
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        startAction = if (group != null && (group.groupId > 0 || group.groupId == Long.MIN_VALUE)) {
-            {
-                GroupDeleteAction(
-                    group = group,
-                    onDismissRequest = onDismissRequest,
-                    viewModel = viewModel
-                )
-            }
-        } else {
-            null
+        startSheetAction = deletableGroup?.let {
+            groupDeleteAction(onRequestDelete = { showDeleteDialog = true })
         },
-        endAction = {
-            GroupResetCoverAction(
-                group = group,
-                onCoverPathChange = { coverPath = it },
-                viewModel = viewModel
-            )
-        }
+        endSheetAction = groupResetCoverAction(
+            group = group,
+            onCoverPathChange = { coverPath = it },
+            viewModel = viewModel
+        ),
     ) {
         GroupEditContent(
             group = group,
@@ -91,6 +83,14 @@ fun GroupEditSheet(
             viewModel = viewModel
         )
     }
+
+    GroupDeleteConfirmDialog(
+        show = showDeleteDialog,
+        group = deletableGroup,
+        onDismiss = { showDeleteDialog = false },
+        onDeleted = onDismissRequest,
+        viewModel = viewModel,
+    )
 }
 
 @Composable
@@ -328,48 +328,57 @@ internal fun groupCoverFileExtension(mimeType: String?): String {
     }
 }
 
+/**
+ * 删除分组操作的声明式形态：点击只请求确认，确认弹窗由 [GroupDeleteConfirmDialog] 承载。
+ * 面板头部槽位只放按钮，弹窗必须留在面板外的 composition 里。
+ */
 @Composable
-fun GroupDeleteAction(
-    group: BookGroup,
-    onDismissRequest: () -> Unit,
+fun groupDeleteAction(onRequestDelete: () -> Unit): SheetAction = SheetAction(
+    onClick = onRequestDelete,
+    icon = Icons.Default.Delete,
+    contentDescription = stringResource(R.string.delete),
+)
+
+/** [groupDeleteAction] 的确认弹窗；[onDeleted] 在删除完成后回调。 */
+@Composable
+fun GroupDeleteConfirmDialog(
+    show: Boolean,
+    group: BookGroup?,
+    onDismiss: () -> Unit,
+    onDeleted: () -> Unit,
     viewModel: GroupViewModel = koinViewModel()
 ) {
-    var showDeleteDialog by remember { mutableStateOf(false) }
-
-    MediumTonalButton(
-        onClick = {
-            showDeleteDialog = true
-        },
-        icon = Icons.Default.Delete,
-        contentDescription = stringResource(R.string.delete),
-    )
-
     AppAlertDialog(
-        show = showDeleteDialog,
-        onDismissRequest = { showDeleteDialog = false },
+        data = group.takeIf { show },
+        onDismissRequest = onDismiss,
         title = stringResource(R.string.delete),
         text = stringResource(
-            if (group.isPrivate) R.string.sure_del_private_group else R.string.sure_del
+            if (group?.isPrivate == true) R.string.sure_del_private_group else R.string.sure_del
         ),
         confirmText = stringResource(android.R.string.ok),
-        onConfirm = {
-            showDeleteDialog = false
-            viewModel.delGroup(group) {
-                onDismissRequest()
+        onConfirm = { target ->
+            viewModel.delGroup(target) {
+                onDeleted()
             }
         },
         dismissText = stringResource(android.R.string.cancel),
-        onDismiss = { showDeleteDialog = false }
+        onDismiss = onDismiss
     )
 }
 
+/**
+ * 重置封面操作的声明式形态：面板头部槽位用，COUI 引擎下由库按钮渲染。
+ *
+ * 清理逻辑仍落在调用处传入的 [viewModel] 上；[onCoverPathChange] 在清理完成后回调，
+ * 调用方据此同步自己的封面草稿。
+ */
 @Composable
-fun GroupResetCoverAction(
+fun groupResetCoverAction(
     group: BookGroup? = null,
     onCoverPathChange: (String?) -> Unit,
     viewModel: GroupViewModel = koinViewModel()
-) {
-    MediumTonalButton(
+): SheetAction {
+    return SheetAction(
         onClick = {
             if (group != null) {
                 viewModel.clearCover(group) {

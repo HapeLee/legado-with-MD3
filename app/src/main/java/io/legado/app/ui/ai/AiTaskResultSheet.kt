@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 
 /** Shared shell for AI task results that need loading, error, and user confirmation content. */
 @Composable
@@ -17,16 +18,16 @@ fun AiTaskResultSheet(
     show: Boolean,
     title: String,
     onDismissRequest: () -> Unit,
-    startAction: @Composable (() -> Unit)? = null,
-    endAction: @Composable (() -> Unit)? = null,
+    startSheetAction: SheetAction? = null,
+    endSheetAction: SheetAction? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = title,
-        startAction = startAction,
-        endAction = endAction,
+        startSheetAction = startSheetAction,
+        endSheetAction = endSheetAction,
         content = {
             Column(
                 modifier = Modifier

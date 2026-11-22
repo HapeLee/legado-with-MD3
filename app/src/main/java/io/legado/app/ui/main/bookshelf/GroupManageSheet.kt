@@ -44,9 +44,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import io.legado.app.R
 import io.legado.app.data.entities.BookGroup
-import io.legado.app.ui.book.group.GroupDeleteAction
+import io.legado.app.ui.book.group.GroupDeleteConfirmDialog
 import io.legado.app.ui.book.group.GroupEditContent
-import io.legado.app.ui.book.group.GroupResetCoverAction
+import io.legado.app.ui.book.group.groupDeleteAction
+import io.legado.app.ui.book.group.groupResetCoverAction
 import io.legado.app.ui.book.group.GroupViewModel
 import io.legado.app.ui.main.bookshelf.autoGroup.AiAutoGroupSheet
 import io.legado.app.ui.tagGroupRule.TagGroupRuleEditSheet
@@ -54,14 +55,12 @@ import io.legado.app.ui.tagGroupRule.TagGroupRuleIntent
 import io.legado.app.ui.tagGroupRule.TagGroupRuleViewModel
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.TinySwitch
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
-import io.legado.app.ui.widget.components.menu.AppAction
-import io.legado.app.ui.widget.components.menu.AppActionGroup
-import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetMenuAction
 import io.legado.app.ui.widget.components.reorderAccessibility
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.move
@@ -89,6 +88,10 @@ fun GroupManageSheet(
     var editingGroup by remember { mutableStateOf<BookGroup?>(null) }
     var isEditing by remember { mutableStateOf(false) }
     var coverPath by remember(editingGroup) { mutableStateOf(editingGroup?.cover) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    val deletableGroup = editingGroup?.takeIf {
+        isEditing && (it.groupId > 0 || it.groupId == Long.MIN_VALUE)
+    }
 
     var editingTagRule by remember { mutableStateOf<io.legado.app.data.entities.TagGroupRule?>(null) }
     var showTagRuleEdit by remember { mutableStateOf(false) }
@@ -130,82 +133,58 @@ fun GroupManageSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = if (!isEditing) stringResource(R.string.group_manage) else stringResource(R.string.group_edit),
-        startAction = editingGroup?.takeIf {
-            isEditing && (it.groupId > 0 || it.groupId == Long.MIN_VALUE)
-        }?.let { group ->
-            {
-                GroupDeleteAction(
-                    group = group,
-                    onDismissRequest = {
-                        editingGroup = null
-                        isEditing = false
-                    },
-                    viewModel = viewModel
-                )
-            }
+        startSheetAction = deletableGroup?.let {
+            groupDeleteAction(onRequestDelete = { showDeleteDialog = true })
         },
-        endAction = {
-            if (!isEditing) {
-                AppActionMenu(
-                    groups = persistentListOf(
-                        AppActionGroup(
-                            id = "group_manage_commands",
-                            actions = persistentListOf(
-                                AppAction(
-                                    "group_add",
-                                    stringResource(R.string.group_add),
-                                    icon = Icons.Default.Add,
-                                ),
-                                AppAction(
-                                    "ai_auto_group",
-                                    stringResource(R.string.ai_auto_group),
-                                    icon = Icons.Default.AutoAwesome,
-                                ),
-                                AppAction(
-                                    "tag_group_add_rule",
-                                    stringResource(R.string.tag_group_add_rule),
-                                    icon = Icons.Default.Add,
-                                ),
-                                AppAction(
-                                    "tag_group_sync",
-                                    stringResource(R.string.tag_group_sync),
-                                    icon = Icons.Default.Sync,
-                                ),
-                            ),
-                        ),
+        endSheetAction = if (!isEditing) {
+            SheetAction(
+                icon = Icons.Default.Add,
+                contentDescription = stringResource(R.string.add),
+                menu = persistentListOf(
+                    SheetMenuAction(
+                        id = "group_add",
+                        label = stringResource(R.string.group_add),
+                        icon = Icons.Default.Add,
+                        onClick = {
+                            editingGroup = null
+                            coverPath = null
+                            isEditing = true
+                        },
                     ),
-                    onAction = { id ->
-                        when (id) {
-                            "group_add" -> {
-                                editingGroup = null
-                                coverPath = null
-                                isEditing = true
-                            }
-                            "ai_auto_group" -> {
-                                aiAutoGroupSessionKey += 1L
-                                showAiAutoGroup = true
-                            }
-                            "tag_group_add_rule" -> {
-                                editingTagRule = null
-                                showTagRuleEdit = true
-                            }
-                            "tag_group_sync" -> tagGroupRuleViewModel.onIntent(TagGroupRuleIntent.SyncGroups)
-                        }
-                    },
-                ) {
-                    AppIcon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = stringResource(R.string.add),
-                        modifier = this.modifier,
-                    )
-                }
-            } else {
-                GroupResetCoverAction(
-                    group = editingGroup,
-                    onCoverPathChange = { coverPath = it },
-                    viewModel = viewModel
-                )
-            }
+                    SheetMenuAction(
+                        id = "ai_auto_group",
+                        label = stringResource(R.string.ai_auto_group),
+                        icon = Icons.Default.AutoAwesome,
+                        onClick = {
+                            aiAutoGroupSessionKey += 1L
+                            showAiAutoGroup = true
+                        },
+                    ),
+                    SheetMenuAction(
+                        id = "tag_group_add_rule",
+                        label = stringResource(R.string.tag_group_add_rule),
+                        icon = Icons.Default.Add,
+                        onClick = {
+                            editingTagRule = null
+                            showTagRuleEdit = true
+                        },
+                    ),
+                    SheetMenuAction(
+                        id = "tag_group_sync",
+                        label = stringResource(R.string.tag_group_sync),
+                        icon = Icons.Default.Sync,
+                        onClick = {
+                            tagGroupRuleViewModel.onIntent(TagGroupRuleIntent.SyncGroups)
+                        },
+                    ),
+                ),
+            )
+        } else {
+            groupResetCoverAction(
+                group = editingGroup,
+                onCoverPathChange = { coverPath = it },
+                viewModel = viewModel
+            )
         }
     ) {
         AnimatedContent(
@@ -293,6 +272,17 @@ fun GroupManageSheet(
             onDismissRequest = { showAiAutoGroup = false }
         )
     }
+
+    GroupDeleteConfirmDialog(
+        show = showDeleteDialog,
+        group = deletableGroup,
+        onDismiss = { showDeleteDialog = false },
+        onDeleted = {
+            editingGroup = null
+            isEditing = false
+        },
+        viewModel = viewModel,
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)

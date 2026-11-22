@@ -25,13 +25,13 @@ fun MarkdownSheet(
     title: String,
     content: String,
     onDismissRequest: () -> Unit,
-    endAction: @Composable (() -> Unit)? = null,
+    endSheetAction: SheetAction? = null,
 ) {
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = title,
-        endAction = endAction,
+        endSheetAction = endSheetAction,
     ) {
         SelectionContainer {
             Column(

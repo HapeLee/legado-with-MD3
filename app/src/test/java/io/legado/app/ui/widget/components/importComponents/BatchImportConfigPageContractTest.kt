@@ -32,7 +32,7 @@ class BatchImportConfigPageContractTest {
         assertTrue("缺少「配置 ↔ 列表」切换按钮", source.contains("Icons.Default.Settings"))
         assertTrue(
             "配置页应隐藏全选与导入按钮",
-            source.contains("endAction = if (!isEditing && !showConfigPage && selectedCount > 0)"),
+            source.contains("endSheetAction = if (!isEditing && !showConfigPage && selectedCount > 0)"),
         )
         assertTrue(
             "配置页应可滚动，避免小屏被截断",

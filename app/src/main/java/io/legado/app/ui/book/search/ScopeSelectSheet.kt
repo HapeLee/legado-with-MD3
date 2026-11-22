@@ -25,10 +25,10 @@ import io.legado.app.R
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.SearchBar
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 
 @Composable
@@ -89,26 +89,22 @@ fun ScopeSelectSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = title,
-        startAction = onConfirm?.let {
-            {
-                MediumTonalButton(
-                    onClick = it,
-                    icon = AppIcons.Settings,
-                    contentDescription = stringResource(R.string.book_source_manage),
-                )
-            }
+        startSheetAction = onConfirm?.let { confirm ->
+            SheetAction(
+                onClick = confirm,
+                icon = AppIcons.Settings,
+                contentDescription = stringResource(R.string.book_source_manage),
+            )
         },
-        endAction = onApplyScope?.let {
-            {
-                MediumTonalButton(
-                    onClick = {
-                        applyDraftSelection()
-                        onDismissRequest()
-                    },
-                    icon = AppIcons.Check,
-                    contentDescription = stringResource(R.string.ok),
-                )
-            }
+        endSheetAction = onApplyScope?.let {
+            SheetAction(
+                onClick = {
+                    applyDraftSelection()
+                    onDismissRequest()
+                },
+                icon = AppIcons.Check,
+                contentDescription = stringResource(R.string.ok),
+            )
         },
     ) {
         Column {

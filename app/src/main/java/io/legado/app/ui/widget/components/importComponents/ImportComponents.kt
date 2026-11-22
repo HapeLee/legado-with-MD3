@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -47,15 +46,17 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.ActionChip
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.GSON
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 
 @Composable
 fun SourceInputDialog(
@@ -122,7 +123,6 @@ fun <T> BatchImportDialog(
     onItemInfoClick: (index: Int) -> Unit = {},
     onUpdateItem: (index: Int, data: T) -> Unit = { _, _ -> },
     onEditItem: ((index: Int) -> Unit)? = null,
-    topBarActions: @Composable RowScope.() -> Unit = {},
     /**
      * 可选的配置页内容。非 null 时顶栏出现「配置 ↔ 列表」切换按钮，配置页隐藏全选与导入按钮；
      * 列表页保持原有行为。用于把「多选开关」这类需要常驻可见、可连续切换的项从下拉菜单里拿出来，
@@ -196,58 +196,50 @@ fun <T> BatchImportDialog(
         onDismissRequest = onDismissRequest,
         modifier = Modifier.heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.8f),
         title = sheetTitle,
-        startAction = if (isEditing) {
-            {
-                MediumTonalButton(
-                    onClick = { editingIndex = null },
-                    icon = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.back)
-                )
-            }
+        startSheetAction = if (isEditing) {
+            SheetAction(
+                onClick = { editingIndex = null },
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(R.string.back),
+            )
         } else if (showConfigPage) {
-            {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    MediumTonalButton(
-                        onClick = { showConfig = false },
-                        icon = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(R.string.back)
-                    )
-                }
-            }
+            SheetAction(
+                onClick = { showConfig = false },
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(R.string.back),
+            )
         } else {
-            {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (config != null) {
-                        MediumTonalButton(
-                            onClick = { showConfig = true },
-                            icon = Icons.Default.Settings,
-                            contentDescription = stringResource(R.string.setting)
-                        )
-                    }
-                    topBarActions()
-                    MediumTonalButton(
-                        onClick = { onToggleAll(!allSelected) },
-                        icon = Icons.Default.SelectAll,
-                        contentDescription = stringResource(if (allSelected) R.string.deselect_all else R.string.select_all)
-                    )
-                }
-            }
+            null
         },
-        endAction = if (!isEditing && !showConfigPage && selectedCount > 0) {
-            {
-                MediumTonalButton(
-                    onClick = {
-                        val selectedData = currentState.items.filter { it.isSelected }.map { it.data }
-                        onConfirm(selectedData)
-                    },
-                    icon = Icons.Default.FileDownload,
-                    text = stringResource(R.string.import_action)
-                )
-            }
+        startSheetActions = if (isEditing || showConfigPage) {
+            persistentListOf()
+        } else {
+            listOfNotNull(
+                config?.let {
+                    SheetAction(
+                        onClick = { showConfig = true },
+                        icon = Icons.Default.Settings,
+                        contentDescription = stringResource(R.string.setting),
+                    )
+                },
+                SheetAction(
+                    onClick = { onToggleAll(!allSelected) },
+                    icon = Icons.Default.SelectAll,
+                    contentDescription = stringResource(
+                        if (allSelected) R.string.deselect_all else R.string.select_all
+                    ),
+                ),
+            ).toImmutableList()
+        },
+        endSheetAction = if (!isEditing && !showConfigPage && selectedCount > 0) {
+            SheetAction(
+                onClick = {
+                    val selectedData = currentState.items.filter { it.isSelected }.map { it.data }
+                    onConfirm(selectedData)
+                },
+                icon = Icons.Default.FileDownload,
+                text = stringResource(R.string.import_action),
+            )
         } else {
             null
         }

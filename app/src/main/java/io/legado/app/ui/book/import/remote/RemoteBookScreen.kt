@@ -76,7 +76,6 @@ import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SelectionActions
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
-import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.GlassCard
@@ -87,6 +86,7 @@ import io.legado.app.ui.widget.components.menu.AppAction
 import io.legado.app.ui.widget.components.menu.AppActionGroup
 import kotlinx.collections.immutable.persistentListOf
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -168,14 +168,12 @@ fun RemoteBookRouteScreen(
             }
             else -> null
         },
-        endAction = if (showSheet is RemoteBookSheet.Servers) {
-            {
-                MediumPlainButton(
-                    onClick = { showSheet = RemoteBookSheet.ServerConfig(null) },
-                    icon = Icons.Default.Add,
-                    contentDescription = stringResource(R.string.add)
-                )
-            }
+        endSheetAction = if (showSheet is RemoteBookSheet.Servers) {
+            SheetAction(
+                onClick = { showSheet = RemoteBookSheet.ServerConfig(null) },
+                icon = Icons.Default.Add,
+                contentDescription = stringResource(R.string.add),
+            )
         } else {
             null
         }

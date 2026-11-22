@@ -62,13 +62,13 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.AppIconButton
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.button.ToggleChip
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallOutlinedButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
@@ -292,58 +292,46 @@ fun AiCastDialogSheet(
     // 这一章有没有东西可删（纯场景入口只数配乐段）
     val deletable = if (sceneOnly) sceneCount > 0 else assignedCount > 0
     // 预设管理是子页：左上角给返回；主面板的左上角给「删除分配」
-    val startAction: @Composable () -> Unit = if (page == 1) {
-        {
-            MediumTonalButton(
-                onClick = { page = 0 },
-                icon = AppIcons.Back,
-                contentDescription = stringResource(R.string.back),
-            )
-        }
+    val startSheetAction = if (page == 1) {
+        SheetAction(
+            onClick = { page = 0 },
+            icon = AppIcons.Back,
+            contentDescription = stringResource(R.string.back),
+        )
     } else {
-        {
-            MediumTonalButton(
-                onClick = {
-                    onIntent(
-                        ReadBookIntent.DeleteChapterCastAssignments(
-                            chapterIndex,
-                            // 这次分配里带了配乐，删除就必须连配乐一起删；
-                            // 纯场景入口更是只有配乐可删
-                            alsoScenes = sceneOnly || assignScene,
-                        ),
-                    )
-                    assignedCount = 0
-                    sceneCount = 0
-                },
-                icon = AppIcons.Delete,
-                contentDescription = stringResource(R.string.ai_cast_delete),
-                enabled = !running && deletable,
-            )
-        }
+        SheetAction(
+            onClick = {
+                onIntent(
+                    ReadBookIntent.DeleteChapterCastAssignments(
+                        chapterIndex,
+                        // 这次分配里带了配乐，删除就必须连配乐一起删；
+                        // 纯场景入口更是只有配乐可删
+                        alsoScenes = sceneOnly || assignScene,
+                    ),
+                )
+                assignedCount = 0
+                sceneCount = 0
+            },
+            icon = AppIcons.Delete,
+            contentDescription = stringResource(R.string.ai_cast_delete),
+            enabled = !running && deletable,
+        )
     }
 
     AppModalBottomSheet(
         show = show && book != null,
         onDismissRequest = onDismissRequest,
         title = title,
-        startAction = startAction,
-        endAction = {
-            if (page == 0) {
-                if (running) {
-                    MediumTonalButton(
-                        onClick = { onIntent(ReadBookIntent.CancelAiCast) },
-                        icon = AppIcons.Close,
-                        contentDescription = stringResource(R.string.cancel),
-                    )
-                } else {
-                    MediumTonalButton(
-                        onClick = { startCast(emptyList()) },
-                        icon = Icons.Default.PlayArrow,
-                        contentDescription = stringResource(R.string.ai_cast_start),
-                    )
-                }
-            }
-        },
+        startSheetAction = startSheetAction,
+        endSheetAction = if (page == 0) SheetAction(
+            onClick = {
+                if (running) onIntent(ReadBookIntent.CancelAiCast) else startCast(emptyList())
+            },
+            icon = if (running) AppIcons.Close else Icons.Default.PlayArrow,
+            contentDescription = stringResource(
+                if (running) R.string.cancel else R.string.ai_cast_start
+            ),
+        ) else null,
     ) {
         Column(
             modifier = Modifier
