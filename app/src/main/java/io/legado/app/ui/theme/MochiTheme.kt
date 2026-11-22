@@ -38,10 +38,8 @@ internal fun ProvideMochiTheme(
         textStyles = textStyles,
         systemBarAppearance = false,
         materials = iosMaterials(
-            isDark = isDark,
             glass = Build.VERSION.SDK_INT >= 33 && settings.appShell.useFloatingBottomBarLiquidGlass,
             blur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && settings.theme.mochiScrollEdgeBlurEnabled,
-            themeAccent = true,
         ),
         content = {
             CompositionLocalProvider(LocalMochiBackdropRegistry provides registry) {

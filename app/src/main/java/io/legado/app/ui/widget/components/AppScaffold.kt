@@ -51,7 +51,7 @@ import io.legado.app.ui.widget.components.coui.LocalCouiPageBackdrop
 import ui.feice.mochi.effect.glass.LocalMochiBackdrop
 import ui.feice.mochi.effect.glass.rememberMochiBackdrop
 import ui.feice.mochi.effect.glass.mochiBackdropSource
-import ui.feice.mochi.ios.IosGlass
+import ui.feice.mochi.theme.MochiGlassDefaults
 import ui.feice.mochi.effect.mask.mochiScrollEdgeBlur
 import ui.feice.mochi.theme.MochiMaterialsScope
 import ui.feice.mochi.theme.MochiTheme
@@ -277,9 +277,9 @@ fun AppScaffold(
                                         if (mochiScrollBlur) it else it.copy(scrollEdge = null)
                                     }
                                     val barMaterials = if (mochiTopBarGlassEnabled) {
-                                        materials.copy(control = remember(isDark) { IosGlass.regular(isDark) })
+                                        materials.copy(control = MochiGlassDefaults.Regular)
                                     } else {
-                                        materials.copy(bar = null, control = null, clear = null)
+                                        materials.copy(bar = null, control = null)
                                     }
                                     MochiMaterialsScope(barMaterials) { topBar() }
                                 } else if (composeEngine == ComposeEngine.Coui) {

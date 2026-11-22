@@ -41,7 +41,9 @@ buildscript {
 // generated script class. Lint remains enabled, including analysis of this build logic.
 // This transform patches the pinned Mochi fork artifact before AGP extracts classes,
 // so unit tests, D8 and R8 all see the patched bytecode:
-//  1. Redirect the one Backdrop 1.x call to the app shim.
+//  1. Redirect the one Backdrop 1.x call to the app shim. The host class is found by
+//     scanning every class for the call, not by a fixed file name: upstream 0.3.x moved
+//     the glass engine out of GlassPipelineKt, and the call site may move again.
 //  2. Rewrite material-color-utilities' DynamicScheme owner, which moved from
 //     com.materialkolor.scheme to com.materialkolor.dynamiccolor in 6.0.0. Mochi 0.2.0
 //     was compiled against 4.1.1 and the app resolves 6.0.0 (required by material3 1.5),
@@ -49,9 +51,10 @@ buildscript {
 // The Scheme* constructor shapes are unchanged across that move, only the owner differs.
 @CacheableTransform
 abstract class MochiCompatTransform implements TransformAction<TransformParameters.None> {
-    private static final String GLASS_PIPELINE =
-        'ui/feice/mochi/effect/glass/engine/GlassPipelineKt.class'
     private static final String OLD_DYNAMIC_SCHEME = 'com/materialkolor/scheme/DynamicScheme'
+    // 只看调用者所属的类名会被上游重命名打断，改为按「被调用方」的特征串定位
+    private static final byte[] RENDER_EFFECT_MARKER =
+        'com/kyant/backdrop/effects/RenderEffectKt'.getBytes('ISO-8859-1')
     private static final String NEW_DYNAMIC_SCHEME = 'com/materialkolor/dynamiccolor/DynamicScheme'
     private static final byte[] DYNAMIC_SCHEME_MARKER = OLD_DYNAMIC_SCHEME.getBytes('ISO-8859-1')
 
@@ -88,7 +91,7 @@ abstract class MochiCompatTransform implements TransformAction<TransformParamete
                 byte[] data = source.readAllBytes()
                 if (!jar && entry.name == 'classes.jar') {
                     data = rewriteArchive(data, true, patches)
-                } else if (jar && entry.name == GLASS_PIPELINE) {
+                } else if (jar && entry.name.endsWith('.class') && contains(data, RENDER_EFFECT_MARKER)) {
                     data = patchBackdrop(data, patches)
                 } else if (jar && contains(data, DYNAMIC_SCHEME_MARKER)) {
                     data = patchDynamicScheme(data, patches)
@@ -107,6 +110,7 @@ abstract class MochiCompatTransform implements TransformAction<TransformParamete
         ClassReader reader = new ClassReader(data)
         ClassNode node = new ClassNode(Opcodes.ASM9)
         reader.accept(node, 0)
+        int before = patches[0]
         for (MethodNode method : node.methods) {
             for (AbstractInsnNode instruction : method.instructions) {
                 if (instruction instanceof MethodInsnNode) {
@@ -120,7 +124,8 @@ abstract class MochiCompatTransform implements TransformAction<TransformParamete
                 }
             }
         }
-        return write(node, reader)
+        // 只是常量池里提到过、没有真正调用时不要重写，保持字节原样
+        return patches[0] == before ? data : write(node, reader)
     }
 
     private static byte[] patchDynamicScheme(byte[] data, int[] patches) {
