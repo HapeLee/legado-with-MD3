@@ -1354,11 +1354,8 @@ fun ReaderCanvasSurface(
                                 bookmarkReleased = claim.isReleased
                             }
                             // 滚动模式斜滑：只看 Y 分量是否过 touchSlop，不跟 X 比大小。
-                            // 原先用 isVerticalDominant（|dy|>|dx|）时，斜滑 |dx|>=|dy| 会落空——
-                            // scrollDrag 与下面的 horizontalTurn 都 false，SCROLL 模式下横向又没有
-                            // 翻页，手势谁也不认领，页面滑不动。Y 分量过 slop 即认领为纵向滚动，之后
-                            // 只用 moveDelta.y 滚（见下面的 scrollDrag 分支）；纯横滑 Y 分量到不了
-                            // slop，仍什么都不做。非 SCROLL 模式的判定（canStartPageTurn）一字不动。
+                            // 要求 Y 主导会让 |dx| >= |dy| 的斜滑无人认领（SCROLL 无横向翻页），
+                            // 页面滑不动；认领后只用 moveDelta.y 滚，见下面的 scrollDrag 分支。
                             scrollDrag = transitionMode == ReaderTransitionMode.SCROLL &&
                                     ReaderMainAxisPolicy.isVerticalScroll(total.y, pageTouchSlop)
                             horizontalTurn = !bookmarkDrag && !scrollDrag &&
