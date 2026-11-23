@@ -484,27 +484,9 @@ fun ExploreSourceHeader(
                 color = contentColor,
                 modifier = Modifier.weight(1f),
             )
-            AnimatedContent(
-                targetState = loadingKinds,
-                label = "LoadingSwitch"
-            ) { loading ->
-                if (loading) {
-                    AppContainedLoadingIndicator(
-                        modifier = Modifier.size(18.dp)
-                    )
-                } else {
-                    AppIcon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .rotate(rotation)
-                            .size(20.dp),
-                        tint = LegadoTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
             // 源名不再放进菜单：原生菜单不渲染分组标题文字，条目正文已有源名，
-            // 长按菜单只保留命令项；删除项走 destructive 落色。锚点取这层 Box（尾部区域）。
+            // 长按菜单只保留命令项；删除项走 destructive 落色。
+            // 尾部图标与菜单锚点共用这一个 Box，之前为锚点复制了一份图标，会并排画出两个。
             Box {
                 AnimatedContent(
                     targetState = loadingKinds,
