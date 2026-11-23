@@ -25,7 +25,7 @@ kotlinxSerialization = "1.11.0"
 kotlinxCoroutinesAndroid = "1.11.0"
 kotlinxSerializationJson = "1.11.0"
 kotlinxCollectionsImmutable = "0.5.2"
-ksp = "2.3.12"
+ksp = "2.3.14"
 # Android composite builds must use the same AGP as the pinned Miuix source.
 agp = "9.5.2"
 aboutlibraries = "15.3.0"
