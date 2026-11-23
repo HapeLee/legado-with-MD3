@@ -127,7 +127,6 @@ import io.legado.app.ui.theme.ProvideColorSchemeOverride
 import io.legado.app.ui.theme.ThemeOverrideState
 import io.legado.app.ui.theme.animateColorSchemeAsState
 import io.legado.app.ui.theme.fadingEdge
-import io.legado.app.ui.theme.isMiuixHyperOs4Enabled
 import io.legado.app.ui.theme.rememberImageSeedColor
 import io.legado.app.ui.theme.rememberThemeOverride
 import io.legado.app.ui.theme.responsiveHazeEffectFixedStyle
@@ -365,8 +364,8 @@ private fun BookInfoScreenContent(
             }
         },
         alwaysDrawBehindBars = true,
-        // 详情简介的 WebView 不能被录进 HyperOS 4 的背景图层（#2610）。
-        disableContentSampling = isMiuixHyperOs4Enabled() && hasWebIntro,
+        // 避免把 WebView 简介录入模糊或玻璃的正文采样图层（#2610）。
+        disableContentSampling = hasWebIntro,
     ) { paddingValues ->
         val book = state.book
         if (book == null) {
