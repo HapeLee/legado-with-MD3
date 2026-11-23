@@ -7,9 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -18,8 +15,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
@@ -27,8 +25,11 @@ import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
+import io.legado.app.ui.widget.components.text.AppText
 import org.koin.compose.koinInject
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -88,13 +89,13 @@ fun AutoReadContent(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
+            AppText(
                 text = stringResource(R.string.auto_page_speed),
-                style = MaterialTheme.typography.titleSmall,
+                style = LegadoTheme.typography.titleSmall,
             )
-            Text(
+            AppText(
                 text = String.format(Locale.ROOT, "%ds", speed.roundToInt()),
-                style = MaterialTheme.typography.bodyLarge,
+                style = LegadoTheme.typography.bodyLarge,
                 modifier = Modifier.padding(start = 8.dp),
             )
         }
@@ -158,16 +159,15 @@ private fun ActionButton(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        androidx.compose.material3.FilledTonalIconButton(onClick = onClick) {
-            Icon(
-                painter = painterResource(icon),
-                contentDescription = label,
-            )
-        }
+        MediumTonalButton(
+            onClick = onClick,
+            icon = ImageVector.vectorResource(icon),
+            contentDescription = label,
+        )
         Spacer(Modifier.height(4.dp))
-        Text(
+        AppText(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
+            style = LegadoTheme.typography.labelSmall,
         )
     }
 }

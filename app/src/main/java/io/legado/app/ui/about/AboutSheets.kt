@@ -13,7 +13,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,7 +68,7 @@ fun UpdateSheet(
                     AppText(
                         text = BuildConfig.VERSION_NAME,
                         style = LegadoTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = LegadoTheme.colorScheme.outline,
                     )
                 }
                 Row(
@@ -84,7 +83,7 @@ fun UpdateSheet(
                     AppText(
                         text = updateInfo.tagName,
                         style = LegadoTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = LegadoTheme.colorScheme.primary,
                     )
                 }
                 Row(
@@ -99,7 +98,7 @@ fun UpdateSheet(
                     AppText(
                         text = Build.SUPPORTED_ABIS.firstOrNull() ?: "unknown",
                         style = LegadoTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = LegadoTheme.colorScheme.outline,
                     )
                 }
                 Row(
@@ -114,7 +113,7 @@ fun UpdateSheet(
                     AppText(
                         text = updateToVariant,
                         style = LegadoTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = LegadoTheme.colorScheme.outline,
                     )
                 }
             } else {

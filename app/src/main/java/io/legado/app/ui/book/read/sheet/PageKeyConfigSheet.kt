@@ -4,9 +4,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,7 +20,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -49,10 +49,10 @@ fun PageKeyConfigSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.custom_page_key),
         content = {
-            OutlinedTextField(
+            AppTextField(
                 value = prevKeys,
                 onValueChange = { prevKeys = it },
-                label = { Text(stringResource(R.string.prev_page_key)) },
+                label = stringResource(R.string.prev_page_key),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 modifier = Modifier
@@ -74,10 +74,10 @@ fun PageKeyConfigSheet(
                     },
             )
             Spacer(modifier = Modifier.height(12.dp))
-            OutlinedTextField(
+            AppTextField(
                 value = nextKeys,
                 onValueChange = { nextKeys = it },
-                label = { Text(stringResource(R.string.next_page_key)) },
+                label = stringResource(R.string.next_page_key),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 modifier = Modifier
@@ -99,10 +99,10 @@ fun PageKeyConfigSheet(
                     },
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
+            AppText(
                 text = stringResource(R.string.page_key_set_help),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = LegadoTheme.typography.bodySmall,
+                color = LegadoTheme.colorScheme.onSurfaceVariant,
             )
         },
         dismissText = stringResource(R.string.reset),

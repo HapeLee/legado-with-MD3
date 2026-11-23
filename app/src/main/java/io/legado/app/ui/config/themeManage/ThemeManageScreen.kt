@@ -20,7 +20,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -132,8 +131,8 @@ fun ThemeManageScreen(
                 item {
                     AppText(
                         text = stringResource(R.string.theme_manage_saved_themes),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = LegadoTheme.typography.titleSmall,
+                        color = LegadoTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                     )
                 }
@@ -248,7 +247,7 @@ private fun SavedThemeItem(
     val data = theme.data
     val lightPrimary = data.themeColor.takeIf { it != 0 }?.let(::Color)
         ?: data.cPrimary.takeIf { it != 0 }?.let(::Color)
-        ?: MaterialTheme.colorScheme.primary
+        ?: LegadoTheme.colorScheme.primary
     val darkPrimary = data.themeColorNight.takeIf { it != 0 }?.let(::Color)
         ?: data.cNPrimary.takeIf { it != 0 }?.let(::Color)
         ?: lightPrimary
@@ -325,7 +324,7 @@ private fun ThemeColorGroup(
                 modifier = Modifier
                     .size(12.dp)
                     .background(color, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                    .border(1.dp, LegadoTheme.colorScheme.outlineVariant, CircleShape)
             )
         }
     }

@@ -32,9 +32,6 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -83,6 +80,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
+import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -460,8 +458,9 @@ fun ExploreSourceHeader(
         cornerRadius = 12.dp,
         containerColor = containerColor,
     ) {
-        ListItem(
+        Row(
             modifier = Modifier
+                .fillMaxWidth()
                 .combinedClickable(
                     role = Role.Button,
                     onClickLabel = expandActionLabel,
@@ -476,11 +475,37 @@ fun ExploreSourceHeader(
                         stateDescription = loadingLabel
                     }
                 }
-                .fillMaxWidth(),
-            colors = ListItemDefaults.colors(
-                containerColor = Color.Transparent
-            ),
-            trailingContent = {
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AppText(
+                text = item.bookSourceName,
+                style = LegadoTheme.typography.titleMedium,
+                color = contentColor,
+                modifier = Modifier.weight(1f),
+            )
+            AnimatedContent(
+                targetState = loadingKinds,
+                label = "LoadingSwitch"
+            ) { loading ->
+                if (loading) {
+                    AppContainedLoadingIndicator(
+                        modifier = Modifier.size(18.dp)
+                    )
+                } else {
+                    AppIcon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .rotate(rotation)
+                            .size(20.dp),
+                        tint = LegadoTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            // 源名不再放进菜单：原生菜单不渲染分组标题文字，条目正文已有源名，
+            // 长按菜单只保留命令项；删除项走 destructive 落色。锚点取这层 Box（尾部区域）。
+            Box {
                 AnimatedContent(
                     targetState = loadingKinds,
                     label = "LoadingSwitch"
@@ -490,58 +515,29 @@ fun ExploreSourceHeader(
                             modifier = Modifier.size(18.dp)
                         )
                     } else {
-                        Icon(
+                        AppIcon(
                             imageVector = Icons.Default.ChevronRight,
                             contentDescription = null,
                             modifier = Modifier
                                 .rotate(rotation)
                                 .size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = LegadoTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
-                // 源名不再放进菜单：原生菜单不渲染分组标题文字，条目正文已有源名，
-                // 长按菜单只保留命令项；删除项走 destructive 落色。锚点取这层 Box（尾部区域）。
-                Box {
-                    AnimatedContent(
-                        targetState = loadingKinds,
-                        label = "LoadingSwitch"
-                    ) { loading ->
-                        if (loading) {
-                            AppContainedLoadingIndicator(
-                                modifier = Modifier.size(18.dp)
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.ChevronRight,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .rotate(rotation)
-                                    .size(20.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    AppActionMenu(
-                        groups = exploreSourceMenuGroups(hasLogin = item.hasLoginUrl),
-                        onAction = { id ->
-                            exploreSourceMenuActionFor(
-                                id, onTop, onEdit, onSearch, onLogin, onRefresh, onDelete,
-                            )
-                        },
-                        modifier = Modifier.matchParentSize(),
-                        embeddedExpanded = showMenu,
-                        onDismissRequest = { showMenu = false },
-                        trigger = {},
-                    )
-                }
-            },
-        ) {
-            AppText(
-                text = item.bookSourceName,
-                style = LegadoTheme.typography.titleMedium,
-                color = contentColor
-            )
+                AppActionMenu(
+                    groups = exploreSourceMenuGroups(hasLogin = item.hasLoginUrl),
+                    onAction = { id ->
+                        exploreSourceMenuActionFor(
+                            id, onTop, onEdit, onSearch, onLogin, onRefresh, onDelete,
+                        )
+                    },
+                    modifier = Modifier.matchParentSize(),
+                    embeddedExpanded = showMenu,
+                    onDismissRequest = { showMenu = false },
+                    trigger = {},
+                )
+            }
         }
     }
 }
