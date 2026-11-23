@@ -1353,8 +1353,11 @@ fun ReaderCanvasSurface(
                                 // must not be reclaimed by a later diagonal direction change.
                                 bookmarkReleased = claim.isReleased
                             }
+                            // 滚动模式斜滑：只看 Y 分量是否过 touchSlop，不跟 X 比大小。
+                            // 要求 Y 主导会让 |dx| >= |dy| 的斜滑无人认领（SCROLL 无横向翻页），
+                            // 页面滑不动；认领后只用 moveDelta.y 滚，见下面的 scrollDrag 分支。
                             scrollDrag = transitionMode == ReaderTransitionMode.SCROLL &&
-                                    ReaderMainAxisPolicy.isVerticalDominant(total.x, total.y)
+                                    ReaderMainAxisPolicy.isVerticalScroll(total.y, pageTouchSlop)
                             horizontalTurn = !bookmarkDrag && !scrollDrag &&
                                     (if (transitionMode == ReaderTransitionMode.IOS_CURL)
                                         iosCurl.recognizedDirection != null
