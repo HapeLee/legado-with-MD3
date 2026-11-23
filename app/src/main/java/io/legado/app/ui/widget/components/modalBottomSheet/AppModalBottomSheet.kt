@@ -150,6 +150,13 @@ enum class MochiSheetLayout {
     Compatibility,
 }
 
+/**
+ * 各引擎共用的模态面板入口。
+ *
+ * @param windowPresentation 是否必须用独立窗口（Dialog）呈现。Miuix 玻璃面板与 Mochi 面板都画在
+ * 宿主 Activity 的层内，调用点如果本身位于独立窗口（如划词浮层 Popup），面板会落到该窗口之下
+ * 并被它吃掉触摸；此时置 true 强制窗口级呈现，与非浮动引擎的 M3 Dialog 行为一致。
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AppModalBottomSheet(
@@ -166,6 +173,7 @@ fun AppModalBottomSheet(
     contentPaddingEnabled: Boolean = true,
     sheetGesturesEnabled: Boolean = true,
     mochiLayout: MochiSheetLayout = MochiSheetLayout.HalfScreen,
+    windowPresentation: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val colorScheme = LocalLegadoThemeColors.current.colorScheme
@@ -183,7 +191,7 @@ fun AppModalBottomSheet(
     // Mochi attaches a sibling ComposeView to the Activity decor. Other windows need their own
     // modal host to retain window insets and the local back dispatcher.
     val inActivityWindow = LocalView.current.rootView === LocalActivity.current?.window?.decorView
-    if (isMochi && mochiLayout != MochiSheetLayout.Compatibility && sheetGesturesEnabled && inActivityWindow) {
+    if (isMochi && !windowPresentation && mochiLayout != MochiSheetLayout.Compatibility && sheetGesturesEnabled && inActivityWindow) {
         MochiOverlayAccessibility(show)
         val backdrop = rememberMochiOverlayBackdrop(show)
         val registry = LocalMochiBackdropRegistry.current
@@ -285,7 +293,10 @@ fun AppModalBottomSheet(
             val themeOverride = rememberPopupThemeOverride()
             val themeSettings = LocalAppUiConfiguration.current.theme
             // 开关打开后只走玻璃；无玻璃设施的独立窗口（如朗读悬浮窗）才退回窗口面板。
-            val useGlassContainer = themeSettings.useHyperOs4Components &&
+            // 玻璃面板画在宿主 Activity 的 Scaffold overlay 内，调用点若本身位于独立窗口
+            // （例如划词浮层 Popup）时会被该窗口盖住并吃掉触摸，因此由调用方显式要求窗口级呈现。
+            val useGlassContainer = !windowPresentation &&
+                themeSettings.useHyperOs4Components &&
                 ThemeResolver.isBlurSupported() &&
                 LocalAppGlassOverlay.current != null
             val backdrop = LocalMiuixBarBackdrop.current
@@ -758,6 +769,7 @@ fun <T> AppModalBottomSheet(
     contentWindowInsets: @Composable () -> WindowInsets = { BottomSheetDefaults.modalWindowInsets },
     sheetGesturesEnabled: Boolean = true,
     mochiLayout: MochiSheetLayout = MochiSheetLayout.HalfScreen,
+    windowPresentation: Boolean = false,
     content: @Composable ColumnScope.(T) -> Unit
 ) {
     var cachedData by remember { mutableStateOf(data) }
@@ -780,6 +792,7 @@ fun <T> AppModalBottomSheet(
         contentWindowInsets = contentWindowInsets,
         sheetGesturesEnabled = sheetGesturesEnabled,
         mochiLayout = mochiLayout,
+        windowPresentation = windowPresentation,
         content = {
             if (currentData != null) {
                 content(currentData)

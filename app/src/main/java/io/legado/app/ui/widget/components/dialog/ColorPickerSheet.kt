@@ -46,6 +46,12 @@ import top.yukonga.miuix.kmp.basic.ColorPalette
 import top.yukonga.miuix.kmp.basic.ColorPicker
 import top.yukonga.miuix.kmp.basic.ColorSpace
 
+/**
+ * 取色面板。
+ *
+ * @param windowPresentation 调用点位于独立窗口（如划词浮层 Popup）时置 true，强制面板用
+ * 独立窗口呈现，避免被该窗口盖住；见 [AppModalBottomSheet]。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ColorPickerSheet(
@@ -53,6 +59,7 @@ fun ColorPickerSheet(
     initialColor: Int,
     onDismissRequest: () -> Unit,
     onColorSelected: (Int) -> Unit,
+    windowPresentation: Boolean = false,
 ) {
     var currentColor by remember { mutableStateOf(Color(initialColor)) }
     var hexInput by remember { mutableStateOf(initialColor.asHexColorString()) }
@@ -71,6 +78,7 @@ fun ColorPickerSheet(
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
+        windowPresentation = windowPresentation,
         title = stringResource(R.string.select_color),
         startSheetAction = SheetAction(
             onClick = {

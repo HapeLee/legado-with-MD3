@@ -40,7 +40,6 @@ import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.StrikethroughS
 import androidx.compose.material.icons.outlined.Style
 import androidx.compose.material.icons.outlined.Waves
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -80,6 +79,7 @@ import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.button.series.SmallOutlinedButton
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
+import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
@@ -366,9 +366,11 @@ fun MarkingSelectionMenu(
         }
     }
 
+    // 笔记/标注浮层是独立窗口的 Popup，面板必须同样走窗口级呈现，否则会落在浮层之下并被它吃掉触摸。
     ColorPickerSheet(
         show = showColorPicker,
         initialColor = colorPickerSeed,
+        windowPresentation = true,
         onDismissRequest = { showColorPicker = false },
         onColorSelected = { color ->
             selectedColor = color
@@ -422,7 +424,7 @@ private fun MarkingColorRow(
                 contentAlignment = Alignment.Center,
             ) {
                 if (color == selectedColor && !useRules) {
-                    Icon(
+                    AppIcon(
                         imageVector = Icons.Outlined.Check,
                         contentDescription = null,
                         tint = if (Color(color).luminance() > 0.5f) Color.Black else Color.White,
@@ -462,9 +464,11 @@ private fun RoundIconButton(
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
+        AppIcon(
             imageVector = icon,
             contentDescription = contentDescription,
+            // 未选中交给 AppIcon 的引擎默认色（onSurface），选中时用容器对比色。
+            tint = if (selected) LegadoTheme.colorScheme.onSecondaryContainer else Color.Unspecified,
             modifier = Modifier.size(15.dp),
         )
     }
@@ -496,54 +500,22 @@ private fun MarkingEffectTile(
 
 @Composable
 private fun MarkingEffectIcon(effect: MarkingEffect) {
-    val foreground = LegadoTheme.colorScheme.onSurface
-    when (effect) {
-        MarkingEffect.SOLID -> Icon(
-            imageVector = Icons.Outlined.FormatUnderlined,
-            contentDescription = null,
-            modifier = Modifier.size(23.dp),
-        )
-
-        MarkingEffect.BG -> Icon(
-            imageVector = Icons.Outlined.FormatColorFill,
-            contentDescription = null,
-            tint = foreground,
-            modifier = Modifier.size(23.dp),
-        )
-
-        MarkingEffect.TEXT -> Icon(
-            imageVector = Icons.Outlined.FormatColorText,
-            contentDescription = null,
-            tint = foreground,
-            modifier = Modifier.size(23.dp),
-        )
-
-        MarkingEffect.WAVE -> Icon(
-            imageVector = Icons.Outlined.Waves,
-            contentDescription = null,
-            tint = foreground,
-            modifier = Modifier.size(23.dp),
-        )
-
-        MarkingEffect.DASHED -> Icon(
-            imageVector = Icons.Outlined.MoreHoriz,
-            contentDescription = null,
-            tint = foreground,
-            modifier = Modifier.size(23.dp),
-        )
-
-        MarkingEffect.STRIKE -> Icon(
-            imageVector = Icons.Outlined.StrikethroughS,
-            contentDescription = null,
-            modifier = Modifier.size(23.dp),
-        )
-
-        MarkingEffect.HIGHLIGHT -> Icon(
-            imageVector = Icons.Outlined.Highlight,
-            contentDescription = null,
-            modifier = Modifier.size(23.dp),
-        )
+    // AppIcon 的默认着色跟随引擎（Miuix/Mochi 用 LegadoTheme.colorScheme.onSurface），
+    // 这里不再逐个传 tint：Miuix 引擎不提供 Material3 的 LocalContentColor，漏传会变黑。
+    val icon = when (effect) {
+        MarkingEffect.SOLID -> Icons.Outlined.FormatUnderlined
+        MarkingEffect.BG -> Icons.Outlined.FormatColorFill
+        MarkingEffect.TEXT -> Icons.Outlined.FormatColorText
+        MarkingEffect.WAVE -> Icons.Outlined.Waves
+        MarkingEffect.DASHED -> Icons.Outlined.MoreHoriz
+        MarkingEffect.STRIKE -> Icons.Outlined.StrikethroughS
+        MarkingEffect.HIGHLIGHT -> Icons.Outlined.Highlight
     }
+    AppIcon(
+        imageVector = icon,
+        contentDescription = null,
+        modifier = Modifier.size(23.dp),
+    )
 }
 
 @Composable
