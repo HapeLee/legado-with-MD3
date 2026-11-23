@@ -23,10 +23,17 @@ import io.legado.app.ui.widget.components.AppSlider
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.text.AppText
 import kotlin.math.roundToInt
 
+/**
+ * 行内档位入口：一颗图标按钮 + 点开的二级面板。
+ *
+ * 只用于**正文行内**（AI 对话输入栏、改写要求那种横向排布），这类位置没有 Sheet 头部槽位的
+ * 约束；面板头部请用 [AiReasoningLevelSection] 直接铺在正文里。
+ */
 @Composable
-fun AiReasoningModeButton(
+fun AiReasoningLevelButton(
     level: AiReasoningLevel,
     enabled: Boolean,
     onLevelChange: (AiReasoningLevel) -> Unit,
@@ -48,10 +55,35 @@ fun AiReasoningModeButton(
     }
 }
 
+/**
+ * 面板正文里的思考档位选择。
+ *
+ * 旧实现住在头部按钮里、点开一个二级面板；头部操作槽只能表达单颗按钮（COUI 下是库按钮），
+ * 这类「按钮 + 二级面板」的交互放不进模型，因此整块挪进正文：标题 + 当前档位 + 滑杆，
+ * 四套引擎共用同一份控件。
+ */
+@Composable
+fun AiReasoningLevelSection(
+    level: AiReasoningLevel,
+    enabled: Boolean,
+    onLevelChange: (AiReasoningLevel) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        AppText(
+            text = stringResource(R.string.ai_thinking_mode),
+            style = LegadoTheme.typography.titleSmall,
+            modifier = Modifier.padding(horizontal = 16.dp),
+        )
+        AiReasoningLevelControl(level = level, onLevelChange = onLevelChange, enabled = enabled)
+    }
+}
+
 @Composable
 internal fun AiReasoningLevelControl(
     level: AiReasoningLevel,
     onLevelChange: (AiReasoningLevel) -> Unit,
+    enabled: Boolean = true,
 ) {
     Column(
         modifier = Modifier
@@ -59,13 +91,13 @@ internal fun AiReasoningLevelControl(
             .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(12.dp))
         TextCard(
             text = level.label(),
             textStyle = LegadoTheme.typography.titleLargeEmphasized,
             backgroundColor = LegadoTheme.colorScheme.onSheetContent
         )
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(12.dp))
         AppSlider(
             value = level.ordinal.toFloat(),
             onValueChange = { value ->
@@ -76,12 +108,13 @@ internal fun AiReasoningLevelControl(
                 )].let(onLevelChange)
             },
             modifier = Modifier.fillMaxWidth(),
+            enabled = enabled,
             valueRange = 0f..AiReasoningLevel.entries.lastIndex.toFloat(),
             steps = AiReasoningLevel.entries.size - 2,
             accessibilityLabel = stringResource(R.string.ai_thinking_mode),
             accessibilityValue = level.label(),
         )
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(12.dp))
     }
 }
 

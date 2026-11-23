@@ -86,7 +86,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.domain.model.AiMessageRole
 import io.legado.app.domain.model.AiReasoningLevel
-import io.legado.app.ui.ai.AiReasoningModeButton
+import io.legado.app.ui.ai.AiReasoningLevelButton
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
@@ -960,7 +960,7 @@ private fun ChatInputBar(
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             // Thinking mode button
-            AiReasoningModeButton(
+            AiReasoningLevelButton(
                 level = reasoningLevel,
                 enabled = !isSending,
                 onLevelChange = onUpdateReasoningLevel,

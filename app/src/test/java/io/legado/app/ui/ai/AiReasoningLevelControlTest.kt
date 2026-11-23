@@ -34,7 +34,7 @@ import splitties.init.injectAsAppCtx
 @Config(application = Application::class, sdk = [35], qualifiers = "w398dp-h800dp")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @LooperMode(LooperMode.Mode.PAUSED)
-class AiReasoningModeButtonTest {
+class AiReasoningLevelControlTest {
     @get:Rule val compose = createComposeRule()
 
     private fun dragEveryLevel(engine: String, widths: List<Int> = listOf(390)) {
@@ -49,8 +49,8 @@ class AiReasoningModeButtonTest {
                         // Inspection previews always choose Material; explicitly exercise Miuix.
                         CompositionLocalProvider(LocalLegadoThemeColors provides colors) {
                             if (engine == "miuix") MiuixThemeWrapper(colors, null, applyBackground = false) {
-                                AiReasoningLevelControl(level.value) { level.value = it }
-                            } else AiReasoningLevelControl(level.value) { level.value = it }
+                                AiReasoningLevelControl(level.value, onLevelChange = { level.value = it })
+                            } else AiReasoningLevelControl(level.value, onLevelChange = { level.value = it })
                         }
                     }
                 }
