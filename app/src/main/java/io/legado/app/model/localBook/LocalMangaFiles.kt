@@ -3,6 +3,7 @@ package io.legado.app.model.localBook
 import android.net.Uri
 import android.provider.DocumentsContract
 import io.legado.app.R
+import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern.bookFileRegex
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
@@ -15,6 +16,7 @@ import io.legado.app.help.book.isImage
 import io.legado.app.utils.AlphanumComparator
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.compress.LibArchiveUtils
+import io.legado.app.utils.openInputStream
 import io.legado.app.utils.openReadPfd
 import io.legado.app.utils.treeChildren
 import kotlin.io.path.invariantSeparatorsPathString
@@ -70,6 +72,29 @@ internal object LocalMangaFiles {
         }
     }
 
+    /**
+     * CBZ/ZIP 漫画没有内嵌封面元数据：优先取包内 `cover.<图片扩展名>`，
+     * 找不到再回退到自然序第一张图。落盘位置与 epub/mobi 的本地封面一致。
+     * 用户手动设置过封面（customCoverUrl）时不生成，避免覆盖自定义封面。
+     */
+    fun upBookCover(book: Book) {
+        if (!book.isLocalMangaArchive || !book.customCoverUrl.isNullOrEmpty()) return
+        val coverPath = LocalBook.getCoverPath(book)
+        val coverFile = File(coverPath)
+        if (!coverFile.isFile || coverFile.length() == 0L) {
+            val written = try {
+                writeArchiveCover(book, coverFile)
+            } catch (error: Exception) {
+                AppLog.put("生成本地漫画封面失败：${book.name}", error)
+                false
+            }
+            if (!written) return
+        }
+        if (book.coverUrl.isNullOrEmpty()) {
+            book.coverUrl = coverPath
+        }
+    }
+
     fun isMangaArchive(archive: FileDoc): Boolean {
         val entries = archive.openReadPfd().getOrThrow().use {
             LibArchiveUtils.getFilesName(it) { name ->
@@ -84,6 +109,35 @@ internal object LocalMangaFiles {
         archive.openReadPfd().getOrThrow().use {
             LibArchiveUtils.getFilesName(it, ::isLocalMangaImage)
         }
+
+    private fun writeArchiveCover(book: Book, coverFile: File): Boolean {
+        val archive = FileDoc.fromUri(book.getLocalUri(), false)
+        // distinctBy 保留首次出现，条目名仍是归档内的原始写法，供单条读取时精确匹配。
+        val entries = archiveImageEntries(archive)
+            .mapNotNull { name ->
+                runCatching { Paths.get(name).normalize().invariantSeparatorsPathString }
+                    .getOrNull()?.let { it to name }
+            }
+            .distinctBy { it.first }
+        val chosen = pickMangaCoverEntry(entries.map { it.first }) ?: return false
+        val entryName = entries.first { it.first == chosen }.second
+        val bytes = archive.openInputStream().getOrThrow().use {
+            LibArchiveUtils.getByteArrayContent(it, entryName)
+        }
+        if (bytes == null || bytes.isEmpty()) return false
+        // 先写临时文件再改名：中途失败不会留下半张封面被下次 exists 判断当成已完成。
+        val tempFile = File("${coverFile.path}.tmp")
+        coverFile.parentFile?.mkdirs()
+        tempFile.writeBytes(bytes)
+        if (!tempFile.renameTo(coverFile)) {
+            coverFile.delete()
+            if (!tempFile.renameTo(coverFile)) {
+                tempFile.delete()
+                return false
+            }
+        }
+        return coverFile.isFile && coverFile.length() > 0L
+    }
 
     fun checkDirectory(book: Book) {
         withDirectoryAccess {
@@ -249,6 +303,27 @@ internal fun relativeMangaArchivePaths(entries: List<String>): List<String> {
     }
     // 章节标题靠 '/' 切分；Path.toString() 在 Windows 上是反斜杠，会把整本书并成一章。
     return paths.map { (common?.relativize(it) ?: it).invariantSeparatorsPathString }
+}
+
+/**
+ * 选封面条目：文件名为 `cover` 的图片优先（层数最浅，再自然序），
+ * 否则回退自然序第一张——与章节排序同口径，保证封面就是阅读器第一页。
+ */
+internal fun pickMangaCoverEntry(relativePaths: List<String>): String? {
+    val images = relativePaths.filter(::isLocalMangaImage)
+    if (images.isEmpty()) return null
+    val byDepthThenName = compareBy<String> { path -> path.count { it == '/' } }
+        .then(AlphanumComparator)
+    return images.filter(::isMangaCoverName).minWithOrNull(byDepthThenName)
+        ?: images.minWithOrNull(AlphanumComparator)
+}
+
+private fun isMangaCoverName(path: String): Boolean {
+    val name = path.substringAfterLast('/')
+    val dot = name.lastIndexOf('.')
+    if (dot <= 0) return false
+    return name.substring(0, dot).equals("cover", ignoreCase = true) &&
+        name.substring(dot + 1).lowercase() in localMangaImageExtensions
 }
 
 internal fun <T> groupLocalMangaPages(

@@ -138,6 +138,10 @@ object LocalBook {
 
     @Throws(TocEmptyException::class)
     fun getChapterList(book: Book): ArrayList<BookChapter> {
+        if (book.isLocalManga) {
+            // 目录重建同样是一次书本初始化：历史导入的 CBZ 在这里补生成封面。
+            LocalMangaFiles.upBookCover(book)
+        }
         val chapters = when {
             book.isLocalManga -> LocalMangaFiles.chapters(book)
 
@@ -420,6 +424,7 @@ object LocalBook {
 
     fun upBookInfo(book: Book) {
         when {
+            book.isLocalManga -> LocalMangaFiles.upBookCover(book)
             book.isEpub -> EpubFile.upBookInfo(book)
             book.isUmd -> UmdFile.upBookInfo(book)
             book.isPdf -> PdfFile.upBookInfo(book)
