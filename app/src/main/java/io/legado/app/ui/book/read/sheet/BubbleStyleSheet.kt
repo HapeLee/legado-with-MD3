@@ -44,8 +44,8 @@ import io.legado.app.ui.book.read.ConfigUpdateAction
 import io.legado.app.ui.book.read.ReadConfigUpdateBus
 import io.legado.app.ui.config.bubble.BubblePreviewCache
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import kotlinx.coroutines.launch
@@ -79,16 +79,14 @@ fun BubbleStyleSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.bubble_config),
-        endAction = {
-            MediumTonalButton(
-                onClick = {
-                    onDismissRequest()
-                    onOpenManage()
-                },
-                icon = Icons.Default.Settings,
-                contentDescription = stringResource(R.string.bubble_manage_entry),
-            )
-        },
+        endSheetAction = SheetAction(
+            onClick = {
+                onDismissRequest()
+                onOpenManage()
+            },
+            icon = Icons.Default.Settings,
+            contentDescription = stringResource(R.string.bubble_manage_entry),
+        ),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             SwitchSettingItem(

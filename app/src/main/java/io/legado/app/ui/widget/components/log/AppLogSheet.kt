@@ -23,8 +23,8 @@ import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.EmptyMessage
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.LogUtils
 import java.util.Date
@@ -48,16 +48,14 @@ fun AppLogSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.log),
-        endAction = {
-            MediumTonalButton(
-                onClick = {
-                    clearAllLogs()
-                    logs = emptyList()
-                },
-                icon = Icons.Default.DeleteSweep,
-                contentDescription = stringResource(R.string.clear)
-            )
-        }
+        endSheetAction = SheetAction(
+            onClick = {
+                clearAllLogs()
+                logs = emptyList()
+            },
+            icon = Icons.Default.DeleteSweep,
+            contentDescription = stringResource(R.string.clear),
+        )
     ) {
         if (logs.isEmpty()) {
             EmptyMessage(modifier = Modifier.fillMaxWidth(),message = stringResource(R.string.no_logs))

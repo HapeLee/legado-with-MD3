@@ -38,8 +38,8 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.isHex
 import top.yukonga.miuix.kmp.basic.ColorPalette
@@ -72,28 +72,24 @@ fun ColorPickerSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.select_color),
-        startAction = {
-            MediumTonalButton(
-                onClick = {
-                    currentColor = Color.Transparent
-                    hexInput = "#00000000"
-                    isHexInputError = false
-                },
-                icon = Icons.Default.Restore,
-                contentDescription = stringResource(R.string.reset),
-            )
-        },
-        endAction = {
-            MediumTonalButton(
-                onClick = {
-                    onColorSelected(currentColor.toArgb())
-                    onDismissRequest()
-                },
-                enabled = parsedHexColor != null && !isHexInputError,
-                icon = Icons.Default.Save,
-                contentDescription = stringResource(R.string.action_save),
-            )
-        },
+        startSheetAction = SheetAction(
+            onClick = {
+                currentColor = Color.Transparent
+                hexInput = "#00000000"
+                isHexInputError = false
+            },
+            icon = Icons.Default.Restore,
+            contentDescription = stringResource(R.string.reset),
+        ),
+        endSheetAction = SheetAction(
+            onClick = {
+                onColorSelected(currentColor.toArgb())
+                onDismissRequest()
+            },
+            icon = Icons.Default.Save,
+            enabled = parsedHexColor != null && !isHexInputError,
+            contentDescription = stringResource(R.string.action_save),
+        ),
     ) {
         Column(
             modifier = Modifier

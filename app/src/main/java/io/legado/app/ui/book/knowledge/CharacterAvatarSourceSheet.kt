@@ -24,10 +24,10 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextFieldSurface
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.text.AppText
 
 /**
@@ -57,15 +57,11 @@ fun CharacterAvatarSourceSheet(
         title = stringResource(
             if (editUrl) R.string.character_avatar_url else R.string.character_avatar_source,
         ),
-        endAction = {
-            if (editUrl) {
-                MediumTonalButton(
-                    onClick = { if (url.isNotBlank()) onUrl(url.trim()) },
-                    icon = AppIcons.Check,
-                    contentDescription = stringResource(R.string.ok),
-                )
-            }
-        },
+        endSheetAction = if (editUrl) SheetAction(
+            onClick = { if (url.isNotBlank()) onUrl(url.trim()) },
+            icon = AppIcons.Check,
+            contentDescription = stringResource(R.string.ok),
+        ) else null,
     ) {
         if (editUrl) {
             AppTextFieldSurface(

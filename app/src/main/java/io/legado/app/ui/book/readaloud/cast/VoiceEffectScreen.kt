@@ -44,15 +44,15 @@ import io.legado.app.ui.widget.components.CastFieldSpec
 import io.legado.app.ui.widget.components.CastFieldStack
 import io.legado.app.ui.widget.components.CastOption
 import io.legado.app.ui.widget.components.TinySwitch
-import io.legado.app.ui.widget.components.VoiceAuditionAction
+import io.legado.app.ui.widget.components.VoiceAuditionButton
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.castCardMaxHeight
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.OptionCard
 import io.legado.app.ui.widget.components.modalBottomSheet.OptionSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
@@ -326,23 +326,15 @@ private fun VoiceEffectEditDialog(
         title = stringResource(
             if (isNew) R.string.voice_effect_create else R.string.voice_effect_edit,
         ),
-        // 试听与保存都作用于下面这份草稿，钉在头部：参数区可以滚，不必滚回顶部才听得见/存得了
-        startAction = {
-            VoiceAuditionAction(
-                voiceId = audition.voiceId,
-                text = remember(context) { VoiceAudition.defaultPreviewText(context) },
-                draft = draft,
-            )
-        },
+        // 保存作用于下面这份草稿，钉在头部；试听要有三态（合成中自转 / 播放中停止 / 待命试听），
+        // 声明式操作的静态图标表达不了，移到正文音色选择下方。
         // 不给取消按钮：草稿全在本弹层里，点保存才落库，关掉就是丢弃，没有需要反悔的中间态
-        endAction = {
-            MediumTonalButton(
-                onClick = { onSave(draft) },
-                enabled = draft.name.isNotBlank(),
-                icon = AppIcons.Check,
-                contentDescription = stringResource(R.string.save),
-            )
-        },
+        endSheetAction = SheetAction(
+            onClick = { onSave(draft) },
+            icon = AppIcons.Check,
+            enabled = draft.name.isNotBlank(),
+            contentDescription = stringResource(R.string.save),
+        ),
     ) {
         Column(
             modifier = Modifier
@@ -391,6 +383,12 @@ private fun VoiceEffectEditDialog(
                         onExpand = { open -> expandedRow = if (open) "voice" else null },
                     ),
                 ),
+            )
+            VoiceAuditionButton(
+                voiceId = audition.voiceId,
+                text = remember(context) { VoiceAudition.defaultPreviewText(context) },
+                label = stringResource(R.string.cloud_tts_preview),
+                draft = draft,
             )
             // 参数区单独一块可滚：任一候选列表一展开就把它整块撤掉——弹层高度是硬约束，
             // 两组同时铺开必然顶到键盘。这里不套 expandVertically/shrinkVertically：

@@ -62,7 +62,6 @@ import io.legado.app.ui.widget.components.DraggableSelectionHandler
 import io.legado.app.ui.widget.components.GroupManageBottomSheet
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.dialog.TextListInputDialog
@@ -79,6 +78,7 @@ import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
 import io.legado.app.ui.widget.components.settingItem.SettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
@@ -815,20 +815,16 @@ private fun CheckBookSourceSheet(
         data = sourceIds,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.check_book_source),
-        startAction = {
-            MediumTonalButton(
-                icon = AppIcons.Settings,
-                contentDescription = stringResource(R.string.check_source_config),
-                onClick = onOpenSettings,
-            )
-        },
-        endAction = {
-            MediumTonalButton(
-                icon = AppIcons.Check,
-                contentDescription = stringResource(R.string.check_book_source),
-                onClick = { sourceIds?.let { onConfirm(it, keyword.trim(), options) } },
-            )
-        },
+        startSheetAction = SheetAction(
+            onClick = onOpenSettings,
+            icon = AppIcons.Settings,
+            contentDescription = stringResource(R.string.check_source_config),
+        ),
+        endSheetAction = SheetAction(
+            onClick = { sourceIds?.let { onConfirm(it, keyword.trim(), options) } },
+            icon = AppIcons.Check,
+            contentDescription = stringResource(R.string.check_book_source),
+        ),
     ) {
         AppTextField(
             value = keyword,

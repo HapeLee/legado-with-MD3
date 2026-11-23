@@ -40,7 +40,6 @@ import io.legado.app.help.readaloud.cast.VoiceAudition
 import io.legado.app.help.readaloud.effect.VoiceEffectAudio
 import io.legado.app.help.readaloud.effect.VoiceEffectStore
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.toastOnUi
@@ -243,35 +242,6 @@ fun VoiceAuditionIconButton(
         audition = audition,
         onClick = audition.toggle,
         modifier = modifier,
-    )
-}
-
-/**
- * 弹层头部槽位用的试听动作（Medium 系列）：头部只有一个图标位，放不下一行标签，
- * 三态与 [AuditionIcon] 同一套——合成中自转的刷新图标 / 播放中停止 / 待命试听。
- */
-@androidx.annotation.OptIn(UnstableApi::class)
-@Composable
-fun VoiceAuditionAction(
-    voiceId: String,
-    text: String,
-    modifier: Modifier = Modifier,
-    effect: String = "",
-    draft: VoiceEffectPreset? = null,
-) {
-    val audition = rememberVoiceAuditionController(
-        voiceId = voiceId,
-        text = text,
-        effect = effect,
-        draft = draft,
-    )
-    MediumTonalButton(
-        onClick = audition.toggle,
-        enabled = audition.enabled,
-        modifier = modifier.rotate(if (audition.busy) auditionSpinAngle() else 0f),
-        selected = audition.playing,
-        icon = auditionIconOf(audition),
-        contentDescription = auditionDescriptionOf(audition, R.string.cloud_tts_preview),
     )
 }
 

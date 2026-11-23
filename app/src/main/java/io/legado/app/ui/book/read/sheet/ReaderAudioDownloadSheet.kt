@@ -42,6 +42,7 @@ import io.legado.app.ui.widget.components.ValueStepper
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.settingItem.TinySettingItem
 import io.legado.app.ui.widget.components.tabRow.CardTabRow
@@ -114,13 +115,11 @@ fun ReaderAudioDownloadSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.read_aloud_audio_download_entry),
-        startAction = {
-            MediumTonalButton(
-                onClick = onDismissRequest,
-                icon = Icons.Default.Close,
-                contentDescription = stringResource(R.string.close),
-            )
-        },
+        startSheetAction = SheetAction(
+            onClick = onDismissRequest,
+            icon = Icons.Default.Close,
+            contentDescription = stringResource(R.string.close),
+        ),
     ) {
         Column(
             modifier = Modifier

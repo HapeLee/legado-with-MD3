@@ -43,14 +43,15 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil3.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.data.entities.BookCharacterProfile
-import io.legado.app.ui.ai.AiReasoningModeButton
+import io.legado.app.domain.model.AiReasoningLevel
+import io.legado.app.ui.ai.AiReasoningLevelSection
 import io.legado.app.ui.ai.AiTaskResultSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.ai.chat.ReasoningCard
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
@@ -180,38 +181,25 @@ private fun CharacterIdentifySheet(
         show = visible && sheet != null,
         onDismissRequest = { onIntent(CharacterListIntent.DismissAiIdentify) },
         title = stringResource(R.string.ai_identify_characters),
-        startAction = if (sheet != null) {
-            {
-                MediumTonalButton(
-                    onClick = { onIntent(CharacterListIntent.RunAiIdentify) },
-                    icon = Icons.Default.Refresh,
-                    contentDescription = stringResource(R.string.retry),
-                    enabled = !sheet.loading,
-                )
-            }
-        } else null,
-        endAction = if (sheet != null) {
-            {
-                Row {
-                    AiReasoningModeButton(
-                        level = sheet.reasoningLevel,
-                        enabled = !sheet.loading,
-                        onLevelChange = {
-                            onIntent(CharacterListIntent.SetAiIdentifyReasoningLevel(it))
-                        },
-                    )
-                    if (sheet.candidates.isNotEmpty()) {
-                        MediumTonalButton(
-                            onClick = { onIntent(CharacterListIntent.SaveAiCandidates) },
-                            contentDescription = stringResource(R.string.ai_identify_characters_save),
-                            icon = Icons.Default.Save,
-                            enabled = !sheet.loading,
-                        )
-                    }
-                }
-            }
-        } else null,
+        startSheetAction = if (sheet != null) SheetAction(
+            onClick = { onIntent(CharacterListIntent.RunAiIdentify) },
+            icon = Icons.Default.Refresh,
+            contentDescription = stringResource(R.string.retry),
+            enabled = !sheet.loading,
+        ) else null,
+        endSheetAction = if (sheet != null && sheet.candidates.isNotEmpty()) SheetAction(
+            onClick = { onIntent(CharacterListIntent.SaveAiCandidates) },
+            contentDescription = stringResource(R.string.ai_identify_characters_save),
+            icon = Icons.Default.Save,
+            enabled = !sheet.loading,
+        ) else null,
     ) {
+        // 思考档位原本是头部按钮点开的二级面板，头部槽位只表达单颗按钮，改为正文内选择。
+        AiReasoningLevelSection(
+            level = sheet?.reasoningLevel ?: AiReasoningLevel.AUTO,
+            enabled = sheet != null && !sheet.loading,
+            onLevelChange = { onIntent(CharacterListIntent.SetAiIdentifyReasoningLevel(it)) },
+        )
         when {
             sheet == null -> Unit
             sheet.loading -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {

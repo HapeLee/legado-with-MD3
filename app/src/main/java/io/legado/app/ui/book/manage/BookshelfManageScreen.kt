@@ -116,6 +116,7 @@ import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.reorderAccessibility
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
@@ -1028,13 +1029,11 @@ private fun BookshelfManageScreen(
             showExportSheet = false
         },
         title = if (showExportSettings) "导出设置" else stringResource(R.string.export),
-        startAction = {
-            MediumTonalButton(
-                onClick = { showExportSettings = !showExportSettings },
-                icon = if (showExportSettings) Icons.Default.Upload else Icons.Default.Settings,
-                contentDescription = if (showExportSettings) stringResource(R.string.export) else "导出设置",
-            )
-        },
+        startSheetAction = SheetAction(
+            onClick = { showExportSettings = !showExportSettings },
+            icon = if (showExportSettings) Icons.Default.Upload else Icons.Default.Settings,
+            contentDescription = if (showExportSettings) stringResource(R.string.export) else "导出设置",
+        ),
     ) {
         AnimatedContent(
             targetState = showExportSettings,
@@ -1446,15 +1445,13 @@ private fun BookSourcePickerSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = title,
-        endAction = {
-            MediumTonalButton(
-                onClick = {
-                    onConfirm(selectedSources.mapNotNull { it.getBookSource() })
-                },
-                icon = Icons.Default.PlayArrow,
-                contentDescription = stringResource(android.R.string.ok)
-            )
-        }
+        endSheetAction = SheetAction(
+            onClick = {
+                onConfirm(selectedSources.mapNotNull { it.getBookSource() })
+            },
+            icon = Icons.Default.PlayArrow,
+            contentDescription = stringResource(android.R.string.ok),
+        )
     ) {
         AppTextField(
             value = searchKey,
@@ -1567,20 +1564,16 @@ private fun BatchChangePreviewSheet(
         data = data,
         onDismissRequest = onDismissRequest,
         title = "批量换源预览",
-        startAction = {
-            MediumTonalButton(
-                onClick = onAddAllToShelf,
-                icon = Icons.Default.Add,
-                contentDescription = stringResource(R.string.add)
-            )
-        },
-        endAction = {
-            MediumTonalButton(
-                onClick = onMigrateAll,
-                icon = Icons.Default.PlayArrow,
-                contentDescription = stringResource(R.string.confirm)
-            )
-        }
+        startSheetAction = SheetAction(
+            onClick = onAddAllToShelf,
+            icon = Icons.Default.Add,
+            contentDescription = stringResource(R.string.add),
+        ),
+        endSheetAction = SheetAction(
+            onClick = onMigrateAll,
+            icon = Icons.Default.PlayArrow,
+            contentDescription = stringResource(R.string.confirm),
+        )
     ) { items ->
         LazyColumn(
             modifier = Modifier

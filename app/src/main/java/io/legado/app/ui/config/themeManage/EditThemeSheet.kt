@@ -31,9 +31,9 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.domain.model.settings.ThemeExportData
 import io.legado.app.ui.widget.components.AppTextField
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.settingItem.CompactClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.CompactSliderSettingItem
@@ -59,17 +59,15 @@ fun EditThemeSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.theme_manage_edit_theme),
-        endAction = {
-            MediumTonalButton(
-                onClick = {
-                    if (name.isNotBlank()) {
-                        onSave(name, data)
-                    }
-                },
-                icon = Icons.Default.Done,
-                contentDescription = stringResource(R.string.save)
-            )
-        }
+        endSheetAction = SheetAction(
+            onClick = {
+                if (name.isNotBlank()) {
+                    onSave(name, data)
+                }
+            },
+            icon = Icons.Default.Done,
+            contentDescription = stringResource(R.string.save),
+        )
     ) {
         Column(
             modifier = Modifier

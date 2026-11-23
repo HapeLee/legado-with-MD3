@@ -34,16 +34,13 @@ import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadSheetConfigUiState
 import io.legado.app.ui.widget.components.TinySwitch
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
-import io.legado.app.ui.widget.components.icon.AppIcon
-import io.legado.app.ui.widget.components.menu.AppAction
-import io.legado.app.ui.widget.components.menu.AppActionGroup
-import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetMenuAction
 import io.legado.app.ui.widget.components.reorderAccessibility
 import io.legado.app.ui.widget.components.settingItem.TinySettingItem
 import kotlinx.collections.immutable.persistentListOf
@@ -130,42 +127,37 @@ fun HighlightRuleConfigSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.highlight_rule_config),
-        startAction = {
-            MediumTonalButton(
-                onClick = { onIntent(ReadBookIntent.AddHighlightRule) },
-                icon = Icons.Default.Add,
-                contentDescription = stringResource(R.string.add)
-            )
-        },
-        endAction = {
-            AppActionMenu(
-                groups = persistentListOf(
-                    AppActionGroup(
-                        id = "highlight_rule_commands",
-                        actions = persistentListOf(
-                            AppAction("highlight_rule_presets", stringResource(R.string.highlight_rule_presets)),
-                            AppAction("import_action", stringResource(R.string.import_action)),
-                            AppAction("export", stringResource(R.string.export)),
-                            AppAction("copy_url", stringResource(R.string.copy_url)),
-                        ),
-                    ),
+        startSheetAction = SheetAction(
+            onClick = { onIntent(ReadBookIntent.AddHighlightRule) },
+            icon = Icons.Default.Add,
+            contentDescription = stringResource(R.string.add),
+        ),
+        endSheetAction = SheetAction(
+            icon = Icons.Default.MoreVert,
+            contentDescription = stringResource(R.string.more_menu),
+            menu = persistentListOf(
+                SheetMenuAction(
+                    id = "highlight_rule_presets",
+                    label = stringResource(R.string.highlight_rule_presets),
+                    onClick = { onIntent(ReadBookIntent.ShowHighlightRulePresets) },
                 ),
-                onAction = { id ->
-                    when (id) {
-                        "highlight_rule_presets" -> onIntent(ReadBookIntent.ShowHighlightRulePresets)
-                        "import_action" -> showImportSheet = true
-                        "export" -> onIntent(ReadBookIntent.ExportHighlightRules)
-                        "copy_url" -> onIntent(ReadBookIntent.ExportHighlightRulesAsUrl)
-                    }
-                },
-            ) {
-                AppIcon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = stringResource(R.string.more_menu),
-                    modifier = this.modifier,
-                )
-            }
-        },
+                SheetMenuAction(
+                    id = "import_action",
+                    label = stringResource(R.string.import_action),
+                    onClick = { showImportSheet = true },
+                ),
+                SheetMenuAction(
+                    id = "export",
+                    label = stringResource(R.string.export),
+                    onClick = { onIntent(ReadBookIntent.ExportHighlightRules) },
+                ),
+                SheetMenuAction(
+                    id = "copy_url",
+                    label = stringResource(R.string.copy_url),
+                    onClick = { onIntent(ReadBookIntent.ExportHighlightRulesAsUrl) },
+                ),
+            ),
+        ),
     ) {
         Column(
             modifier = Modifier

@@ -56,6 +56,7 @@ import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.rules.RuleEditFields
 import io.legado.app.ui.widget.components.rules.RuleEditSheet
@@ -117,20 +118,16 @@ fun TxtTocRulePreviewScreen(
                 data = item,
                 onDismissRequest = { onIntent(TxtTocRulePreviewIntent.DismissSheet) },
                 title = item.rule.name,
-                startAction = {
-                    TopBarActionButton(
-                        onClick = { onIntent(TxtTocRulePreviewIntent.EditRule(item.rule)) },
-                        imageVector = AppIcons.Edit,
-                        contentDescription = stringResource(R.string.edit),
-                    )
-                },
-                endAction = {
-                    TopBarActionButton(
-                        onClick = { onIntent(TxtTocRulePreviewIntent.ApplyRule) },
-                        imageVector = AppIcons.Check,
-                        contentDescription = stringResource(R.string.ok),
-                    )
-                },
+                startSheetAction = SheetAction(
+                    onClick = { onIntent(TxtTocRulePreviewIntent.EditRule(item.rule)) },
+                    icon = AppIcons.Edit,
+                    contentDescription = stringResource(R.string.edit),
+                ),
+                endSheetAction = SheetAction(
+                    onClick = { onIntent(TxtTocRulePreviewIntent.ApplyRule) },
+                    icon = AppIcons.Check,
+                    contentDescription = stringResource(R.string.ok),
+                ),
             ) {
                 ChapterListSheetContent(item = item)
             }

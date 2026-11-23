@@ -51,6 +51,7 @@ import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.utils.toastOnUi
 import org.koin.androidx.compose.koinViewModel
@@ -96,23 +97,21 @@ fun AiAutoGroupSheet(
         show = show,
         onDismissRequest = closeSheet,
         title = stringResource(R.string.ai_auto_group),
-        endAction = {
-            when (state.phase) {
-                AiAutoGroupPhase.Reviewing -> MediumTonalButton(
-                    onClick = { viewModel.onIntent(AiAutoGroupIntent.RequestApply) },
-                    icon = Icons.Default.Check,
-                    contentDescription = stringResource(R.string.ai_auto_group_confirm_execute),
-                    enabled = state.assignedBookCount > 0,
-                )
+        endSheetAction = when (state.phase) {
+            AiAutoGroupPhase.Reviewing -> SheetAction(
+                onClick = { viewModel.onIntent(AiAutoGroupIntent.RequestApply) },
+                icon = Icons.Default.Check,
+                contentDescription = stringResource(R.string.ai_auto_group_confirm_execute),
+                enabled = state.assignedBookCount > 0,
+            )
 
-                AiAutoGroupPhase.Result -> MediumPlainButton(
-                    onClick = closeSheet,
-                    icon = Icons.Default.Close,
-                    contentDescription = stringResource(R.string.close),
-                )
+            AiAutoGroupPhase.Result -> SheetAction(
+                onClick = closeSheet,
+                icon = Icons.Default.Close,
+                contentDescription = stringResource(R.string.close),
+            )
 
-                else -> Unit
-            }
+            else -> null
         }
     ) {
         when (state.phase) {

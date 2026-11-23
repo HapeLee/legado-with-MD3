@@ -16,9 +16,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.widget.components.AppTextField
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,24 +32,20 @@ fun CoverRuleConfigSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.cover_rule),
-        startAction = {
-            MediumTonalButton(
+        startSheetAction = SheetAction(
+            onClick = {
+                onIntent(CoverConfigIntent.RestoreDefaultRule)
+            },
             icon = Icons.Default.SettingsBackupRestore,
             contentDescription = stringResource(R.string.restore_default),
-                onClick = {
-                    onIntent(CoverConfigIntent.RestoreDefaultRule)
-                }
-            )
-        },
-        endAction = {
-            MediumTonalButton(
+        ),
+        endSheetAction = SheetAction(
+            onClick = {
+                onIntent(CoverConfigIntent.SaveRule)
+            },
             icon = Icons.Default.Save,
             contentDescription = stringResource(R.string.save),
-                onClick = {
-                    onIntent(CoverConfigIntent.SaveRule)
-                }
-            )
-        }
+        )
     ) {
         Column(
             modifier = Modifier

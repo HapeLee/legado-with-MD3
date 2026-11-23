@@ -21,10 +21,10 @@ import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.collections.immutable.toImmutableList
@@ -58,14 +58,12 @@ internal fun MangaGlossarySheet(
         animateContentSize = false,
         title = stringResource(R.string.manga_translation_glossary),
         onDismissRequest = onDismiss,
-        endAction = {
-            MediumTonalButton(
-                onClick = { index = -1; source = ""; target = ""; editing = true },
-                enabled = enabled,
-                icon = AppIcons.Add,
-                contentDescription = stringResource(R.string.manga_glossary_add),
-            )
-        },
+        endSheetAction = SheetAction(
+            onClick = { index = -1; source = ""; target = ""; editing = true },
+            icon = AppIcons.Add,
+            enabled = enabled,
+            contentDescription = stringResource(R.string.manga_glossary_add),
+        ),
     ) {
         Column(
             Modifier

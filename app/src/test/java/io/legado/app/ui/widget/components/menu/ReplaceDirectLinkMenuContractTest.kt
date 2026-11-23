@@ -35,23 +35,22 @@ class ReplaceDirectLinkMenuContractTest {
         val direct = sourceOf(DIRECT_LINK)
         assertFalse("直链上传 Sheet 仍手画 RoundDropdownMenu", direct.contains("RoundDropdownMenu("))
         assertFalse("直链上传 Sheet 仍自带 showMenu 开合状态", direct.contains("showMenu"))
-        assertTrue("直链上传 Sheet 缺少 AppActionMenu", direct.contains("AppActionMenu("))
-        val endAction = direct.substringAfter("endAction = {").substringBefore("onDismissRequest")
-        assertFalse(
-            "endAction 仍自带按钮 trigger，会与入口按钮叠加",
-            endAction.contains("MediumTonalButton("),
+        assertFalse("直链上传 Sheet 仍自己搭菜单入口", direct.contains("AppActionMenu("))
+        assertTrue(
+            "直链上传 Sheet 未走声明式操作槽",
+            direct.contains("endSheetAction = SheetAction("),
         )
-        assertTrue("endAction 缺少纯展示 trigger", endAction.contains("AppIcon("))
+        assertTrue("直链上传 Sheet 的菜单未挂在按钮上", direct.contains("menu = persistentListOf("))
     }
 
     @Test
     fun everyActionHasDeclarationAndDispatchBranch() {
-        ACTIONS.forEach { (path, ids) ->
-            val source = sourceOf(path)
-            ids.forEach { id ->
-                assertTrue("$path 未声明 $id", source.contains("\"$id\""))
-                assertTrue("$path 缺少 $id 的分派分支", source.contains("\"$id\" ->"))
-            }
+        val direct = sourceOf(DIRECT_LINK)
+        DIRECT_ACTION_IDS.forEach { id -> assertDeclarativeItem(direct, DIRECT_LINK, id) }
+        val replace = sourceOf(REPLACE_EDIT)
+        REPLACE_ACTION_IDS.forEach { id ->
+            assertTrue("$REPLACE_EDIT 未声明 $id", replace.contains("\"$id\""))
+            assertTrue("$REPLACE_EDIT 缺少 $id 的分派分支", replace.contains("\"$id\" ->"))
         }
     }
 
@@ -89,10 +88,9 @@ class ReplaceDirectLinkMenuContractTest {
         const val REPLACE_EDIT = "io/legado/app/ui/replace/edit/ReplaceEditScreen.kt"
         const val DIRECT_LINK = "io/legado/app/ui/config/otherConfig/DirectLinkUploadBottomSheet.kt"
 
-        val ACTIONS = mapOf(
-            REPLACE_EDIT to listOf("copy_rule", "paste_rule"),
-            DIRECT_LINK to
-                listOf("import_default_rule", "copy_direct_link_rule", "paste_direct_link_rule"),
-        )
+        val REPLACE_ACTION_IDS = listOf("copy_rule", "paste_rule")
+
+        val DIRECT_ACTION_IDS =
+            listOf("import_default_rule", "copy_direct_link_rule", "paste_direct_link_rule")
     }
 }

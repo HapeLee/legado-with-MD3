@@ -51,7 +51,6 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextFieldSurface
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
@@ -61,6 +60,7 @@ import io.legado.app.ui.widget.components.menu.AppAction
 import io.legado.app.ui.widget.components.menu.AppActionGroup
 import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
@@ -411,21 +411,17 @@ private fun BubbleEditSheet(
         } else {
             stringResource(R.string.bubble_edit)
         },
-        startAction = {
-            MediumTonalButton(
-                onClick = onDismiss,
-                icon = Icons.Default.Close,
-                contentDescription = stringResource(R.string.close),
-            )
-        },
-        endAction = {
-            MediumTonalButton(
-                onClick = onConfirm,
-                enabled = !state.saving && config.name.isNotBlank(),
-                icon = Icons.Default.Check,
-                contentDescription = stringResource(R.string.action_save),
-            )
-        },
+        startSheetAction = SheetAction(
+            onClick = onDismiss,
+            icon = Icons.Default.Close,
+            contentDescription = stringResource(R.string.close),
+        ),
+        endSheetAction = SheetAction(
+            onClick = onConfirm,
+            icon = Icons.Default.Check,
+            enabled = !state.saving && config.name.isNotBlank(),
+            contentDescription = stringResource(R.string.action_save),
+        ),
     ) {
         Column(
             modifier = Modifier

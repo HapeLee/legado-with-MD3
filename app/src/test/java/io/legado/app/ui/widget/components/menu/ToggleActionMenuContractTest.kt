@@ -54,21 +54,21 @@ class ToggleActionMenuContractTest {
     fun migratedToggleMenusUseDeclarativeEntrypoint() {
         TARGETS.forEach { target ->
             val source = sourceOf(target.path)
-            val slice = source.substringAfter("startAction = {").substringBefore("endAction = {")
             assertFalse(
                 "${target.path} 仍手画 RoundDropdownMenu",
-                slice.contains("RoundDropdownMenu("),
+                source.contains("RoundDropdownMenu("),
             )
             assertFalse(
                 "${target.path} 仍自带菜单开合状态",
-                listOf("showOptionsMenu", "menuExpanded", "expanded =").any { slice.contains(it) },
+                listOf("showOptionsMenu", "menuExpanded", "expanded =").any { source.contains(it) },
             )
-            assertTrue("${target.path} 缺少 AppActionMenu", slice.contains("AppActionMenu("))
+            assertFalse("${target.path} 仍自己搭菜单入口", source.contains("AppActionMenu("))
+            assertTrue("${target.path} 未走声明式操作槽", source.contains("startSheetAction"))
             assertTrue(
-                "${target.path} 未用 AppAction.checked 表达独立开关",
-                slice.contains("checked = "),
+                "${target.path} 未用 SheetMenuAction.checked 表达独立开关",
+                source.contains("checked = "),
             )
-            assertTrue("${target.path} 缺少纯展示 trigger", slice.contains("AppIcon("))
+            assertTrue("${target.path} 的菜单未挂在按钮上", source.contains("menu = persistentListOf("))
             assertFalse(
                 "${target.path} 仍残留局部开合状态 ${target.localState}",
                 source.contains(target.localState),
@@ -81,8 +81,7 @@ class ToggleActionMenuContractTest {
         ACTIONS.forEach { (path, ids) ->
             val source = sourceOf(path)
             ids.forEach { id ->
-                assertTrue("$path 未声明 $id", source.contains("\"$id\""))
-                assertTrue("$path 缺少 $id 的分派分支", source.contains("\"$id\" ->"))
+                assertDeclarativeItem(source, path, id)
             }
         }
     }

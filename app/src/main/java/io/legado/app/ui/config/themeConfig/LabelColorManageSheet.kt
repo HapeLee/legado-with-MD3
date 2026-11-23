@@ -28,12 +28,12 @@ import androidx.core.graphics.ColorUtils
 import io.legado.app.R
 import io.legado.app.help.config.TagColorGenerator
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,31 +56,27 @@ fun LabelColorManageSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.theme_config_manage_label_colors),
-        startAction = {
-            MediumTonalButton(
-                onClick = {
-                    val baseColor = if (themeColor != 0) Color(themeColor) else primaryColor
-                    val generatedColors = TagColorGenerator.generateTagColors(baseColor)
-                    tagColors.clear()
-                    tagColors.addAll(generatedColors)
-                    onColorsChange(tagColors.toList())
-                },
-                icon = Icons.Default.AutoAwesome,
-                contentDescription = stringResource(R.string.ai_generate)
-            )
-        },
-        endAction = {
-            MediumTonalButton(
-                onClick = {
-                    tagColors.add(TagColorPair(0, 0))
-                    editingIndex = tagColors.size - 1
-                    editingTextColor = 0
-                    showColorPicker = true
-                },
-                icon = Icons.Default.Add,
-                contentDescription = stringResource(R.string.add)
-            )
-        }
+        startSheetAction = SheetAction(
+            onClick = {
+                val baseColor = if (themeColor != 0) Color(themeColor) else primaryColor
+                val generatedColors = TagColorGenerator.generateTagColors(baseColor)
+                tagColors.clear()
+                tagColors.addAll(generatedColors)
+                onColorsChange(tagColors.toList())
+            },
+            icon = Icons.Default.AutoAwesome,
+            contentDescription = stringResource(R.string.ai_generate),
+        ),
+        endSheetAction = SheetAction(
+            onClick = {
+                tagColors.add(TagColorPair(0, 0))
+                editingIndex = tagColors.size - 1
+                editingTextColor = 0
+                showColorPicker = true
+            },
+            icon = Icons.Default.Add,
+            contentDescription = stringResource(R.string.add),
+        )
     ) {
         LazyColumn(
             modifier = Modifier

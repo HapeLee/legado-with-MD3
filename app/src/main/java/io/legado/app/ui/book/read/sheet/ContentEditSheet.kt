@@ -32,13 +32,10 @@ import io.legado.app.ui.book.read.ContentEditUiState
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.checkBox.AppCheckbox
-import io.legado.app.ui.widget.components.icon.AppIcon
-import io.legado.app.ui.widget.components.menu.AppAction
-import io.legado.app.ui.widget.components.menu.AppActionGroup
-import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetMenuAction
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.collections.immutable.persistentListOf
@@ -104,56 +101,38 @@ fun ContentEditSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.edit_chapter),
-        startAction = {
-            AppActionMenu(
-                groups = persistentListOf(
-                    AppActionGroup(
-                        id = "content_edit_commands",
-                        actions = persistentListOf(
-                            AppAction(
-                                "reset_content",
-                                stringResource(R.string.content_edit_reset),
-                                icon = Icons.Default.Restore,
-                            ),
-                            AppAction(
-                                "body_only",
-                                stringResource(R.string.content_edit_body_only),
-                                checked = state.bodyOnly,
-                            ),
-                        ),
-                    ),
+        startSheetAction = SheetAction(
+            icon = Icons.Default.MoreVert,
+            contentDescription = stringResource(R.string.more_menu),
+            menu = persistentListOf(
+                SheetMenuAction(
+                    id = "reset_content",
+                    label = stringResource(R.string.content_edit_reset),
+                    icon = Icons.Default.Restore,
+                    onClick = { onIntent(ReadBookIntent.ResetContentEdit) },
                 ),
-                onAction = { id ->
-                    when (id) {
-                        "reset_content" -> onIntent(ReadBookIntent.ResetContentEdit)
-                        "body_only" ->
-                            onIntent(ReadBookIntent.SetContentEditBodyOnly(!state.bodyOnly))
-                    }
-                },
-            ) {
-                AppIcon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = stringResource(R.string.more_menu),
-                    modifier = this.modifier,
-                )
-            }
-        },
-        endAction = {
-            MediumTonalButton(
-                onClick = {
-                    onIntent(
-                        ReadBookIntent.SaveContentEdit(
-                            editorState.text.toString(),
-                            state.saveToSource,
-                            state.chapterTitle,
-                        )
+                SheetMenuAction(
+                    id = "body_only",
+                    label = stringResource(R.string.content_edit_body_only),
+                    checked = state.bodyOnly,
+                    onClick = { onIntent(ReadBookIntent.SetContentEditBodyOnly(!state.bodyOnly)) },
+                ),
+            ),
+        ),
+        endSheetAction = SheetAction(
+            onClick = {
+                onIntent(
+                    ReadBookIntent.SaveContentEdit(
+                        editorState.text.toString(),
+                        state.saveToSource,
+                        state.chapterTitle,
                     )
-                    onDismissRequest()
-                },
-                icon = Icons.Default.Save,
-                contentDescription = stringResource(R.string.action_save),
-            )
-        },
+                )
+                onDismissRequest()
+            },
+            icon = Icons.Default.Save,
+            contentDescription = stringResource(R.string.action_save),
+        ),
     ) {
         Column(
             modifier = Modifier

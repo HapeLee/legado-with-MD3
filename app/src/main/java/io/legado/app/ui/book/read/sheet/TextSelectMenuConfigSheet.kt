@@ -48,9 +48,9 @@ import io.legado.app.ui.book.read.ActionMenuItem
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.ConfigListEntry
 import io.legado.app.ui.widget.components.ConfigListEntryRow
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.reorderAccessibility
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySettingItem
@@ -126,16 +126,14 @@ fun TextSelectMenuConfigSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.edit_select_menu),
-        endAction = {
-            MediumTonalButton(
-                onClick = {
-                    onSaved(draftItems)
-                    onDismissRequest()
-                },
-                icon = Icons.Default.Save,
-                contentDescription = stringResource(R.string.save)
-            )
-        }
+        endSheetAction = SheetAction(
+            onClick = {
+                onSaved(draftItems)
+                onDismissRequest()
+            },
+            icon = Icons.Default.Save,
+            contentDescription = stringResource(R.string.save),
+        )
     ) {
         Column(
             modifier = Modifier

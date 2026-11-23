@@ -25,12 +25,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Merge
+import androidx.compose.material.icons.filled.FormatListNumbered
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timeline
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
@@ -85,8 +88,6 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
-import io.legado.app.ui.widget.components.heatmap.HeatmapCalendarEndAction
-import io.legado.app.ui.widget.components.heatmap.HeatmapCalendarStartAction
 import io.legado.app.ui.widget.components.heatmap.HeatmapConfig
 import io.legado.app.ui.widget.components.heatmap.HeatmapLegend
 import io.legado.app.ui.widget.components.heatmap.HeatmapMode
@@ -102,6 +103,7 @@ import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.privacy.PrivateLockedCover
 import io.legado.app.ui.widget.components.privacy.PrivateRecordKey
 import io.legado.app.ui.widget.components.privacy.rememberPrivateLockedRecords
@@ -583,20 +585,31 @@ fun ReadRecordScreen(
         show = showCalendar,
         onDismissRequest = { showCalendar = false },
         title = heatmapCalendarTitle(),
-        startAction = {
-            HeatmapCalendarStartAction(
-                currentMode = heatmapMode,
-                onModeChanged = { heatmapMode = it }
-            )
-        },
-        endAction = {
-            HeatmapCalendarEndAction(
-                onClearDate = {
-                    onIntent(ReadRecordIntent.SelectDate(null))
-                    showCalendar = false
+        // 时长/次数切换用声明式操作的选中态表达：勾选即「按时长」。
+        startSheetAction = SheetAction(
+            onClick = {
+                heatmapMode = if (heatmapMode == HeatmapMode.TIME) {
+                    HeatmapMode.COUNT
+                } else {
+                    HeatmapMode.TIME
                 }
-            )
-        }
+            },
+            icon = if (heatmapMode == HeatmapMode.TIME) {
+                Icons.Default.AccessTime
+            } else {
+                Icons.Default.FormatListNumbered
+            },
+            selected = heatmapMode == HeatmapMode.TIME,
+            contentDescription = stringResource(R.string.by_duration),
+        ),
+        endSheetAction = SheetAction(
+            onClick = {
+                onIntent(ReadRecordIntent.SelectDate(null))
+                showCalendar = false
+            },
+            icon = Icons.Outlined.Delete,
+            contentDescription = stringResource(R.string.clear),
+        ),
     ) {
         HeatmapCalendarSection(
             dailyReadCounts = state.dailyReadCounts,

@@ -15,10 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.FormatListNumbered
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -41,9 +37,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.button.series.MediumToggleButton
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
-import io.legado.app.ui.widget.components.button.series.ToggleStyle
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.formatReadDuration
 import java.time.LocalDate
@@ -53,40 +46,6 @@ import java.time.LocalDate
  */
 @Composable
 fun heatmapCalendarTitle(): String = stringResource(R.string.timeline)
-
-/**
- * 热力图日历弹窗左侧操作
- */
-@Composable
-fun HeatmapCalendarStartAction(
-    currentMode: HeatmapMode,
-    onModeChanged: (HeatmapMode) -> Unit,
-) {
-    MediumToggleButton(
-        checked = currentMode == HeatmapMode.TIME,
-        onCheckedChange = {
-            onModeChanged(if (it) HeatmapMode.TIME else HeatmapMode.COUNT)
-        },
-        style = ToggleStyle.Tonal,
-        contentDescription = stringResource(R.string.by_duration),
-        icon = Icons.Default.FormatListNumbered,
-        iconChecked = Icons.Default.AccessTime
-    )
-}
-
-/**
- * 热力图日历弹窗右侧操作
- */
-@Composable
-fun HeatmapCalendarEndAction(
-    onClearDate: () -> Unit
-) {
-    MediumTonalButton(
-        onClick = onClearDate,
-        icon = Icons.Outlined.Delete,
-        contentDescription = stringResource(R.string.clear),
-    )
-}
 
 /**
  * 星期标签列（周一到周日）

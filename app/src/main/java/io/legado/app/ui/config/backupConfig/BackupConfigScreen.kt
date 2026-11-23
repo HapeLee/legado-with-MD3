@@ -51,11 +51,11 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.InputSettingItem
@@ -430,13 +430,11 @@ private fun IgnoreItemsSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = title,
-        endAction = {
-            MediumTonalButton(
-                onClick = onConfirm,
-                icon = Icons.Default.Save,
-                contentDescription = stringResource(R.string.save),
-            )
-        },
+        endSheetAction = SheetAction(
+            onClick = onConfirm,
+            icon = Icons.Default.Save,
+            contentDescription = stringResource(R.string.save),
+        ),
     ) {
         Column(
             modifier = Modifier

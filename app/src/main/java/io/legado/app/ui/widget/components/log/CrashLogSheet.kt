@@ -18,8 +18,8 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.EmptyMessage
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.FileDoc
 
@@ -35,13 +35,11 @@ fun CrashLogSheet(
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        endAction = {
-            MediumTonalButton(
-                onClick = onClear,
-                icon = Icons.Default.DeleteSweep,
-                contentDescription = stringResource(R.string.clear)
-            )
-        },
+        endSheetAction = SheetAction(
+            onClick = onClear,
+            icon = Icons.Default.DeleteSweep,
+            contentDescription = stringResource(R.string.clear),
+        ),
         title = stringResource(R.string.crash_log),
     ) {
         if (logFiles.isEmpty()) {

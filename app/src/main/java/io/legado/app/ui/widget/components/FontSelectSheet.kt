@@ -2,9 +2,6 @@ package io.legado.app.ui.widget.components
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.FolderOpen
@@ -12,11 +9,9 @@ import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -26,11 +21,9 @@ import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import io.legado.app.R
 import io.legado.app.help.importFontFiles
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
-import io.legado.app.ui.widget.components.menu.AppAction
-import io.legado.app.ui.widget.components.menu.AppActionGroup
-import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetMenuAction
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.toastOnUi
@@ -49,7 +42,6 @@ import java.io.File
 private val fontPickMimeTypes = arrayOf("*/*")
 
 // 系统字体菜单的稳定 ID：字体名可能重复（同名不同文件），用序号定位。
-private const val FontTypefaceMenuGroup = "font_typeface_menu"
 private const val FontTypefaceIdPrefix = "font_typeface:"
 
 @Composable
@@ -61,7 +53,7 @@ fun FontSelectSheet(
     onDismissRequest: () -> Unit,
     onSelectFont: (FileDoc) -> Unit,
     onOpenFolderPicker: () -> Unit,
-    startAction: (@Composable () -> Unit)? = null,
+    startSheetAction: SheetAction? = null,
     folderIcon: ImageVector = Icons.Default.FolderOpen,
     folderContentDescription: String? = null,
     onSelectSystemTypeface: ((Int) -> Unit)? = null,
@@ -81,7 +73,6 @@ fun FontSelectSheet(
             }.getOrNull()
         }
     }
-    var showTypefaceMenu by remember { mutableStateOf(false) }
     // 导入字体后递增，让字体网格重新扫描应用私有字体目录
     var reloadKey by remember { mutableIntStateOf(0) }
     // 在组合期取文案，回调里用 LocalContext 取资源会被 lint 判为不跟随配置变化
@@ -103,65 +94,46 @@ fun FontSelectSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = title,
-        startAction = {
-            startAction?.invoke()
+        // 系统字体菜单：条目由传入的字体数组动态生成。字体名可能重复（同名不同文件），
+        // 因此 ID 用序号而不是名字，点击时直接带上下标，不再需要回解字符串。
+        startSheetActions = buildList {
+            startSheetAction?.let(::add)
             val typefaces = systemTypefaces
             val selectTypeface = onSelectSystemTypeface
             if (typefaces != null && selectTypeface != null) {
-                Box {
-                    AppActionMenu(
-                        groups = persistentListOf(
-                            AppActionGroup(
-                                id = FontTypefaceMenuGroup,
-                                actions = typefaces.mapIndexed { index, name ->
-                                    AppAction(
-                                        id = "$FontTypefaceIdPrefix$index",
-                                        label = name,
-                                    )
-                                }.toImmutableList(),
-                            ),
-                        ),
-                        onAction = { id ->
-                            id.removePrefix(FontTypefaceIdPrefix).toIntOrNull()
-                                ?.takeIf { index -> index in typefaces.indices }
-                                ?.let { index ->
-                                    selectTypeface(index)
-                                    onDismissRequest()
-                                }
-                        },
-                        modifier = Modifier.matchParentSize(),
-                        embeddedExpanded = showTypefaceMenu,
-                        onDismissRequest = { showTypefaceMenu = false },
-                        trigger = {},
-                    )
-                    MediumTonalButton(
-                        onClick = { showTypefaceMenu = true },
+                add(
+                    SheetAction(
                         icon = Icons.Default.TextFields,
                         contentDescription = stringResource(R.string.select_font),
+                        menu = typefaces.mapIndexed { index, name ->
+                            SheetMenuAction(
+                                id = "$FontTypefaceIdPrefix$index",
+                                label = name,
+                                onClick = {
+                                    selectTypeface(index)
+                                    onDismissRequest()
+                                },
+                            )
+                        }.toImmutableList(),
                     )
-                }
-            }
-        },
-        endAction = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                // 系统文件选择器返回的 tree URI 在部分国产 ROM 上查不到内容，
-                // 直接导入字体文件不依赖目录遍历，是唯一在所有设备上都可靠的入口。
-                MediumTonalButton(
-                    onClick = { importFontLauncher.launch(fontPickMimeTypes) },
-                    icon = Icons.Default.FileOpen,
-                    contentDescription = stringResource(R.string.font_import),
-                )
-                MediumTonalButton(
-                    onClick = onOpenFolderPicker,
-                    icon = folderIcon,
-                    contentDescription = folderContentDescription
-                        ?: stringResource(R.string.select_folder),
                 )
             }
-        },
+        }.toImmutableList(),
+        // 系统文件选择器返回的 tree URI 在部分国产 ROM 上查不到内容，直接导入字体文件
+        // 不依赖目录遍历，是唯一在所有设备上都可靠的入口。
+        endSheetActions = persistentListOf(
+            SheetAction(
+                onClick = { importFontLauncher.launch(fontPickMimeTypes) },
+                icon = Icons.Default.FileOpen,
+                contentDescription = stringResource(R.string.font_import),
+            ),
+            SheetAction(
+                onClick = onOpenFolderPicker,
+                icon = folderIcon,
+                contentDescription = folderContentDescription
+                    ?: stringResource(R.string.select_folder),
+            ),
+        ),
     ) {
         FontSelectGrid(
             folderState = folderState,

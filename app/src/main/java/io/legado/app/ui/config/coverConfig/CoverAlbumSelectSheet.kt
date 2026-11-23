@@ -24,10 +24,10 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.text.AppText
 
 @Composable
@@ -43,13 +43,11 @@ fun CoverAlbumSelectSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.select_cover_album),
-        endAction = {
-            MediumTonalButton(
-                onClick = onManage,
-                icon = Icons.Default.Settings,
-                contentDescription = stringResource(R.string.manage_cover_albums),
-            )
-        },
+        endSheetAction = SheetAction(
+            onClick = onManage,
+            icon = Icons.Default.Settings,
+            contentDescription = stringResource(R.string.manage_cover_albums),
+        ),
     ) {
         Column(
             modifier = Modifier

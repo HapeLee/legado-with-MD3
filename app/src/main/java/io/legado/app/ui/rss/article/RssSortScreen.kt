@@ -45,12 +45,12 @@ import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SearchBar
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallToggleButton
 import io.legado.app.ui.widget.components.button.series.ToggleStyle
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
@@ -376,13 +376,11 @@ private fun RssSearchSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.search),
-        endAction = {
-            MediumTonalButton(
-                onClick = { onSearch(query) },
-                icon = AppIcons.Search,
-                contentDescription = stringResource(R.string.search)
-            )
-        }
+        endSheetAction = SheetAction(
+            onClick = { onSearch(query) },
+            icon = AppIcons.Search,
+            contentDescription = stringResource(R.string.search),
+        )
     ) {
         SearchBar(
             query = query,
@@ -406,13 +404,11 @@ private fun RssReadRecordSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.read_record),
-        endAction = {
-            MediumTonalButton(
-                onClick = onClear,
-                icon = Icons.Default.CleaningServices,
-                contentDescription = stringResource(R.string.clear)
-            )
-        }
+        endSheetAction = SheetAction(
+            onClick = onClear,
+            icon = Icons.Default.CleaningServices,
+            contentDescription = stringResource(R.string.clear),
+        )
     ) {
         if (records.isEmpty()) {
             EmptyMessage(

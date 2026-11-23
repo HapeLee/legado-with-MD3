@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.domain.model.AiMessagePart
 import io.legado.app.domain.model.AiMessageRole
-import io.legado.app.ui.ai.AiReasoningModeButton
+import io.legado.app.ui.ai.AiReasoningLevelSection
 import io.legado.app.ui.ai.chat.AiChatMessageUi
 import io.legado.app.ui.ai.chat.AiGeneratedMessageContent
 import io.legado.app.ui.book.read.ChapterSummaryUiState
@@ -43,14 +43,13 @@ fun ChapterSummarySheet(
         title = state.chapterTitle.ifBlank {
             stringResource(R.string.ai_chapter_summary)
         },
-        endAction = {
-            AiReasoningModeButton(
-                level = state.reasoningLevel,
-                enabled = !state.isLoading,
-                onLevelChange = { onIntent(ReadBookIntent.SetChapterSummaryReasoningLevel(it)) },
-            )
-        },
     ) {
+        // 思考档位原本是头部按钮点开的二级面板，头部槽位只表达单颗按钮，改为正文内选择。
+        AiReasoningLevelSection(
+            level = state.reasoningLevel,
+            enabled = !state.isLoading,
+            onLevelChange = { onIntent(ReadBookIntent.SetChapterSummaryReasoningLevel(it)) },
+        )
         when {
             state.errorMessage != null -> {
                 Column(

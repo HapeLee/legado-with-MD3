@@ -50,9 +50,9 @@ import io.legado.app.ui.book.read.MarkingUiState
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessage
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
 import io.legado.app.ui.widget.components.text.AppText
@@ -125,33 +125,27 @@ fun MarkingSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = selection?.bookText?.takeIf { it.isNotBlank() } ?: editingAnchorText,
-        startAction = {
-            if (editing != null) {
-                MediumTonalButton(
-                    onClick = onDelete,
-                    icon = Icons.Default.Delete,
-                    contentDescription = stringResource(R.string.delete)
+        startSheetAction = if (editing != null) SheetAction(
+            onClick = onDelete,
+            icon = Icons.Default.Delete,
+            contentDescription = stringResource(R.string.delete),
+        ) else null,
+        endSheetAction = SheetAction(
+            onClick = {
+                val style = buildStyle(
+                    useRule = useRule,
+                    selectedRule = state.highlightRules.firstOrNull { it.id == selectedRuleId },
+                    effect = effect,
+                    markColor = markColor,
+                    underlineWidth = underlineWidth,
+                    underlineOffset = underlineOffset,
+                    underlineSvgPath = underlineSvgPath,
                 )
-            }
-        },
-        endAction = {
-            MediumTonalButton(
-                onClick = {
-                    val style = buildStyle(
-                        useRule = useRule,
-                        selectedRule = state.highlightRules.firstOrNull { it.id == selectedRuleId },
-                        effect = effect,
-                        markColor = markColor,
-                        underlineWidth = underlineWidth,
-                        underlineOffset = underlineOffset,
-                        underlineSvgPath = underlineSvgPath,
-                    )
-                    onSave(style, noteState.text.toString())
-                },
-                icon = Icons.Default.Save,
-                contentDescription = stringResource(android.R.string.ok)
-            )
-        }
+                onSave(style, noteState.text.toString())
+            },
+            icon = Icons.Default.Save,
+            contentDescription = stringResource(android.R.string.ok),
+        )
     ) {
         if (selection == null && editing == null) {
             // 编辑模式异步加载标记期间的占位，避免先空再弹内容

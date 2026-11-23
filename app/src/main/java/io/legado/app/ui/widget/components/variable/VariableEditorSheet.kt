@@ -14,9 +14,9 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.text.AppText
 
 @Immutable
@@ -38,13 +38,11 @@ fun VariableEditorSheet(
         show = state != null,
         onDismissRequest = onDismissRequest,
         title = state?.title,
-        endAction = {
-            MediumTonalButton(
-                icon = AppIcons.Check,
-                contentDescription = stringResource(R.string.action_save),
-                onClick = onSave,
-            )
-        },
+        endSheetAction = SheetAction(
+            onClick = onSave,
+            icon = AppIcons.Check,
+            contentDescription = stringResource(R.string.action_save),
+        ),
     ) {
         Column(
             modifier = Modifier

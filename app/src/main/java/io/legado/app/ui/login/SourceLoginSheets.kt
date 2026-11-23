@@ -53,13 +53,11 @@ import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.explore.ExploreKindMultiTypeItem
 import io.legado.app.ui.widget.components.explore.FlexItemLayout
 import io.legado.app.ui.widget.components.explore.calculateFlexRows
-import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.log.AppLogSheet
-import io.legado.app.ui.widget.components.menu.AppAction
-import io.legado.app.ui.widget.components.menu.AppActionGroup
-import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetMenuAction
 import kotlinx.collections.immutable.persistentListOf
 import top.yukonga.miuix.kmp.squircle.LocalSquircleEnabled
 
@@ -98,13 +96,11 @@ fun SourceLoginSheetHost(
         title = stringResource(R.string.login_header),
         content = header?.content.orEmpty(),
         onDismissRequest = { onIntent(SourceLoginIntent.DismissSheet) },
-        endAction = {
-            MediumTonalButton(
-                icon = Icons.Default.ContentCopy,
-                contentDescription = stringResource(R.string.copy_text),
-                onClick = { header?.content?.let { onIntent(SourceLoginIntent.CopyLoginHeader(it)) } },
-            )
-        },
+        endSheetAction = SheetAction(
+            icon = Icons.Default.ContentCopy,
+            contentDescription = stringResource(R.string.copy_text),
+            onClick = { header?.content?.let { onIntent(SourceLoginIntent.CopyLoginHeader(it)) } },
+        ),
     )
     AppLogSheet(
         show = state.activeSheet == SourceLoginSheet.Log,
@@ -121,40 +117,32 @@ private fun SourceLoginFormSheet(
         show = state.activeSheet == SourceLoginSheet.Form,
         onDismissRequest = { onIntent(SourceLoginIntent.Back) },
         title = state.title,
-        startAction = {
-            AppActionMenu(
-                groups = persistentListOf(
-                    AppActionGroup(
-                        id = "source_login_commands",
-                        actions = persistentListOf(
-                            AppAction("show_login_header", stringResource(R.string.show_login_header)),
-                            AppAction("delete_login_header", stringResource(R.string.del_login_header)),
-                            AppAction("show_log", stringResource(R.string.log)),
-                        ),
-                    ),
+        startSheetAction = SheetAction(
+            icon = AppIcons.MoreVert,
+            contentDescription = stringResource(R.string.menu),
+            menu = persistentListOf(
+                SheetMenuAction(
+                    id = "show_login_header",
+                    label = stringResource(R.string.show_login_header),
+                    onClick = { onIntent(SourceLoginIntent.ShowLoginHeader) },
                 ),
-                onAction = { id ->
-                    when (id) {
-                        "show_login_header" -> onIntent(SourceLoginIntent.ShowLoginHeader)
-                        "delete_login_header" -> onIntent(SourceLoginIntent.DeleteLoginHeader)
-                        "show_log" -> onIntent(SourceLoginIntent.ShowLog)
-                    }
-                },
-            ) {
-                AppIcon(
-                    imageVector = AppIcons.MoreVert,
-                    contentDescription = stringResource(R.string.menu),
-                    modifier = this.modifier,
-                )
-            }
-        },
-        endAction = {
-            MediumTonalButton(
-                icon = AppIcons.Check,
-                contentDescription = stringResource(R.string.ok),
-                onClick = { onIntent(SourceLoginIntent.Confirm) },
-            )
-        },
+                SheetMenuAction(
+                    id = "delete_login_header",
+                    label = stringResource(R.string.del_login_header),
+                    onClick = { onIntent(SourceLoginIntent.DeleteLoginHeader) },
+                ),
+                SheetMenuAction(
+                    id = "show_log",
+                    label = stringResource(R.string.log),
+                    onClick = { onIntent(SourceLoginIntent.ShowLog) },
+                ),
+            ),
+        ),
+        endSheetAction = SheetAction(
+            onClick = { onIntent(SourceLoginIntent.Confirm) },
+            icon = AppIcons.Check,
+            contentDescription = stringResource(R.string.ok),
+        ),
     ) {
         val rows = remember(state.rows) {
             calculateFlexRows(state.rows, maxSpan = 6) { row ->
@@ -294,13 +282,11 @@ private fun SourceLoginWebSheet(
             show = state.mode == SourceLoginMode.Web && !state.loading,
             onDismissRequest = { onIntent(SourceLoginIntent.Back) },
             title = state.title,
-            endAction = {
-                MediumTonalButton(
-                    icon = AppIcons.Check,
-                    contentDescription = stringResource(R.string.ok),
-                    onClick = { onIntent(SourceLoginIntent.Confirm) },
-                )
-            },
+            endSheetAction = SheetAction(
+                onClick = { onIntent(SourceLoginIntent.Confirm) },
+                icon = AppIcons.Check,
+                contentDescription = stringResource(R.string.ok),
+            ),
             contentPaddingEnabled = false,
             sheetGesturesEnabled = false,
         ) {

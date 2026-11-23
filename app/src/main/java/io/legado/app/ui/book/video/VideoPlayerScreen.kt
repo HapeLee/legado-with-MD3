@@ -113,6 +113,7 @@ import io.legado.app.ui.widget.components.menu.AppAction
 import io.legado.app.ui.widget.components.menu.AppActionGroup
 import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.player.AnimatedPlayPauseButton
 import io.legado.app.ui.widget.components.player.PlayerProgressSlider
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
@@ -1370,13 +1371,12 @@ private fun SpeedSheet(
         show = show,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.play_speed),
-        endAction = {
-            SmallTonalButton(
-                onClick = onDismiss,
-                icon = AppIcons.Check,
-                contentDescription = stringResource(R.string.close),
-            )
-        },
+        endSheetAction = SheetAction(
+            onClick = onDismiss,
+            icon = AppIcons.Check,
+            contentDescription = stringResource(R.string.close),
+            compact = true,
+        ),
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),

@@ -46,8 +46,8 @@ import io.legado.app.R
 import io.legado.app.help.http.handleRenderProcessGone
 import io.legado.app.ui.rss.read.VisibleWebViewCompose
 import io.legado.app.ui.widget.components.EmptyMessage
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.pager.pagerHeight
 import io.legado.app.ui.widget.components.pager.rememberPagerAnimatedHeight
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
@@ -89,13 +89,11 @@ fun DictSheet(
         show = show && webPage == null,
         onDismissRequest = onDismissRequest,
         title = word,
-        endAction = {
-            MediumTonalButton(
-                onClick = { viewModel.onIntent(DictIntent.OpenSelectedRuleInWebView) },
-                icon = Icons.Default.OpenInBrowser,
-                contentDescription = stringResource(R.string.source_tab_web_view),
-            )
-        },
+        endSheetAction = SheetAction(
+            onClick = { viewModel.onIntent(DictIntent.OpenSelectedRuleInWebView) },
+            icon = Icons.Default.OpenInBrowser,
+            contentDescription = stringResource(R.string.source_tab_web_view),
+        ),
         contentPaddingEnabled = false,
         animateContentSize = false,
     ) {

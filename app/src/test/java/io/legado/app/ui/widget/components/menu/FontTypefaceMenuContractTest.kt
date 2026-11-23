@@ -7,50 +7,63 @@ import org.junit.Test
 import java.io.File
 
 /**
- * 第三十五轮：`FontSelectSheet` 的系统字体菜单迁成受控 [AppActionMenu]。
+ * `FontSelectSheet` 系统字体菜单的契约。
  *
- * 这处菜单挂在 sheet 的 `startAction` 槽里，条目由传入的 `Array<String>` 动态生成，
- * 选中后既要关菜单也要关整个 sheet。迁移后：
- * - 只有一个受控弹层，锚点是字体按钮所在的 `Box`；
- * - 条目 ID 用序号（字体名可能重复，同名不同文件），回解后按 `typefaces.indices` 校验；
+ * 菜单挂在 sheet 的左侧操作槽里，条目由传入的 `Array<String>` 动态生成，选中后既要关菜单
+ * 也要关整个 sheet。当前形态：左侧操作走声明式 `startSheetActions`，字体菜单是
+ * `SheetAction.menu`，按钮由各引擎自己的头部渲染（COUI 下是库按钮）——
+ * 因此业务侧不再需要 `AppActionMenu` 或局部开合状态。
+ *
+ * - 调用方按钮与字体菜单同侧共存：`buildList { startSheetAction?.let(::add) }` 合并；
+ * - 条目 ID 用序号（字体名可能重复，同名不同文件），点击直接带下标，不再回解字符串；
  * - 选中仍先调 `onSelectSystemTypeface(index)`，再 `onDismissRequest()` 关 sheet。
  *
  * **已知差异**：旧实现用 `ProvideAppDensity` 包住菜单项，避免系统大字号/高密度把菜单项撑大；
- * 受控弹层的内容由组件内部渲染，这个包裹用不上了。若真机上出现字号异常，需要回头在
- * `AppActionMenu` 侧提供密度钩子，而不是在这里补。
+ * 现在条目由 `SheetAction.menu` 经 `AppActionMenu` 渲染，这个包裹用不上了。若真机上出现
+ * 字号异常，需要回头在 `AppActionMenu` 侧提供密度钩子，而不是在这里补。
  */
 class FontTypefaceMenuContractTest {
 
     @Test
-    fun typefaceMenuIsSingleControlledAppActionMenu() {
+    fun typefaceMenuIsDeclarativeMenuOnAButton() {
         val source = codeOf(SHEET)
         assertEquals("仍手画菜单", 0, Regex("RoundDropdownMenu").findAll(source).count())
         assertEquals(
-            "应只剩一个受控弹层",
-            1,
+            "业务侧不应再自己搭菜单入口",
+            0,
             Regex("AppActionMenu\\(").findAll(source).count(),
         )
-        assertTrue("弹层未受控", source.contains("embeddedExpanded = showTypefaceMenu"))
-        assertTrue("受控弹层不应渲染 trigger", source.contains("trigger = {}"))
-        assertTrue("锚点丢失", source.contains("modifier = Modifier.matchParentSize()"))
+        assertEquals(
+            "开合状态应交给 SheetAction",
+            0,
+            Regex("showTypefaceMenu").findAll(source).count(),
+        )
+        assertTrue("左侧操作未走声明式槽", source.contains("startSheetActions = buildList {"))
+        assertTrue(
+            "调用方按钮与字体菜单未合并",
+            source.contains("startSheetAction?.let(::add)"),
+        )
+        assertTrue(
+            "字体菜单未挂在按钮上",
+            source.contains("menu = typefaces.mapIndexed { index, name ->"),
+        )
     }
 
     /** 条目由字体数组驱动，选中后按序号回到原回调。 */
     @Test
     fun typefaceItemsFollowSystemListAndKeepSelection() {
         val source = codeOf(SHEET)
-        assertTrue("条目未由字体列表生成", source.contains("typefaces.mapIndexed { index, name ->"))
         assertTrue(
             "ID 未用序号前缀",
             source.contains("id = \"\$FontTypefaceIdPrefix\$index\""),
         )
-        assertTrue(
-            "ID 未回解成序号",
-            source.contains("removePrefix(FontTypefaceIdPrefix).toIntOrNull()"),
-        )
-        assertTrue("序号未做边界校验", source.contains("index in typefaces.indices"))
+        assertTrue("条目未声明成菜单项", source.contains("SheetMenuAction("))
         assertTrue("选中回调丢失", source.contains("selectTypeface(index)"))
         assertTrue("选完未关闭整个 sheet", source.contains("onDismissRequest()"))
+        assertFalse(
+            "仍在按字符串回解下标",
+            source.contains("removePrefix(FontTypefaceIdPrefix).toIntOrNull()"),
+        )
     }
 
     /** 记录已知差异：不再有 `ProvideAppDensity` 包裹。 */

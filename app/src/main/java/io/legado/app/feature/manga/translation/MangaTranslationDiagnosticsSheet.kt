@@ -23,10 +23,10 @@ import io.legado.app.ui.ai.chat.AiThinkingCard
 import io.legado.app.ui.ai.chat.AiThinkingStep
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.EmptyMessage
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.collections.immutable.persistentListOf
 
@@ -40,8 +40,11 @@ internal fun MangaTranslationDiagnosticsSheet(
         show = show,
         title = stringResource(R.string.feature_manga_translation_diagnostics),
         onDismissRequest = onDismiss,
-        startAction = { MediumTonalButton(onClick = onDismiss, icon = AppIcons.Back,
-            contentDescription = stringResource(R.string.back)) },
+        startSheetAction = SheetAction(
+            onClick = onDismiss,
+            icon = AppIcons.Back,
+            contentDescription = stringResource(R.string.back),
+        ),
     ) {
         val empty = state.ai == null && state.diagnosticPath == null && !state.busy && state.error == null
         Column(

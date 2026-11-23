@@ -79,10 +79,10 @@ import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.InfoCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.dialog.TimePickerDialog
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
@@ -1115,16 +1115,14 @@ fun ThemeConfigScreen(
         onDismissRequest = { onIntent(ThemeConfigIntent.DismissSheet) },
         onSelectFont = { onIntent(ThemeConfigIntent.SelectAppFont(it)) },
         onOpenFolderPicker = { onIntent(ThemeConfigIntent.RequestFontFolder) },
-        startAction = {
-            MediumTonalButton(
-                icon = Icons.Default.Delete,
-                contentDescription = stringResource(R.string.clear),
-                onClick = {
-                    onIntent(ThemeConfigIntent.ClearAppFont)
-                    onIntent(ThemeConfigIntent.DismissSheet)
-                }
-            )
-        },
+        startSheetAction = SheetAction(
+            icon = Icons.Default.Delete,
+            contentDescription = stringResource(R.string.clear),
+            onClick = {
+                onIntent(ThemeConfigIntent.ClearAppFont)
+                onIntent(ThemeConfigIntent.DismissSheet)
+            },
+        ),
         folderIcon = Icons.Default.Add,
         folderContentDescription = stringResource(R.string.select_folder),
         emptyText = stringResource(R.string.theme_config_no_font_files),

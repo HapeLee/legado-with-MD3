@@ -7,23 +7,22 @@ import org.junit.Test
 import java.io.File
 
 /**
- * Sheet `startAction` / `endAction` 命令菜单的迁移契约（第六轮）。
+ * Sheet 顶部命令菜单的契约。
  *
- * 这四处与第五轮的规则编辑剪贴板菜单同构：原本都是
- * `Box { MediumTonalButton(onClick = showMenu); RoundDropdownMenu { ... } }`，
- * 迁移后由 [AppActionMenu] 统一渲染按钮与开合，业务只保留「稳定 ID → 副作用」分派。
+ * 这些菜单原本是 `Box { MediumTonalButton(onClick = showMenu); RoundDropdownMenu { ... } }`，
+ * 先迁到受控 [AppActionMenu]，再收进 sheet 的声明式操作槽：菜单是 `SheetAction.menu`，
+ * 条目自带 `onClick`，按钮由各引擎头部渲染（COUI 下是库按钮）。
  *
- * [CloudTtsScreen] 同文件还有形态不同的下拉（第十七轮后只剩区域混合菜单），
- * 因此该文件的断言只覆盖 `speak_engine` 编辑器这一处 `startAction` 区域，
- * 并单独用棘轮断言锁住「没有顺手改掉其它菜单」。
+ * [GroupManageSheet] 的右侧槽在非编辑态是菜单、编辑态是「重置封面」，两态现在都是
+ * [SheetAction]，菜单态走 `menu`，所以整条头部可以交给引擎（COUI 下即库工具栏）。
  *
- * 静态契约只保证结构与 ID 一致性，**不证明各命令的副作用正确**，也不覆盖真机外观。
+ * 静态契约只保证结构与副作用接线一致，**不证明各命令的副作用正确**，也不覆盖真机外观。
  */
 class SheetActionMenuContractTest {
 
     @Test
     fun migratedActionMenusUseDeclarativeEntrypoint() {
-        TARGETS.forEach { target ->
+        DECLARATIVE.forEach { target ->
             val source = sourceOf(target.path)
             val slice = if (target.regionStart == null) {
                 source
@@ -38,19 +37,17 @@ class SheetActionMenuContractTest {
                 "${target.path} 仍自带菜单开合状态",
                 listOf("showMenu", "menuExpanded", "expanded").any { slice.contains(it) },
             )
-            assertTrue("${target.path} 缺少 AppActionMenu", slice.contains("AppActionMenu("))
-            assertTrue("${target.path} 缺少纯展示 trigger", slice.contains("AppIcon("))
+            assertFalse("${target.path} 仍自己搭菜单入口", slice.contains("AppActionMenu("))
+            assertTrue("${target.path} 未走声明式操作槽", slice.contains("SheetAction("))
+            assertTrue("${target.path} 的菜单未挂在按钮上", slice.contains("menu = persistentListOf("))
         }
     }
 
     @Test
     fun everyActionHasDispatchBranch() {
-        ACTIONS.forEach { (path, ids) ->
+        DECLARATIVE_ACTIONS.forEach { (path, ids) ->
             val source = sourceOf(path)
-            ids.forEach { id ->
-                assertTrue("$path 未声明 $id", source.contains("\"$id\""))
-                assertTrue("$path 缺少 $id 的分派分支", source.contains("\"$id\" ->"))
-            }
+            ids.forEach { id -> assertDeclarativeItem(source, path, id) }
         }
     }
 
@@ -86,27 +83,28 @@ class SheetActionMenuContractTest {
 
     private companion object {
         const val CLOUD_TTS = "io/legado/app/ui/book/readaloud/cloudtts/CloudTtsScreen.kt"
+        const val GROUP_MANAGE = "io/legado/app/ui/main/bookshelf/GroupManageSheet.kt"
 
-        val TARGETS = listOf(
+        val DECLARATIVE = listOf(
+            Target(GROUP_MANAGE),
             Target("io/legado/app/ui/login/SourceLoginSheets.kt"),
-            Target("io/legado/app/ui/main/bookshelf/GroupManageSheet.kt"),
             Target("io/legado/app/ui/book/read/sheet/HighlightRuleConfigSheet.kt"),
             Target(
                 CLOUD_TTS,
                 // `speak_engine` 标题在同文件另一个 Sheet 也出现，用编辑器独有的 dismiss intent 定位。
                 regionStart = "onDismissRequest = { onIntent(CloudTtsIntent.DismissHttpTtsEditor) }",
-                regionEnd = "endAction = {",
+                regionEnd = "endSheetAction = ",
             ),
         )
 
-        val ACTIONS = mapOf(
+        val DECLARATIVE_ACTIONS = mapOf(
             "io/legado/app/ui/login/SourceLoginSheets.kt" to
                 listOf("show_login_header", "delete_login_header", "show_log"),
-            "io/legado/app/ui/main/bookshelf/GroupManageSheet.kt" to
-                listOf("group_add", "ai_auto_group", "tag_group_add_rule", "tag_group_sync"),
             "io/legado/app/ui/book/read/sheet/HighlightRuleConfigSheet.kt" to
                 listOf("highlight_rule_presets", "import_action", "export", "copy_url"),
             CLOUD_TTS to listOf("copy_text", "paste_source"),
+            GROUP_MANAGE to
+                listOf("group_add", "ai_auto_group", "tag_group_add_rule", "tag_group_sync"),
         )
     }
 }

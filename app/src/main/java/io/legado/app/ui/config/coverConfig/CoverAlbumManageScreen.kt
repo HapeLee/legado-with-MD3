@@ -52,12 +52,12 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.AppIconButton
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.tabRow.CardTabRow
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
@@ -309,13 +309,11 @@ private fun CoverAlbumEditorSheet(
         show = album != null,
         onDismissRequest = onDismissRequest,
         title = album?.name,
-        endAction = {
-            MediumTonalButton(
-                onClick = { onAddImages(isDark) },
-                icon = Icons.Default.Add,
-                contentDescription = stringResource(R.string.cover_album_add_images),
-            )
-        },
+        endSheetAction = SheetAction(
+            onClick = { onAddImages(isDark) },
+            icon = Icons.Default.Add,
+            contentDescription = stringResource(R.string.cover_album_add_images),
+        ),
     ) {
         CardTabRow(
             tabTitles = listOf(

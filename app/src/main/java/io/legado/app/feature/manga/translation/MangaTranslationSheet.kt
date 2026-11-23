@@ -27,11 +27,11 @@ import io.legado.app.domain.model.manga.MangaTranslationStage
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumOutlinedButton
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallOutlinedButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
@@ -68,32 +68,27 @@ fun MangaTranslationSheet(
     AppModalBottomSheet(
         show = state.open && !diagnostics,
         title = stringResource(R.string.manga_translation_title),
-        startAction = {
-            if (state.settings.composition in setOf(MangaComposition.SMART, MangaComposition.PATCH))
-                MediumTonalButton(
-                    onClick = { onIntent(MangaTranslationIntent.Recompose(chapter = true)) },
-                    enabled = state.loaded && !state.busy && state.chapterPages > 0,
-                    icon = Icons.Default.Layers,
-                    contentDescription = stringResource(R.string.manga_translation_recompose_chapter),
-                )
-        },
-        endAction = {
-            MediumTonalButton(
-                onClick = {
-                    onIntent(
-                        MangaTranslationIntent.Translate(
-                            chapter = true, force = state.chapterTranslated
-                        )
+        startSheetAction = if (state.settings.composition in setOf(MangaComposition.SMART, MangaComposition.PATCH)) SheetAction(
+            onClick = { onIntent(MangaTranslationIntent.Recompose(chapter = true)) },
+            icon = Icons.Default.Layers,
+            enabled = state.loaded && !state.busy && state.chapterPages > 0,
+            contentDescription = stringResource(R.string.manga_translation_recompose_chapter),
+        ) else null,
+        endSheetAction = SheetAction(
+            onClick = {
+                onIntent(
+                    MangaTranslationIntent.Translate(
+                        chapter = true, force = state.chapterTranslated
                     )
-                },
-                enabled = state.loaded && !state.busy && state.chapterPages > 0,
-                icon = Icons.Default.Translate,
-                contentDescription = stringResource(
-                    if (state.chapterTranslated) R.string.feature_manga_translation_retry_chapter
-                    else R.string.manga_translation_chapter, state.chapterPages
-                ),
-            )
-        },
+                )
+            },
+            icon = Icons.Default.Translate,
+            enabled = state.loaded && !state.busy && state.chapterPages > 0,
+            contentDescription = stringResource(
+                if (state.chapterTranslated) R.string.feature_manga_translation_retry_chapter
+                else R.string.manga_translation_chapter, state.chapterPages
+            ),
+        ),
         onDismissRequest = { onIntent(MangaTranslationIntent.Close) }) {
         Column(
             Modifier

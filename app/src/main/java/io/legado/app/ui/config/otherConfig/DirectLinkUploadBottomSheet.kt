@@ -25,14 +25,11 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
-import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
-import io.legado.app.ui.widget.components.menu.AppAction
-import io.legado.app.ui.widget.components.menu.AppActionGroup
-import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetMenuAction
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
@@ -54,64 +51,54 @@ fun DirectLinkUploadBottomSheet(
     AppModalBottomSheet(
         show = show,
         title = stringResource(R.string.direct_link_upload_config),
-        startAction = {
-            MediumTonalButton(
-                onClick = {
-                    onIntent(OtherConfigIntent.TestDirectLinkRule)
-                },
-                icon = Icons.Default.Checklist,
-                contentDescription = stringResource(R.string.test)
-            )
-        },
-        endAction = {
-            AppActionMenu(
-                groups = persistentListOf(
-                    AppActionGroup(
-                        id = "direct_link_rule_menu",
-                        actions = persistentListOf(
-                            AppAction(
-                                id = "import_default_rule",
-                                label = stringResource(R.string.import_default_rule),
-                                icon = Icons.Default.Download,
-                            ),
-                            AppAction(
-                                id = "copy_direct_link_rule",
-                                label = stringResource(R.string.copy_rule),
-                                icon = Icons.Default.ContentCopy,
-                            ),
-                            AppAction(
-                                id = "paste_direct_link_rule",
-                                label = stringResource(R.string.paste_rule),
-                                icon = Icons.Default.ContentPaste,
-                            ),
-                        ),
-                    ),
-                ),
-                onAction = { id ->
-                    when (id) {
-                        "import_default_rule" ->
-                            context.selector(state.directRulePresets) { _, rule, _ ->
-                                onIntent(
-                                    OtherConfigIntent.DirectRuleChanged(
-                                        uploadUrl = rule.uploadUrl,
-                                        downloadUrlRule = rule.downloadUrlRule,
-                                        summary = rule.summary,
-                                        compress = rule.compress,
-                                    )
+        startSheetAction = SheetAction(
+            onClick = {
+                onIntent(OtherConfigIntent.TestDirectLinkRule)
+            },
+            icon = Icons.Default.Checklist,
+            contentDescription = stringResource(R.string.test),
+        ),
+        endSheetAction = SheetAction(
+            icon = AppIcons.MoreVert,
+            contentDescription = stringResource(R.string.more_menu),
+            menu = persistentListOf(
+                SheetMenuAction(
+                    id = "import_default_rule",
+                    label = stringResource(R.string.import_default_rule),
+                    icon = Icons.Default.Download,
+                    onClick = {
+                        context.selector(state.directRulePresets) { _, rule, _ ->
+                            onIntent(
+                                OtherConfigIntent.DirectRuleChanged(
+                                    uploadUrl = rule.uploadUrl,
+                                    downloadUrlRule = rule.downloadUrlRule,
+                                    summary = rule.summary,
+                                    compress = rule.compress,
                                 )
-                            }
-
-                        "copy_direct_link_rule" -> {
-                            val rule = DirectLinkRuleUi(
-                                uploadUrl = state.directUploadUrl,
-                                downloadUrlRule = state.directDownloadUrlRule,
-                                summary = state.directSummary,
-                                compress = state.directCompress,
                             )
-                            context.sendToClip(GSON.toJson(rule))
                         }
-
-                        "paste_direct_link_rule" -> runCatching {
+                    },
+                ),
+                SheetMenuAction(
+                    id = "copy_direct_link_rule",
+                    label = stringResource(R.string.copy_rule),
+                    icon = Icons.Default.ContentCopy,
+                    onClick = {
+                        val rule = DirectLinkRuleUi(
+                            uploadUrl = state.directUploadUrl,
+                            downloadUrlRule = state.directDownloadUrlRule,
+                            summary = state.directSummary,
+                            compress = state.directCompress,
+                        )
+                        context.sendToClip(GSON.toJson(rule))
+                    },
+                ),
+                SheetMenuAction(
+                    id = "paste_direct_link_rule",
+                    label = stringResource(R.string.paste_rule),
+                    icon = Icons.Default.ContentPaste,
+                    onClick = {
+                        runCatching {
                             context.getClipText()?.let {
                                 val rule =
                                     GSON.fromJsonObject<DirectLinkRuleUi>(it)
@@ -128,15 +115,10 @@ fun DirectLinkUploadBottomSheet(
                         }.onFailure {
                             context.toastOnUi(R.string.clipboard_empty_or_invalid)
                         }
-                    }
-                },
-            ) {
-                AppIcon(
-                    imageVector = AppIcons.MoreVert,
-                    contentDescription = stringResource(R.string.more_menu),
-                )
-            }
-        },
+                    },
+                ),
+            ),
+        ),
         onDismissRequest = onDismiss
     ) {
         Column(

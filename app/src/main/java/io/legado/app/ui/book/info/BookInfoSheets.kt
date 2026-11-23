@@ -65,8 +65,9 @@ import io.legado.app.ui.book.changecover.CoverOption
 import io.legado.app.ui.book.group.GroupEditSheet
 import io.legado.app.ui.book.search.ScopeSelectSheet
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
+import kotlinx.collections.immutable.persistentListOf
 import io.legado.app.ui.theme.LocalAppUiConfiguration
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.SelectionItemCard
@@ -134,20 +135,16 @@ fun GroupSelectSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.group_select),
-        startAction = {
-            MediumTonalButton(
-                onClick = { showAddGroup = true },
-                icon = Icons.Default.Add,
-                contentDescription = stringResource(R.string.group_add)
-            )
-        },
-        endAction = {
-            MediumTonalButton(
-                onClick = { onConfirm(selectedGroupId) },
-                icon = Icons.Default.Check,
-                contentDescription = stringResource(R.string.confirm)
-            )
-        }
+        startSheetAction = SheetAction(
+            onClick = { showAddGroup = true },
+            icon = Icons.Default.Add,
+            contentDescription = stringResource(R.string.group_add),
+        ),
+        endSheetAction = SheetAction(
+            onClick = { onConfirm(selectedGroupId) },
+            icon = Icons.Default.Check,
+            contentDescription = stringResource(R.string.confirm),
+        ),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             LazyColumn(
@@ -243,22 +240,20 @@ fun ChangeCoverSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.change_cover_source),
-        endAction = {
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                MediumTonalButton(
-                    onClick = { viewModel.onIntent(ChangeCoverIntent.ToggleSearch) },
-                    icon = if (state.isSearching) Icons.Default.MoreVert else Icons.Default.Refresh,
-                    contentDescription = stringResource(
-                        if (state.isSearching) R.string.more_menu else R.string.refresh
-                    )
-                )
-                MediumTonalButton(
-                    onClick = { showFilterSheet = true },
-                    icon = Icons.Default.FilterList,
-                    contentDescription = stringResource(R.string.screen)
-                )
-            }
-        }
+        endSheetActions = persistentListOf(
+            SheetAction(
+                onClick = { viewModel.onIntent(ChangeCoverIntent.ToggleSearch) },
+                icon = if (state.isSearching) Icons.Default.MoreVert else Icons.Default.Refresh,
+                contentDescription = stringResource(
+                    if (state.isSearching) R.string.more_menu else R.string.refresh
+                ),
+            ),
+            SheetAction(
+                onClick = { showFilterSheet = true },
+                icon = Icons.Default.FilterList,
+                contentDescription = stringResource(R.string.screen),
+            ),
+        ),
     ) {
         if (state.isSearching) {
             AppLinearProgressIndicator(modifier = Modifier.fillMaxWidth())

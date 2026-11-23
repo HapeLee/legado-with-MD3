@@ -36,11 +36,11 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.CastFieldSpec
 import io.legado.app.ui.widget.components.CastFieldStack
 import io.legado.app.ui.widget.components.CastOption
-import io.legado.app.ui.widget.components.VoiceAuditionAction
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
+import io.legado.app.ui.widget.components.VoiceAuditionButton
 import io.legado.app.ui.widget.components.castCardMaxHeight
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
@@ -357,26 +357,15 @@ private fun RegexCastEditDialog(
         title = stringResource(
             if (current.isNew) R.string.regex_cast_create else R.string.regex_cast_edit
         ),
-        // 试听与保存都是「对这份草稿做的事」，钉在头部：草稿在下面的表单里，
-        // 滚到哪儿都能一键试听/保存，不必先滚回顶部
-        startAction = {
-            if (isRole) {
-                VoiceAuditionAction(
-                    voiceId = draft.itemId,
-                    text = remember(context) { VoiceAudition.defaultPreviewText(context) },
-                    effect = draft.voiceEffect,
-                )
-            }
-        },
-        endAction = {
-            MediumTonalButton(
-                onClick = { onSave(draft) },
-                // 匹配内容和音色都没定的规则存进去也只会什么都不响，直接不给按
-                enabled = draft.pattern.isNotBlank() && draft.itemId.isNotBlank(),
-                icon = AppIcons.Check,
-                contentDescription = stringResource(R.string.ok),
-            )
-        },
+        // 保存是「对这份草稿做的事」，钉在头部；试听要有三态（合成中自转 / 播放中停止 /
+        // 待命试听），声明式操作的静态图标表达不了，移到正文挨着音色字段。
+        // 匹配内容和音色都没定的规则存进去也只会什么都不响，直接不给按
+        endSheetAction = SheetAction(
+            onClick = { onSave(draft) },
+            enabled = draft.pattern.isNotBlank() && draft.itemId.isNotBlank(),
+            icon = AppIcons.Check,
+            contentDescription = stringResource(R.string.ok),
+        ),
     ) {
         Column(
             modifier = Modifier
@@ -516,8 +505,15 @@ private fun RegexCastEditDialog(
                         listOfNotNull(effectSpec) +
                         listOf(groupSpec, scopeSpec, excludeSpec),
             )
-            // 试听在头部 startAction（Medium 系列）：只选了池没定下具体音色（itemId 空 = 朗读时随机）
-            // 时没有可试的声音，那颗按钮会自动置灰
+            // 只选了池没定下具体音色（itemId 空 = 朗读时随机）时没有可试的声音，按钮自己置灰
+            if (isRole) {
+                VoiceAuditionButton(
+                    voiceId = draft.itemId,
+                    text = remember(context) { VoiceAudition.defaultPreviewText(context) },
+                    label = stringResource(R.string.cloud_tts_preview),
+                    effect = draft.voiceEffect,
+                )
+            }
             AppText(
                 text = stringResource(R.string.regex_cast_dialog_hint),
                 style = LegadoTheme.typography.labelMedium,

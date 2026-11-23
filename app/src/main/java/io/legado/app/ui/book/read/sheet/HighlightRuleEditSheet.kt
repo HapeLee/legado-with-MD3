@@ -101,10 +101,10 @@ import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.FontFolderState
 import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.SectionTitle
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyColorModeSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
@@ -343,23 +343,23 @@ fun HighlightRuleEditSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = title ?: stringResource(titleRes),
-        endAction = {
-            MediumTonalButton(
-                onClick = {
-                    if (showRuleInfo && pattern.isNotBlank()) {
-                        val result = runCatching { Regex(pattern) }
-                        if (result.isFailure) {
-                            patternError = result.exceptionOrNull()?.message
-                            return@MediumTonalButton
-                        }
-                    }
+        endSheetAction = SheetAction(
+            onClick = {
+                val failure = if (showRuleInfo && pattern.isNotBlank()) {
+                    runCatching { Regex(pattern) }.exceptionOrNull()
+                } else {
+                    null
+                }
+                if (failure != null) {
+                    patternError = failure.message
+                } else {
                     patternError = null
                     onSave(previewRule)
-                },
-                icon = Icons.Default.Done,
-                contentDescription = stringResource(R.string.save),
-            )
-        },
+                }
+            },
+            icon = Icons.Default.Done,
+            contentDescription = stringResource(R.string.save),
+        ),
     ) {
         val scrollState = rememberScrollState()
         // 键盘顶着屏幕时不浮出预览：悬浮卡钉在弹层底边，输入框一拿到焦点就收回。
@@ -1331,13 +1331,11 @@ internal fun NinePatchEditorDialog(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.nine_patch_editor),
-        endAction = {
-            MediumTonalButton(
-                onClick = { onSave(left, right, top, bottom) },
-                icon = Icons.Default.Done,
-                contentDescription = stringResource(R.string.save),
-            )
-        },
+        endSheetAction = SheetAction(
+            onClick = { onSave(left, right, top, bottom) },
+            icon = Icons.Default.Done,
+            contentDescription = stringResource(R.string.save),
+        ),
     ) {
         Column(
             modifier = Modifier

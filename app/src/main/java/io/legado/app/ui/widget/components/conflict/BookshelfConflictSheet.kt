@@ -33,10 +33,10 @@ import io.legado.app.ui.book.changesource.ChangeSourceMigrationOptionsSheet
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppRadioButton
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
 
@@ -108,13 +108,11 @@ fun BookshelfConflictSheet(
             onDismissRequest()
         },
         title = stringResource(R.string.bookshelf_conflict_title),
-        endAction = {
-            MediumTonalButton(
-                onClick = { showOptions = true },
-                icon = Icons.Outlined.Settings,
-                contentDescription = stringResource(R.string.setting)
-            )
-        },
+        endSheetAction = SheetAction(
+            onClick = { showOptions = true },
+            icon = Icons.Outlined.Settings,
+            contentDescription = stringResource(R.string.setting),
+        ),
     ) {
         val candidates = conflict?.candidates.orEmpty()
         if (conflict != null && candidates.isNotEmpty()) {

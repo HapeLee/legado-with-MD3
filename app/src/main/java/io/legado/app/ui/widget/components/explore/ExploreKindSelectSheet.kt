@@ -33,8 +33,8 @@ import io.legado.app.domain.usecase.ExploreKindUiUseCase
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.SearchBar
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,19 +88,15 @@ fun ExploreKindSelectSheet(
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        endAction = {
-            if (multiple && selectedTitles.isNotEmpty()) {
-                MediumTonalButton(
-                    onClick = {
-                        val selectedKinds = kinds.filter { it.title in selectedTitles }
-                        onSelected(selectedKinds)
-                        onDismissRequest()
-                    },
-                    icon = Icons.Default.Check,
-                    contentDescription = stringResource(R.string.confirm)
-                )
-            }
-        }
+        endSheetAction = if (multiple && selectedTitles.isNotEmpty()) SheetAction(
+            onClick = {
+                val selectedKinds = kinds.filter { it.title in selectedTitles }
+                onSelected(selectedKinds)
+                onDismissRequest()
+            },
+            icon = Icons.Default.Check,
+            contentDescription = stringResource(R.string.confirm),
+        ) else null
     ) {
         Column {
             SearchBar(

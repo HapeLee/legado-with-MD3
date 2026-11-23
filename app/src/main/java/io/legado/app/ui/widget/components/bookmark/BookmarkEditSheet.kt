@@ -21,9 +21,9 @@ import io.legado.app.R
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.ui.widget.components.AppTextFieldSurface
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.SheetAction
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,26 +42,22 @@ fun BookmarkEditSheet(
         show = show,
         onDismissRequest = onDismiss,
         title = bookmark.chapterName,
-        startAction = {
-            MediumTonalButton(
-                onClick = { showDeleteConfirmDialog = true },
-                icon = AppIcons.Delete,
-                contentDescription = stringResource(R.string.delete)
-            )
-        },
-        endAction = {
-            MediumTonalButton(
-                onClick = {
-                    val newBookmark = bookmark.apply {
-                        this.bookText = bookText
-                        this.content = content
-                    }
-                    onSave(newBookmark)
-                },
-                icon = AppIcons.Check,
-                contentDescription = stringResource(R.string.action_save)
-            )
-        }
+        startSheetAction = SheetAction(
+            onClick = { showDeleteConfirmDialog = true },
+            icon = AppIcons.Delete,
+            contentDescription = stringResource(R.string.delete),
+        ),
+        endSheetAction = SheetAction(
+            onClick = {
+                val newBookmark = bookmark.apply {
+                    this.bookText = bookText
+                    this.content = content
+                }
+                onSave(newBookmark)
+            },
+            icon = AppIcons.Check,
+            contentDescription = stringResource(R.string.action_save),
+        )
     ) {
         BookmarkEditContent(
             bookmark = bookmark,
