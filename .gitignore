@@ -19,6 +19,7 @@ node_modules/
 /.vscode/settings.json
 /.codex/skills
 /.workbuddy/
+/.codebuddy/
 /.debug-runs/
 __pycache__/
 *.py[cod]
