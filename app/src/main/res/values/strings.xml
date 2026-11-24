@@ -1668,6 +1668,7 @@
     <string name="result_analyzed">Analyzed</string>
     <string name="bookshelf_px_4">Comprehensive</string>
     <string name="bookshelf_px_5">Sort by author</string>
+    <string name="bookshelf_px_6">By local file size</string>
     <string name="effective_replaces">Effective Replacement</string>
     <string name="export_book">Export Book</string>
     <string name="export_book_notification_content">Exporting (%1$s), with %2$d to be exported.</string>

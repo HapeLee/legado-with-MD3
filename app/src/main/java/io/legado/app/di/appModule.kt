@@ -386,7 +386,7 @@ val appModule = module {
     single<BookshelfAutoGroupGateway> { BookshelfAutoGroupRepository(get()) }
     single<BookshelfAutoGroupPromptGateway> { BookshelfAutoGroupPromptRepository(get()) }
     singleOf(::BookSourceRepository)
-    singleOf(::BookshelfRepository)
+    single { BookshelfRepository(get(), get()) }
     singleOf(::DictRuleRepository)
     singleOf(::TxtTocRuleRepository)
     single {
@@ -867,6 +867,7 @@ val appModule = module {
         BookshelfManageScreenViewModel(
             application = get(),
             bookRepository = get(),
+            bookshelfRepository = get(),
             bookSourceRepository = get(),
             bookGroupRepository = get(),
             searchRepository = get(),

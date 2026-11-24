@@ -12,6 +12,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.ShelfBookSummary
+import io.legado.app.data.model.LocalBookMetricTarget
 import io.legado.app.domain.model.CacheableBook
 import io.legado.app.domain.model.PrivateBookFacts
 import io.legado.app.help.book.isNotShelf
@@ -219,6 +220,21 @@ interface BookDao {
     /** [flowLocal] 的一次性查询（失效信号防抖后由 mapLatest 调用）。 */
     @Query("SELECT * FROM books WHERE type & ${BookType.local} > 0")
     suspend fun getLocal(): List<Book>
+
+    /** 本地书排序指标计算所需的轻量投影（包含私密分组内的本地书，不拉取大文本简介）。 */
+    @Query(
+        """
+        SELECT
+            bookUrl,
+            originName,
+            type,
+            latestChapterTime
+        FROM books
+        WHERE type & ${BookType.local} > 0
+          AND type & ${BookType.notShelf} = 0
+        """
+    )
+    fun flowLocalBookMetricTargets(): Flow<List<LocalBookMetricTarget>>
 
     @Query(
         """

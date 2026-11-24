@@ -11,6 +11,7 @@ import io.legado.app.data.repository.BookshelfRepository
 import io.legado.app.domain.gateway.BookshelfSettingsGateway
 import io.legado.app.domain.gateway.CoverSettingsGateway
 import io.legado.app.domain.gateway.PrivateContentGateway
+import io.legado.app.domain.model.LocalBookshelfSort
 import io.legado.app.domain.model.isPrivateBook
 import io.legado.app.domain.model.settings.BookshelfSettings
 import io.legado.app.ui.widget.components.image.cover.bookshelfCoverMemoryCacheKey
@@ -207,9 +208,11 @@ class BookshelfCoverPreloader(
 
         val groupId = settings.saveTabPosition
         val layout = resolveFirstScreenLayout(settings)
+        val groupBookSort = withContext(Dispatchers.IO) { bookGroupRepository.getByID(groupId)?.bookSort }
+        val effectiveSort = LocalBookshelfSort.resolveEffectiveSort(groupBookSort, settings.bookshelfSort)
         val signature = listOf(
             groupId,
-            settings.bookshelfSort,
+            effectiveSort,
             settings.bookshelfSortOrder,
             layout.grid,
             layout.coverWidthDp,
@@ -217,7 +220,7 @@ class BookshelfCoverPreloader(
         if (signature == warmedSignature) return 0
 
         return withContext(Dispatchers.IO) {
-            val targets = buildTargets(groupId, settings, layout)
+            val targets = buildTargets(groupId, settings, layout, effectiveSort)
             if (targets.isEmpty()) return@withContext 0
             val pending = targets.filterNot { isAlreadyCached(it.memoryCacheKey) }
             if (pending.isEmpty()) {
@@ -252,6 +255,7 @@ class BookshelfCoverPreloader(
         groupId: Long,
         settings: BookshelfSettings,
         layout: FirstScreenLayout,
+        effectiveSort: Int,
     ): List<CoverPreloadTarget> {
         // 排序输入与书架完全一致：分组取 flowShow（书架的 groupsFlow），
         // 私密掩码取 flowAll（书架的 allGroupsFlow），两边都用同一个纯函数判定
@@ -263,11 +267,19 @@ class BookshelfCoverPreloader(
             if (it.groupId > 0 && it.isPrivate) acc or it.groupId else acc
         }
 
+        val shelfBooks = bookRepository.flowBookShelfByGroup(groupId).first()
+        val localMetrics = if (LocalBookshelfSort.isMetric(effectiveSort)) {
+            bookshelfRepository.tryGetCachedMetrics(effectiveSort, shelfBooks) ?: return emptyList()
+        } else {
+            emptyMap()
+        }
+
         val candidates = bookshelfRepository.sortBooks(
-            list = bookRepository.flowBookShelfByGroup(groupId).first(),
+            list = shelfBooks,
             group = group,
             sort = settings.bookshelfSort,
             sortOrder = settings.bookshelfSortOrder,
+            localMetrics = localMetrics,
         ).asSequence()
             // 锁定态的卡片用的是另一套内存键，预热清晰封面既无用也只是白解码
             .filterNot { isPrivateBook(it.bookUrl, it.group, privateBookUrls, privateGroupMask) }

@@ -41,6 +41,7 @@
 		<item>@string/bookshelf_px_3</item>
 		<item>@string/bookshelf_px_4</item>
 		<item>@string/bookshelf_px_5</item>
+		<item>@string/bookshelf_px_6</item>
 	</string-array>
 
 	<string-array name="indent">
@@ -345,6 +346,7 @@
 		<item>@string/bookshelf_px_3</item>
 		<item>@string/bookshelf_px_4</item>
 		<item>@string/bookshelf_px_5</item>
+		<item>@string/bookshelf_px_6</item>
 	</string-array>
 
 	<string-array name="bookshelf_layout">
