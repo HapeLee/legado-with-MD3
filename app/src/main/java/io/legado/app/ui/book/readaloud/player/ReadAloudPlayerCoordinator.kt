@@ -172,6 +172,7 @@ class ReadAloudPlayerCoordinator(
             speakerName = playback.characterName.ifBlank { playback.roleType.storageValue },
             isPaused = session.status != ReadAloudSessionStatus.Playing,
             speed = readAloudSettingsGateway.currentSettings.ttsSpeechRate,
+            ttsFollowSys = settings.ttsFollowSys,
             timerMinutes = session.timerMinutes,
             timerMode = settings.timerMode,
             timerChapters = if (session.timerChapters > 0 || session.status != ReadAloudSessionStatus.Idle) {
@@ -206,6 +207,7 @@ class ReadAloudPlayerCoordinator(
             speakerName = playback.characterName.ifBlank { playback.roleType.storageValue },
             isPaused = session.status != ReadAloudSessionStatus.Playing,
             speed = readAloudSettingsGateway.currentSettings.ttsSpeechRate,
+            ttsFollowSys = readAloudSettingsGateway.currentSettings.ttsFollowSys,
             timerMinutes = session.timerMinutes,
             timerMode = readAloudSettingsGateway.currentSettings.timerMode,
             timerChapters = if (session.timerChapters > 0 || session.status != ReadAloudSessionStatus.Idle) {
@@ -318,6 +320,12 @@ class ReadAloudPlayerCoordinator(
 
     suspend fun setSpeed(value: Int) {
         readAloudSettingsGateway.update { it.copy(ttsSpeechRate = coerceReadAloudSpeed(value)) }
+        ReadAloud.upTtsSpeechRate(application)
+    }
+
+    /** 与经典朗读面板共用同一份 ttsFollowSys；切换后服务要重建引擎恢复系统默认语速。 */
+    suspend fun setFollowSys(value: Boolean) {
+        readAloudSettingsGateway.update { it.copy(ttsFollowSys = value) }
         ReadAloud.upTtsSpeechRate(application)
     }
 
@@ -540,6 +548,7 @@ data class ReadAloudPlayerSourceState(
     val speakerName: String,
     val isPaused: Boolean,
     val speed: Int,
+    val ttsFollowSys: Boolean,
     val timerMinutes: Int,
     val timerMode: String,
     val timerChapters: Int,

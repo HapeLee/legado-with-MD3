@@ -88,6 +88,9 @@ class ReadAloudPlayerViewModel(
             is ReadAloudPlayerIntent.SetSpeed -> viewModelScope.launch {
                 coordinator.setSpeed(intent.value)
             }
+            is ReadAloudPlayerIntent.SetTtsFollowSys -> viewModelScope.launch {
+                coordinator.setFollowSys(intent.value)
+            }
             is ReadAloudPlayerIntent.SetTimer -> viewModelScope.launch {
                 coordinator.setTimer(intent.minutes)
             }
@@ -288,6 +291,7 @@ class ReadAloudPlayerViewModel(
             isPaused = source.isPaused,
             readAloudRunning = BaseReadAloudService.isRun,
             speed = source.speed,
+            ttsFollowSys = source.ttsFollowSys,
             timerMinutes = source.timerMinutes,
             timerMode = source.timerMode,
             timerChapters = source.timerChapters,

@@ -18,11 +18,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -88,6 +90,7 @@ import io.legado.app.ui.book.readaloud.ReadAloudTimerSheet
 import io.legado.app.ui.book.readaloud.ReadAloudVoiceSheet
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.hazeStyle.HazeLegado
+import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.util.rememberBlurBackdrop
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.button.series.MediumPlainButton
@@ -720,6 +723,14 @@ private fun ReadAloudSpeedSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.read_aloud_adjust_speed),
     ) {
+        TinySwitchSettingItem(
+            title = stringResource(R.string.flow_sys),
+            checked = state.ttsFollowSys,
+            onCheckedChange = {
+                onIntent(ReadAloudPlayerIntent.SetTtsFollowSys(it))
+            },
+        )
+        Spacer(Modifier.height(8.dp))
         PlayerAdjustmentSlider(
             title = stringResource(R.string.read_aloud_adjust_speed),
             value = speedPreview.coerceIn(
@@ -735,6 +746,7 @@ private fun ReadAloudSpeedSheet(
             },
             valueRange = READ_ALOUD_SPEED_MIN.toFloat()..READ_ALOUD_SPEED_MAX.toFloat(),
             steps = READ_ALOUD_SPEED_MAX - READ_ALOUD_SPEED_MIN - 1,
+            enabled = !state.ttsFollowSys,
         )
     }
 }
