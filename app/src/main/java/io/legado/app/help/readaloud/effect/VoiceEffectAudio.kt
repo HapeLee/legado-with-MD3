@@ -129,17 +129,26 @@ class VoiceEffectAudio {
         /** 就是 `androidx.media3.common.C.AUDIO_SESSION_ID_UNSET`（= 平台那个占位值）。 */
         private const val AUDIO_SESSION_ID_UNSET = 0
 
-        /** 音高与语速倍率的上限：预设写错时也不至把声音推成噪音。 */
+        /** 变声器预设自己的音高/语速倍率范围：预设写错时也不至把声音推成噪音。 */
         const val MIN_PITCH = 0.4f
         const val MAX_PITCH = 2.5f
         const val MIN_SPEED = 0.5f
         const val MAX_SPEED = 2f
 
+        /**
+         * 最终播放倍率范围，与朗读语速 0..80（(v + 5) / 10 = 0.5×..8.5×）对齐。
+         * [MIN_SPEED]/[MAX_SPEED] 只约束变声器预设自己的倍率，不能拿来夹最终结果。
+         */
+        const val MIN_PLAYBACK_SPEED = 0.5f
+        const val MAX_PLAYBACK_SPEED = 8.5f
+
         fun pitchOf(preset: VoiceEffectPreset?, base: Float = 1f): Float =
             (base * (preset?.pitch ?: 1f)).coerceIn(MIN_PITCH, MAX_PITCH)
 
-        fun speedOf(preset: VoiceEffectPreset?, base: Float = 1f): Float =
-            (base * (preset?.speed ?: 1f)).coerceIn(MIN_SPEED, MAX_SPEED)
+        fun speedOf(preset: VoiceEffectPreset?, base: Float = 1f): Float {
+            val factor = (preset?.speed ?: 1f).coerceIn(MIN_SPEED, MAX_SPEED)
+            return (base * factor).coerceIn(MIN_PLAYBACK_SPEED, MAX_PLAYBACK_SPEED)
+        }
 
         fun parameters(preset: VoiceEffectPreset?, baseSpeed: Float): PlaybackParameters =
             PlaybackParameters(speedOf(preset, baseSpeed), pitchOf(preset))
