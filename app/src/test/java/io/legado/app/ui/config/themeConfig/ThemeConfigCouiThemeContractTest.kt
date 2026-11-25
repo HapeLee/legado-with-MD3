@@ -1,5 +1,6 @@
 package io.legado.app.ui.config.themeConfig
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -174,16 +175,10 @@ class ThemeConfigCouiThemeContractTest {
             "不支持模糊时开关仍显示为已开启",
             themeConfig.contains("checked = theme.useHyperOs4Components && ThemeResolver.isBlurSupported(),"),
         )
-        assertTrue(
-            "模糊开关未只在 Material / Mochi 下保留",
-            themeConfig.contains(
-                "if (composeEngine == ComposeEngine.Material || composeEngine == ComposeEngine.Mochi) {",
-            ),
-        )
-        assertFalse(
-            "COUI / Miuix 仍可通过模糊开关关闭材质",
-            themeConfig.contains("ComposeEngine.Coui -> ThemeResolver.isCouiSupported()"),
-        )
+        val bars = sourceOf(TOP_BOTTOM_BAR_SECTION).substringBefore("internal fun BottomBarSettingsSection")
+        assertEquals(2, Regex("SearchableSetting\\(\"theme.is_blur_enable\"\\)").findAll(bars).count())
+        assertTrue(bars.contains("ComposeEngine.Material -> {"))
+        assertTrue(bars.contains("ComposeEngine.Mochi -> {"))
 
         val resolver = sourceOf(THEME_RESOLVER)
         assertTrue("未提供统一的模糊能力判定", resolver.contains("internal fun isBlurSupported()"))
@@ -203,17 +198,14 @@ class ThemeConfigCouiThemeContractTest {
         )
     }
 
-    /**
-     * 「首页与导航」「顶栏与底栏」从浮层收进外观页：设置项必须留在页面里（与同页 SettingItem
-     * 系列同形），浮层入口只保留仍需整块编辑的导航图标。
-     */
     @Test
-    fun mainNavigationAndBarSettingsAreInlinedInTheAppearancePage() {
+    fun navigationVisibilityAndOrderShareASheetFromTheInlineNavigationSettings() {
         val page = sourceOf(THEME_CONFIG)
-        assertFalse("首页与导航仍在用浮层承载", page.contains("ThemeConfigSheet.MainNavigation"))
+        assertTrue("导航排序入口未打开独立面板", page.contains("ThemeConfigSheet.NavigationOrder"))
         assertFalse("顶栏与底栏仍在用浮层承载", page.contains("ThemeConfigSheet.TopBottomBar"))
         assertTrue("首页与导航未内联渲染", page.contains("MainNavigationSettingsSection("))
-        assertTrue("顶栏与底栏未内联渲染", page.contains("TopBottomBarSettingsSection("))
+        assertTrue("顶栏未内联渲染", page.contains("TopBarSettingsSection("))
+        assertTrue("底栏未内联渲染", page.contains("BottomBarSettingsSection("))
         assertTrue("导航图标入口丢失", page.contains("ThemeConfigSheet.NavIcons"))
         assertFalse(
             "旧浮层实现仍留在源码树",
@@ -223,8 +215,11 @@ class ThemeConfigCouiThemeContractTest {
         val navigation = sourceOf(MAIN_NAVIGATION_SECTION)
         assertTrue("默认主页未使用同页下拉项", navigation.contains("SearchableSetting(\"theme.default_home_page\")"))
         assertTrue("导航标签模式未使用同页下拉项", navigation.contains("DropdownListSettingItem("))
-        assertTrue("导航项未使用同页开关", navigation.contains("SwitchSettingItem("))
-        assertTrue("导航项丢失拖拽排序", navigation.contains("rememberReorderableLazyListState"))
+        assertFalse("导航显示开关仍在外观页", navigation.substringBefore("internal fun MainNavigationOrderSheet").contains("SwitchSettingItem("))
+        val order = navigation.substringAfter("internal fun MainNavigationOrderSheet")
+        assertTrue("排序面板未使用公共浮层", order.contains("AppModalBottomSheet("))
+        assertTrue("导航项丢失拖拽排序", order.contains("longPressDraggableHandle("))
+        assertTrue("排序面板缺少显示开关", order.contains("AdaptiveSwitch("))
 
         val bars = sourceOf(TOP_BOTTOM_BAR_SECTION)
         assertTrue("折叠应用栏未使用同页开关", bars.contains("SwitchSettingItem("))

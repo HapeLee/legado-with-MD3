@@ -1223,7 +1223,8 @@
     <string name="show_discovery">显示发现</string>
     <string name="show_home">显示首页</string>
     <string name="main_navigation_settings">首页与导航</string>
-    <string name="main_navigation_settings_summary">配置首页、发现、订阅、默认主页和导航栏图标</string>
+    <string name="theme_main_navigation_order">导航项显示与排序</string>
+    <string name="theme_navigation_item_visibility">显示%1$s</string>
     <string name="navigation_order">导航顺序</string>
     <string name="style">样式</string>
     <string name="group_style">分组样式</string>
@@ -1956,8 +1957,8 @@
     <string name="coui_floating_bottom_bar_summary">COUI 的底部导航固定使用悬浮样式</string>
     <string name="top_bar_button_liquid_glass">顶栏按钮液态玻璃</string>
     <string name="top_bar_button_liquid_glass_summary">为顶栏按钮启用背景模糊和折射，需要 Android 13 或更高版本</string>
-    <string name="floating_bottom_bar_liquid_glass">液态玻璃效果</string>
-    <string name="floating_bottom_bar_liquid_glass_summary">为悬浮底栏启用液态玻璃高光效果，需要 Android 13 及以上系统</string>
+    <string name="floating_bottom_bar_liquid_glass">悬浮底栏液态玻璃</string>
+    <string name="floating_bottom_bar_liquid_glass_summary">为悬浮底栏应用液态玻璃，需要 Android 13 或更高版本。</string>
     <string name="nav_label_mode">导航栏标签显示方式</string>
     <string name="read">阅读</string>
     <string name="privacy">隐私</string>
@@ -2077,6 +2078,14 @@
     <string name="palette_style">调色板样式</string>
     <string name="material_version">颜色规格</string>
     <string name="tip_compose_set">这里的选项仅可以控制使用Compose重写的界面。对于禁用的选项，会在日后实现时开放，现在仅作占位。</string>
+    <string name="theme_fonts_and_background">字体与背景</string>
+    <string name="theme_top_bar_group">顶栏</string>
+    <string name="theme_layout_and_motion">布局与动效</string>
+    <string name="theme_cards_and_lists">卡片与列表</string>
+    <string name="theme_book_relationships">关联书籍</string>
+    <string name="theme_top_bar_background_blur">顶栏背景模糊</string>
+    <string name="theme_top_bar_background_blur_summary">内容滚过顶栏时模糊背景，需要 Android 13 或更高版本。</string>
+    <string name="theme_app_background_summary">日间和夜间背景图与背景虚化</string>
     <string name="is_blur_enable">启用控件模糊</string>
     <string name="use_underline">总是使用下划线表示强调文本</string>
     <string name="adapt_special_style">适配特殊样式</string>

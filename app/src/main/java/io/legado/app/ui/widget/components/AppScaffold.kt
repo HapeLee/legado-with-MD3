@@ -123,7 +123,6 @@ fun AppScaffold(
     val density = LocalDensity.current
     val miuixEngine = composeEngine == ComposeEngine.Miuix
     val miuixSurfaceColor = MiuixTheme.colorScheme.surface
-    // Miuix 的顶/底栏模糊同样常开，enableBlur 只作用于 Material / Mochi。
     val miuixBarBlur = miuixEngine && nativeSamplingSupported && hasBars
     val miuixGlassMenus = miuixEngine && themeSettings.useHyperOs4Components &&
         ThemeResolver.isBlurSupported()
@@ -139,8 +138,7 @@ fun AppScaffold(
     val mochiScrollBlur = composeEngine == ComposeEngine.Mochi &&
         nativeSamplingSupported && topBar != null && themeSettings.mochiScrollEdgeBlurEnabled
     val mochiScrollProgress = if (mochiScrollBlur) remember { mutableStateOf<() -> Float>({ 1f }) } else null
-    val mochiBackdrop = if (composeEngine == ComposeEngine.Mochi && nativeSamplingSupported &&
-        (mochiTopBarGlassEnabled || bottomBar != null && configuration.appShell.useFloatingBottomBarLiquidGlass)) {
+    val mochiBackdrop = if (mochiTopBarGlassEnabled) {
         rememberMochiBackdrop(backdropBaseColor)
     } else null
     val mochiRegistry = LocalMochiBackdropRegistry.current

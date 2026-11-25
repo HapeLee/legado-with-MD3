@@ -1035,7 +1035,8 @@
     <string name="show_discovery">顯示發現</string>
     <string name="show_home">顯示首頁</string>
     <string name="main_navigation_settings">首頁與導覽</string>
-    <string name="main_navigation_settings_summary">設定首頁、發現、訂閱、預設主頁和導航欄圖示</string>
+    <string name="theme_main_navigation_order">導航項目顯示與排序</string>
+    <string name="theme_navigation_item_visibility">顯示%1$s</string>
     <string name="navigation_order">導覽順序</string>
     <string name="style">樣式</string>
     <string name="group_style">分組樣式</string>
@@ -2005,8 +2006,8 @@
     <string name="coui_floating_bottom_bar_summary">COUI 的底部導覽固定使用懸浮樣式</string>
     <string name="top_bar_button_liquid_glass">頂欄按鈕液態玻璃</string>
     <string name="top_bar_button_liquid_glass_summary">為頂欄按鈕啟用背景模糊與折射，需要 Android 13 或更新版本</string>
-    <string name="floating_bottom_bar_liquid_glass">液態玻璃效果</string>
-    <string name="floating_bottom_bar_liquid_glass_summary">為懸浮底欄啟用液態玻璃高亮效果。需要模糊和 Android 13+</string>
+    <string name="floating_bottom_bar_liquid_glass">懸浮底欄液態玻璃</string>
+    <string name="floating_bottom_bar_liquid_glass_summary">為懸浮底欄套用液態玻璃，需要 Android 13 或更新版本。</string>
     <string name="nav_label_mode">導航欄標籤模式</string>
     <string name="read">閱讀</string>
     <string name="privacy">隱私</string>
@@ -2118,6 +2119,14 @@
     <string name="palette_style">調色板樣式</string>
     <string name="material_version">色彩規格</string>
     <string name="tip_compose_set">這些選項僅影響使用 Compose 重寫的介面。停用的選項為佔位符，將在實作後啟用。</string>
+    <string name="theme_fonts_and_background">字型與背景</string>
+    <string name="theme_top_bar_group">頂欄</string>
+    <string name="theme_layout_and_motion">版面與動畫</string>
+    <string name="theme_cards_and_lists">卡片與清單</string>
+    <string name="theme_book_relationships">關聯書籍</string>
+    <string name="theme_top_bar_background_blur">頂欄背景模糊</string>
+    <string name="theme_top_bar_background_blur_summary">內容捲過頂欄時模糊背景，需要 Android 13 或更新版本。</string>
+    <string name="theme_app_background_summary">日間和夜間背景圖片及背景模糊</string>
     <string name="is_blur_enable">啟用元素模糊</string>
     <string name="use_underline">強調文字始終使用底線</string>
     <string name="adapt_special_style">適配特殊樣式</string>

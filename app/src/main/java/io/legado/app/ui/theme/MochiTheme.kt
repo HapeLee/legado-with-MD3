@@ -37,8 +37,9 @@ internal fun ProvideMochiTheme(
         colors = colors,
         textStyles = textStyles,
         systemBarAppearance = false,
+        // Top bar and floating navigation choose their own glass materials.
         materials = iosMaterials(
-            glass = Build.VERSION.SDK_INT >= 33 && settings.appShell.useFloatingBottomBarLiquidGlass,
+            glass = false,
             blur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && settings.theme.mochiScrollEdgeBlurEnabled,
         ),
         content = {

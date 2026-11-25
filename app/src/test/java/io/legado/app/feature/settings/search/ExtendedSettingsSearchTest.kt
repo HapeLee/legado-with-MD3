@@ -6,6 +6,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -23,7 +26,9 @@ import io.legado.app.ui.config.otherConfig.OtherConfigScreen
 import io.legado.app.ui.config.otherConfig.OtherConfigUiState
 import io.legado.app.ui.config.themeConfig.ThemeConfigScreen
 import io.legado.app.ui.config.themeConfig.ThemeConfigIntent
+import io.legado.app.ui.config.themeConfig.ThemeConfigSheet
 import io.legado.app.ui.config.themeConfig.ThemeConfigUiState
+import io.legado.app.ui.main.MainDestination
 import io.legado.app.ui.theme.AppTheme
 import org.junit.Assert.*
 import org.junit.Rule
@@ -87,7 +92,9 @@ class ExtendedSettingsSearchTest {
             vm.onIntent(SettingsSearchIntent.QueryChanged(app.getString(R.string.is_blur_progressive_enable)))
             assertFalse(vm.uiState.value.results.any { it.id == "theme.is_blur_progressive_enable" })
             vm.onIntent(SettingsSearchIntent.QueryChanged(app.getString(R.string.is_blur_enable)))
-            assertTrue(vm.uiState.value.results.any { it.id == "theme.is_blur_enable" })
+            assertTrue(vm.uiState.value.results.any {
+                it.id == "theme.is_blur_enable" && it.title == app.getString(R.string.theme_top_bar_background_blur)
+            })
         }
     }
 
@@ -170,10 +177,107 @@ class ExtendedSettingsSearchTest {
         }
     }
 
+    @Test
+    fun `dragging a navigation item reorders it within the Material navigation order sheet`() =
+        verifyNavigationReorder("material")
+
+    @Test
+    fun `dragging a navigation item reorders it within the Miuix navigation order sheet`() =
+        verifyNavigationReorder("miuix")
+
+    private fun verifyNavigationReorder(engine: String) {
+        val app = RuntimeEnvironment.getApplication().also { it.injectAsAppCtx() }
+        val target = requireNotNull(SettingsSearchCatalog.find("theme.main_navigation_settings"))
+        var shell by mutableStateOf(AppShellSettings(composeEngine = engine, showHome = false))
+        var sheet by mutableStateOf<ThemeConfigSheet?>(null)
+        val events = mutableListOf<ThemeConfigIntent>()
+        compose.setContent {
+            AppTheme(AppUiConfiguration(appShell = shell)) {
+                SettingsSearchTargetScope(target) {
+                    ThemeConfigScreen(
+                        ThemeConfigUiState(appShell = shell, activeSheet = sheet),
+                        { intent ->
+                            events += intent
+                            when (intent) {
+                                is ThemeConfigIntent.ShowSheet -> sheet = intent.sheet
+                                ThemeConfigIntent.DismissSheet -> sheet = null
+                                is ThemeConfigIntent.SetMainNavigationOrder ->
+                                    shell = shell.copy(mainNavigationOrder = intent.routes)
+                                is ThemeConfigIntent.SetMainDestinationVisible -> {
+                                    assertEquals(MainDestination.Home.route, intent.route)
+                                    shell = shell.copy(showHome = intent.visible)
+                                }
+                                else -> Unit
+                            }
+                        },
+                        {}, {}, {},
+                    )
+                }
+            }
+        }
+        val entry = hasAnyAncestor(hasTestTag("setting:theme.main_navigation_settings"))
+        val homeTitle = app.getString(MainDestination.Home.labelId)
+        val bookshelfTitle = app.getString(MainDestination.Bookshelf.labelId)
+        val homeSwitch = compose.onNodeWithContentDescription(
+            app.getString(R.string.theme_navigation_item_visibility, homeTitle),
+        )
+        homeSwitch.assertDoesNotExist()
+        compose.onNode(hasClickAction() and entry).performClick()
+        homeSwitch.assertIsOff()
+        for (destination in listOf(MainDestination.Bookshelf, MainDestination.My)) {
+            val title = app.getString(destination.labelId)
+            compose.onNodeWithContentDescription(app.getString(R.string.theme_navigation_item_visibility, title))
+                .assertIsOn()
+                .assertIsNotEnabled()
+        }
+        val homeRow = compose.onNodeWithContentDescription(app.getString(R.string.a11y_reorder_named, homeTitle))
+        val bookshelfRow = compose.onNodeWithContentDescription(app.getString(R.string.a11y_reorder_named, bookshelfTitle))
+        MainDestination.mainDestinations.forEach { destination ->
+            val title = app.getString(destination.labelId)
+            compose.onNodeWithContentDescription(app.getString(R.string.a11y_reorder_named, title))
+                .assertIsDisplayed()
+                .assert(!hasClickAction())
+        }
+        compose.runOnIdle { assertEquals(listOf(ThemeConfigIntent.ShowSheet(ThemeConfigSheet.NavigationOrder)), events) }
+        val distance = bookshelfRow.fetchSemanticsNode().boundsInRoot.center.y -
+            homeRow.fetchSemanticsNode().boundsInRoot.center.y
+        homeRow.performTouchInput { down(center) }
+        compose.mainClock.advanceTimeBy(650)
+        homeRow.performTouchInput { moveBy(Offset(0f, distance)) }
+        compose.mainClock.advanceTimeBy(100)
+        homeRow.performTouchInput { up() }
+
+        compose.runOnIdle {
+            assertEquals("bookshelf,home,explore,rss,my", shell.mainNavigationOrder)
+            assertTrue(events.drop(1).all { it is ThemeConfigIntent.SetMainNavigationOrder })
+            assertFalse(shell.showHome)
+        }
+        bookshelfRow.assert(
+            SemanticsMatcher.expectValue(
+                SemanticsProperties.StateDescription,
+                app.getString(R.string.a11y_reorder_position, 1, MainDestination.mainDestinations.size),
+            ),
+        )
+
+        homeSwitch.performTouchInput { click() }
+        homeSwitch.assertIsOn()
+        compose.runOnIdle {
+            assertEquals("bookshelf,home,explore,rss,my", shell.mainNavigationOrder)
+            assertEquals(listOf(ThemeConfigIntent.SetMainDestinationVisible(MainDestination.Home.route, true)),
+                events.filterIsInstance<ThemeConfigIntent.SetMainDestinationVisible>())
+        }
+
+        val moveDown = bookshelfRow.fetchSemanticsNode().config[SemanticsActions.CustomActions]
+            .single { it.label == app.getString(R.string.a11y_move_down) }
+        compose.runOnIdle {
+            assertTrue(moveDown.action())
+            assertEquals(AppShellSettings().mainNavigationOrder, shell.mainNavigationOrder)
+        }
+    }
+
     private fun assertThemeUnchanged(events: List<ThemeConfigIntent>, shell: AppShellSettings = AppShellSettings()) {
         for (event in events) when (event) {
             ThemeConfigIntent.DismissSheet -> Unit
-            // The existing navigation sheet canonicalizes its order even when hidden.
             is ThemeConfigIntent.SetMainNavigationOrder -> assertEquals(shell.mainNavigationOrder, event.routes)
             else -> fail("Unexpected setting mutation: $event")
         }
@@ -209,6 +313,8 @@ class ExtendedSettingsSearchTest {
         }
         for ((res, id) in listOf(
             R.string.font_setting to "theme.font_setting",
+            R.string.theme_pack to "theme.theme_pack",
+            R.string.change_icon to "theme.change_icon",
             R.string.language to "other.language",
             R.string.clear_webview_data to "other.clear_webview_data",
         )) {

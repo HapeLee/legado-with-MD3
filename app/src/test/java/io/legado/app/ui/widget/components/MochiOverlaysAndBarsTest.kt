@@ -56,7 +56,7 @@ import io.legado.app.feature.settings.search.SettingsSearchTargetScope
 import io.legado.app.ui.config.themeConfig.ThemeConfigIntent
 import io.legado.app.ui.config.themeConfig.ThemeConfigScreen
 import io.legado.app.ui.config.themeConfig.ThemeConfigUiState
-import io.legado.app.ui.config.themeConfig.TopBottomBarSettingsSection
+import io.legado.app.ui.config.themeConfig.TopBarSettingsSection
 import io.legado.app.ui.theme.AppTheme
 import io.legado.app.ui.theme.LocalHasMiuixPopupHost
 import io.legado.app.ui.theme.LocalMochiBackdropRegistry
@@ -660,37 +660,38 @@ class MochiOverlaysAndBarsTest {
     }
 
     @Test
-    fun mochiTopBarGlassCanTurnOffWhileTheBottomBarStillUsesGlass() {
+    fun floatingBarGlassDoesNotChangeMochiTopBarOrOverlayMaterials() {
         RuntimeEnvironment.getApplication().injectAsAppCtx()
         val theme = mutableStateOf(ThemeSettings())
+        val shell = mutableStateOf(AppShellSettings(composeEngine = "mochi", useFloatingBottomBar = true))
         var topBarGlass = false
-        var bottomBarGlass = false
+        var overlayGlass = false
         compose.setContent {
-            AppTheme(AppUiConfiguration(
-                appShell = AppShellSettings(composeEngine = "mochi", useFloatingBottomBarLiquidGlass = true),
-                theme = theme.value,
-            )) {
-                AppScaffold(
-                    topBar = {
-                        val glass = MochiTheme.materials.controlGlass != null && LocalMochiBackdrop.current != null
-                        SideEffect { topBarGlass = glass }
-                        GlassTopAppBar("Title", actions = { TopBarActionButton({}, AppIcons.Search, "Search") })
-                    },
-                    bottomBar = {
-                        val glass = MochiTheme.materials.bar != null && LocalMochiBackdrop.current != null
-                        SideEffect { bottomBarGlass = glass }
-                    },
-                ) {}
+            AppTheme(AppUiConfiguration(appShell = shell.value, theme = theme.value)) {
+                AppScaffold(topBar = {
+                    val glass = MochiTheme.materials.controlGlass != null && LocalMochiBackdrop.current != null
+                    SideEffect { topBarGlass = glass }
+                    GlassTopAppBar("Title", actions = { TopBarActionButton({}, AppIcons.Search, "Search") })
+                }) {
+                    val materials = MochiTheme.materials
+                    val glass = materials.menuGlass != null || materials.alertGlass != null || materials.sheetGlass != null
+                    SideEffect { overlayGlass = glass }
+                }
             }
         }
         compose.runOnIdle {
             assertTrue(topBarGlass)
-            assertTrue(bottomBarGlass)
+            assertFalse(overlayGlass)
+            shell.value = shell.value.copy(useFloatingBottomBarLiquidGlass = true)
+        }
+        compose.runOnIdle {
+            assertTrue(topBarGlass)
+            assertFalse(overlayGlass)
             theme.value = theme.value.copy(mochiTopBarLiquidGlass = false)
         }
         compose.runOnIdle {
             assertFalse(topBarGlass)
-            assertTrue(bottomBarGlass)
+            assertFalse(overlayGlass)
         }
     }
 
@@ -1650,13 +1651,14 @@ class MochiOverlaysAndBarsTest {
         val app = RuntimeEnvironment.getApplication()
         val theme = mutableStateOf(ThemeSettings(topBarButtonStyle = "liquid", mergeTopBarActions = true))
         show(glass = true, merged = true) {
-            TopBottomBarSettingsSection(
-                appShell = AppShellSettings(composeEngine = "mochi"),
-                theme = theme.value,
-                onIntent = { if (it is ThemeConfigIntent.UpdateTheme) theme.value = it.transform(theme.value) },
-            )
+            Column {
+                TopBarSettingsSection(
+                    theme = theme.value,
+                    onIntent = { if (it is ThemeConfigIntent.UpdateTheme) theme.value = it.transform(theme.value) },
+                )
+            }
         }
-        compose.onNodeWithText(app.getString(R.string.show_bottom_nav)).assertIsDisplayed()
+        compose.onNodeWithText(app.getString(R.string.theme_top_bar_background_blur)).assertIsOn()
         compose.onNodeWithText(app.getString(R.string.top_bar_button_style)).assertDoesNotExist()
         compose.onNodeWithText(app.getString(R.string.merge_top_bar_actions)).assertDoesNotExist()
         compose.onNodeWithText(app.getString(R.string.top_bar_button_liquid_glass)).assertIsOn().performClick()

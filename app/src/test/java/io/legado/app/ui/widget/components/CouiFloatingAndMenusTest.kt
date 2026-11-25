@@ -47,7 +47,7 @@ import io.legado.app.R
 import io.legado.app.domain.model.settings.AppShellSettings
 import io.legado.app.domain.model.settings.AppUiConfiguration
 import io.legado.app.domain.model.settings.ThemeSettings
-import io.legado.app.ui.config.themeConfig.TopBottomBarSettingsSection
+import io.legado.app.ui.config.themeConfig.BottomBarSettingsSection
 import io.legado.app.ui.theme.AppTheme
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.coui.rememberAppVerticalOverscrollEffect
@@ -235,19 +235,28 @@ class CouiFloatingAndMenusTest {
     @Test
     fun couiLocksFloatingNavigationOnButKeepsItsGlassSetting() {
         val context = RuntimeEnvironment.getApplication()
+        val useNavigationRail = mutableStateOf(false)
         setCouiContent {
-            TopBottomBarSettingsSection(
-                appShell = AppShellSettings(composeEngine = "coui", useFloatingBottomBar = false),
-                theme = ThemeSettings(),
-                onIntent = {},
-            )
+            Column {
+                BottomBarSettingsSection(
+                    appShell = AppShellSettings(composeEngine = "coui", useFloatingBottomBar = false),
+                    theme = ThemeSettings(),
+                    useNavigationRail = useNavigationRail.value,
+                    onIntent = {},
+                )
+            }
         }
 
-        compose.onNodeWithText(context.getString(R.string.floating_bottom_bar))
-            .assertIsOn().assertIsNotEnabled()
-        compose.onNodeWithText(context.getString(R.string.floating_bottom_bar_liquid_glass))
-            .assertIsEnabled()
+        val floating = compose.onNodeWithText(context.getString(R.string.floating_bottom_bar))
+        val glass = compose.onNodeWithText(context.getString(R.string.floating_bottom_bar_liquid_glass))
+        floating.assertIsOn().assertIsNotEnabled()
+        glass.assertIsEnabled()
         compose.onNodeWithText(context.getString(R.string.bottom_bar_opacity)).assertDoesNotExist()
+
+        compose.runOnIdle { useNavigationRail.value = true }
+        compose.onNodeWithText(context.getString(R.string.show_bottom_nav)).assertIsEnabled()
+        floating.assertDoesNotExist()
+        glass.assertDoesNotExist()
     }
 
     @Test

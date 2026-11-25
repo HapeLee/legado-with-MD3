@@ -14,7 +14,7 @@ import kotlinx.collections.immutable.ImmutableList
 import ui.feice.mochi.basic.MochiTabBar
 import ui.feice.mochi.basic.MochiTabBarDefaults
 import ui.feice.mochi.basic.MochiTabItem
-import ui.feice.mochi.theme.MochiTheme
+import ui.feice.mochi.theme.MochiGlassDefaults
 
 @Composable
 internal fun AppMochiNavigationBar(
@@ -25,7 +25,7 @@ internal fun AppMochiNavigationBar(
     showLabel: Boolean = true,
     alwaysShowLabel: Boolean = true,
     floating: Boolean = false,
-    glass: Boolean = true,
+    glass: Boolean = false,
 ) {
     MochiTabBar(
         items = items,
@@ -48,6 +48,6 @@ internal fun AppMochiNavigationBar(
             selectedLabelOnly = showLabel && !alwaysShowLabel,
         ),
         windowInsets = if (floating) WindowInsets(0) else MochiTabBarDefaults.windowInsets,
-        material = if (glass) MochiTheme.materials.bar else null,
+        material = if (glass) MochiGlassDefaults.Regular else null,
     )
 }

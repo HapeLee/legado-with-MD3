@@ -1260,7 +1260,8 @@
     <string name="show_discovery">Show Discovery</string>
     <string name="show_home">Show Home</string>
     <string name="main_navigation_settings">Home and navigation</string>
-    <string name="main_navigation_settings_summary">Configure Home, Discovery, Subscriptions, start page, and navigation icons</string>
+    <string name="theme_main_navigation_order">Navigation Visibility and Order</string>
+    <string name="theme_navigation_item_visibility">Show %1$s</string>
     <string name="navigation_order">Navigation order</string>
     <string name="style">Style</string>
     <string name="group_style">Group style</string>
@@ -2012,8 +2013,8 @@
     <string name="coui_floating_bottom_bar_summary">COUI always uses a floating bottom bar when bottom navigation is shown</string>
     <string name="top_bar_button_liquid_glass">Liquid Glass Top Bar Buttons</string>
     <string name="top_bar_button_liquid_glass_summary">Enable backdrop blur and refraction on top bar buttons. Requires Android 13 or later.</string>
-    <string name="floating_bottom_bar_liquid_glass">Liquid Glass Effect</string>
-    <string name="floating_bottom_bar_liquid_glass_summary">Enable the liquid glass highlight for the floating bar. Requires blur and Android 13+</string>
+    <string name="floating_bottom_bar_liquid_glass">Floating Bottom Bar Liquid Glass</string>
+    <string name="floating_bottom_bar_liquid_glass_summary">Apply liquid glass to the floating bottom bar. Requires Android 13 or later.</string>
     <string name="nav_label_mode">Navigation Bar Label Mode</string>
     <string name="read">Read</string>
     <string name="privacy">Privacy</string>
@@ -2135,6 +2136,14 @@
     <string name="palette_style">Palette Style</string>
     <string name="material_version">Color Specification</string>
     <string name="tip_compose_set">These options only affect screens rewritten in Compose. Disabled options are placeholders and will be enabled after implementation.</string>
+    <string name="theme_fonts_and_background">Fonts and Background</string>
+    <string name="theme_top_bar_group">Top Bar</string>
+    <string name="theme_layout_and_motion">Layout and Motion</string>
+    <string name="theme_cards_and_lists">Cards and Lists</string>
+    <string name="theme_book_relationships">Related Books</string>
+    <string name="theme_top_bar_background_blur">Top Bar Background Blur</string>
+    <string name="theme_top_bar_background_blur_summary">Blur content as it scrolls behind the top bar. Requires Android 13 or later.</string>
+    <string name="theme_app_background_summary">Day and night background images and background blur</string>
     <string name="is_blur_enable">Enable Element Blur</string>
     <string name="use_underline">Always Use Underline for Emphasized Text</string>
     <string name="adapt_special_style">Adapt Special Styles</string>

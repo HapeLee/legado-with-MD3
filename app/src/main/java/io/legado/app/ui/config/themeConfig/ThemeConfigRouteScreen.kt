@@ -28,6 +28,7 @@ fun ThemeConfigRouteScreen(
     onNavigateToCustomTheme: () -> Unit,
     onNavigateToThemeManage: () -> Unit,
     viewModel: ThemeConfigViewModel = koinViewModel(),
+    useNavigationRail: Boolean = false,
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -119,5 +120,6 @@ fun ThemeConfigRouteScreen(
         onBackClick = onBackClick,
         onNavigateToCustomTheme = onNavigateToCustomTheme,
         onNavigateToThemeManage = onNavigateToThemeManage,
+        useNavigationRail = useNavigationRail,
     )
 }

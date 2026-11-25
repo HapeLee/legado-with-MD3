@@ -343,7 +343,7 @@ fun MainScreen(
             useFloatingBottomBar = ThemeResolver.useFloatingBottomBar(engine, mainUiState.useFloatingBottomBar),
             useRail = useRail,
         )
-    val useLiquidGlass = useFloatingBottomBar &&
+    val useLiquidGlass = useFloatingBottomBar && engine != ComposeEngine.Oxygen &&
             mainUiState.useFloatingBottomBarLiquidGlass &&
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
     var floatingFooterHeight by remember { mutableStateOf(0.dp) }

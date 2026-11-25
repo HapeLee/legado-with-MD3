@@ -1,6 +1,5 @@
 package io.legado.app.feature.settings.search
 
-import android.os.Build
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
@@ -50,13 +49,9 @@ fun SettingsSearchRouteScreen(
 ) {
     val resources = LocalResources.current
     val configuration = LocalConfiguration.current
-    val hasProgressiveBlurSetting = when (LegadoTheme.composeEngine) {
-        ComposeEngine.Material -> true
-        ComposeEngine.Miuix -> Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-        ComposeEngine.Oxygen, ComposeEngine.Mochi, ComposeEngine.Coui -> false
-    }
-    // 按当前配置解析文案，并在主题能力变化时更新可搜索条目。
-    val index = remember(resources, configuration, hasProgressiveBlurSetting) {
+    val engine = LegadoTheme.composeEngine
+    // Resolve text and availability against the same theme as the destination.
+    val index = remember(resources, configuration, engine) {
         val reading = ReadSetting.entries.map { setting ->
             SettingsSearchEntry(
                 id = setting.id,
@@ -71,19 +66,27 @@ fun SettingsSearchRouteScreen(
                 keywords = setting.keywordsRes?.let(resources::getString).orEmpty(),
             )
         }
-        val availableItems = SettingsSearchCatalog.items.filterNot {
-            !hasProgressiveBlurSetting && it.id == "theme.is_blur_progressive_enable"
+        val availableItems = SettingsSearchCatalog.items.filter { item ->
+            when (item.id) {
+                "theme.is_blur_progressive_enable" -> engine == ComposeEngine.Material
+                "theme.is_blur_enable" -> engine == ComposeEngine.Material || engine == ComposeEngine.Mochi
+                "theme.floating_bottom_bar_liquid_glass" -> engine != ComposeEngine.Oxygen
+                else -> true
+            }
         }
         val fixed = (SettingsSearchCatalog.categories + availableItems).map { item ->
+            val isMochiBlur = engine == ComposeEngine.Mochi && item.id == "theme.is_blur_enable"
+            val titleRes = if (isMochiBlur) R.string.theme_top_bar_background_blur else item.titleRes
+            val descriptionRes = if (isMochiBlur) R.string.theme_top_bar_background_blur_summary else item.descriptionRes
             val pageTitle = resources.getString(item.page.titleRes)
             val parent = item.parentId?.let(SettingsSearchCatalog::find)
             val description = listOfNotNull(
-                item.descriptionRes?.let(resources::getString),
+                descriptionRes?.let(resources::getString),
                 parent?.let { resources.getString(R.string.settings_search_condition, resources.getString(it.titleRes)) },
             ).joinToString("\n")
             SettingsSearchEntry(
                 id = item.id,
-                title = resources.getString(item.titleRes),
+                title = resources.getString(titleRes),
                 path = when {
                     item.isCategory -> resources.getString(R.string.setting)
                     item.groupTitleRes != null -> resources.getString(R.string.settings_search_path,
@@ -93,7 +96,10 @@ fun SettingsSearchRouteScreen(
                 description = description,
                 keywords = when (item.page) {
                     SettingsSearchPage.Theme, SettingsSearchPage.CustomTheme, SettingsSearchPage.ThemeManage ->
-                        resources.getString(R.string.settings_search_theme_keywords)
+                        if (isMochiBlur) {
+                            resources.getString(R.string.settings_search_theme_keywords) + " " +
+                                resources.getString(item.titleRes)
+                        } else resources.getString(R.string.settings_search_theme_keywords)
                     SettingsSearchPage.Other -> resources.getString(R.string.settings_search_advanced_keywords)
                     else -> ""
                 },

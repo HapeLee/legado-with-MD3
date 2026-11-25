@@ -22,6 +22,7 @@ sealed interface ThemeConfigSheet {
 
     /** 导航栏自定义图标：仍以浮层编辑（每个目的地含两个图标槽）。 */
     data object NavIcons : ThemeConfigSheet
+    data object NavigationOrder : ThemeConfigSheet
     data object LauncherIcon : ThemeConfigSheet
     data object DividerColor : ThemeConfigSheet
     data class BaseCardBorderColor(val dark: Boolean) : ThemeConfigSheet
@@ -64,7 +65,6 @@ sealed interface ThemeConfigIntent {
     data class SetReaderSharedElementEnabled(val enabled: Boolean) : ThemeConfigIntent
     data class SetFontScale(val value: Int) : ThemeConfigIntent
     data class SetShowStatusBar(val visible: Boolean) : ThemeConfigIntent
-    data class SetSwipeAnimation(val enabled: Boolean) : ThemeConfigIntent
     data class SetShowBottomView(val visible: Boolean) : ThemeConfigIntent
     data class SetUsePagerTopBar(val enabled: Boolean) : ThemeConfigIntent
     data class SetUseFloatingBottomBar(val enabled: Boolean) : ThemeConfigIntent
