@@ -1,6 +1,7 @@
 package io.legado.app.ui.theme
 
 import android.app.Application
+import android.os.Looper
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
@@ -31,12 +32,14 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
@@ -47,7 +50,10 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
+import com.itos.coui.layout.CouiPageDefaults
+import com.itos.coui.switch.CouiSwitchDefaults
 import com.itos.coui.theme.CouiColorScheme
 import com.itos.coui.theme.CouiPresets
 import com.itos.coui.theme.CouiTheme
@@ -79,6 +85,7 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarScrollBehavior
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarAnimatedActionButton
+import java.time.Duration
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
@@ -88,6 +95,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import org.robolectric.annotation.LooperMode
@@ -356,6 +364,49 @@ class AppThemeEngineTest {
             .assertIsDisplayed()
             .assertIsNotEnabled()
         compose.runOnIdle { assertEquals(0, writes) }
+    }
+
+    @Test
+    @Config(sdk = [34])
+    fun couiSingleLineSwitchFitsTheRowAndSupportsTapAndDrag() {
+        RuntimeEnvironment.getApplication().injectAsAppCtx()
+        val checked = mutableStateOf(false)
+        val changes = mutableListOf<Boolean>()
+        compose.setContent {
+            AppTheme(AppUiConfiguration(appShell = AppShellSettings(composeEngine = "coui"))) {
+                SwitchSettingItem("Reading hints", checked = checked.value) {
+                    checked.value = it
+                    changes += it
+                }
+            }
+        }
+
+        val row = compose.onNodeWithText("Reading hints")
+        row.assertHeightIsEqualTo(CouiPageDefaults.rowMinHeight).assertIsOff()
+        row.performClick().assertIsOn()
+        val (rowPadding, halfSwitchWidth) = with(compose.density) {
+            CouiPageDefaults.rowPadding.toPx() to CouiSwitchDefaults.width.toPx() / 2f
+        }
+        row.performTouchInput { click(Offset(rowPadding, centerY)) }.assertIsOff()
+        row.performTouchInput {
+            click(Offset(width - rowPadding - halfSwitchWidth, centerY))
+        }.assertIsOn()
+
+        // The native switch uses Android spring animations for both toggles and drags.
+        val mainLooper = shadowOf(Looper.getMainLooper())
+        val settleTime = Duration.ofMillis(600)
+        mainLooper.idleFor(settleTime)
+        row.performTouchInput {
+            down(Offset(width - rowPadding - halfSwitchWidth, centerY))
+            moveBy(Offset(-halfSwitchWidth, 0f))
+        }
+        mainLooper.idleFor(settleTime)
+        row.performTouchInput { up() }
+        mainLooper.idleFor(settleTime)
+        row.assertIsOff()
+        compose.runOnIdle {
+            assertEquals(listOf(true, false, true, false), changes)
+        }
     }
 
     @Test
