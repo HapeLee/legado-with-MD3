@@ -22,7 +22,9 @@ import io.legado.app.domain.model.settings.CoverSettings
 import io.legado.app.model.localBook.contentDescriptorByteSize
 import io.legado.app.model.localBook.localBookFileSize
 import io.legado.app.support.InMemoryAppDatabaseFixture
+import io.legado.app.ui.main.bookshelf.BookShelfItem
 import io.legado.app.ui.main.bookshelf.BookshelfCoverPreloader
+import io.legado.app.utils.FileDoc
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -31,10 +33,12 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -51,6 +55,8 @@ import org.robolectric.shadows.ShadowContentResolver
 import splitties.init.injectAsAppCtx
 import java.io.File
 import java.io.FileNotFoundException
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 @RunWith(RobolectricTestRunner::class)
@@ -75,7 +81,7 @@ class BookshelfLocalSortTest {
         val missing = book(File(folder.root, "missing.txt")).copy(durChapterTime = 10)
         database.bookDao.insert(missing, large, comic, archive, small, empty)
 
-        val metrics = repository.flowLocalMetrics(LocalBookshelfSort.FILE_SIZE)
+        val metrics = repository.metricsOf(database.bookDao.flowBookShelfLocal())
             .await { it.size == 5 }
         val localItems = database.bookDao.flowBookShelfLocal().first()
         val group = localGroup(LocalBookshelfSort.FILE_SIZE)
@@ -127,7 +133,7 @@ class BookshelfLocalSortTest {
             val changing = book(changingFile).copy(latestChapterTime = 100L)
             database.bookDao.insert(safBook, changing)
 
-            val initial = repository.flowLocalMetrics(LocalBookshelfSort.FILE_SIZE)
+            val initial = repository.metricsOf(database.bookDao.flowBookShelfLocal())
                 .await { it[safBook.bookUrl] == 7L && it[changing.bookUrl] == 3L }
             assertEquals(7L, initial[safBook.bookUrl])
             val queriesAfterInitial = provider.queryCount.get()
@@ -140,7 +146,7 @@ class BookshelfLocalSortTest {
                 changing.copy(name = "Updated title", durChapterTime = 888L),
             )
             delay(350)
-            val afterProgress = repository.flowLocalMetrics(LocalBookshelfSort.FILE_SIZE).first()
+            val afterProgress = repository.metricsOf(database.bookDao.flowBookShelfLocal()).first()
             assertEquals(7L, afterProgress[safBook.bookUrl])
             assertEquals(3L, afterProgress[changing.bookUrl])
             assertEquals(queriesAfterInitial, provider.queryCount.get())
@@ -149,11 +155,13 @@ class BookshelfLocalSortTest {
             val cacheFile = File(folder.root, "metrics-cache.json")
             assertTrue(cacheFile.isFile)
             assertFalse(cacheFile.readText().contains(safBook.bookUrl))
+            assertFalse(cacheFile.readText().contains("known.png"))
+            assertFalse(cacheFile.readText().contains("changing.txt"))
 
             val restartedScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
             val restartedRepo = BookshelfRepository(database, settings, cacheFile, restartedScope)
             try {
-                val restarted = restartedRepo.flowLocalMetrics(LocalBookshelfSort.FILE_SIZE)
+                val restarted = restartedRepo.metricsOf(database.bookDao.flowBookShelfLocal())
                     .await { it[safBook.bookUrl] == 7L && it[changing.bookUrl] == 3L }
                 assertEquals(7L, restarted[safBook.bookUrl])
                 assertEquals(queriesAfterInitial, provider.queryCount.get())
@@ -163,7 +171,7 @@ class BookshelfLocalSortTest {
 
             // 重新导入（latestChapterTime 变化）只重测该书
             database.bookDao.update(changing.copy(latestChapterTime = 200L))
-            val afterReimport = repository.flowLocalMetrics(LocalBookshelfSort.FILE_SIZE)
+            val afterReimport = repository.metricsOf(database.bookDao.flowBookShelfLocal())
                 .await { it[changing.bookUrl] == 15L }
             assertEquals(15L, afterReimport[changing.bookUrl])
             assertEquals(queriesAfterInitial, provider.queryCount.get())
@@ -171,7 +179,7 @@ class BookshelfLocalSortTest {
             // 显式刷新后重测外部改过的文件
             changingFile.writeBytes(ByteArray(25))
             repository.invalidateLocalMetrics(LocalBookshelfSort.FILE_SIZE)
-            val afterRefresh = repository.flowLocalMetrics(LocalBookshelfSort.FILE_SIZE)
+            val afterRefresh = repository.metricsOf(database.bookDao.flowBookShelfLocal())
                 .await { it[changing.bookUrl] == 25L }
             assertEquals(25L, afterRefresh[changing.bookUrl])
         }
@@ -190,7 +198,7 @@ class BookshelfLocalSortTest {
                 .copy(name = "F未知本地", durChapterTime = 50)
             database.bookDao.insert(onlineA, onlineC, onlineE, localB, localD, localF)
 
-            val metrics = repository.flowLocalMetrics(LocalBookshelfSort.FILE_SIZE)
+            val metrics = repository.metricsOf(database.bookDao.flowBookShelfLocal())
                 .await { it[localB.bookUrl] == 300L && it[localD.bookUrl] == 100L }
             val allItems = database.bookDao.flowBookShelf().first()
 
@@ -229,10 +237,11 @@ class BookshelfLocalSortTest {
             database.bookGroupDao.insert(privateGroup)
             database.bookDao.insert(bookA, bookB)
 
-            val combined = combine(
+            // 与书架生产路径一致：指标只来自该分组自己的书单
+            val combined = repository.flowBooksWithLocalMetrics(
                 database.bookDao.flowBookShelfByGroup(privateGroup.groupId),
-                repository.flowLocalMetrics(LocalBookshelfSort.FILE_SIZE),
-            ) { items, metrics ->
+                LocalBookshelfSort.FILE_SIZE,
+            ).map { (items, metrics) ->
                 repository.sortBooks(items, privateGroup, sort = 0, sortOrder = 0, localMetrics = metrics)
                     .map { it.bookUrl }
             }
@@ -278,7 +287,7 @@ class BookshelfLocalSortTest {
                 assertEquals(0, provider.queryCount.get())
 
                 // 指标落盘缓存后，tryGetCachedMetrics 直接命中缓存且零 SAF 查询
-                val measured = repository.flowLocalMetrics(LocalBookshelfSort.FILE_SIZE)
+                val measured = repository.metricsOf(database.bookDao.flowBookShelfLocal())
                     .await { it[book.bookUrl] == 7L }
                 assertEquals(7L, measured[book.bookUrl])
                 val queriesAfterMeasure = provider.queryCount.get()
@@ -293,9 +302,191 @@ class BookshelfLocalSortTest {
             }
         }
 
+    @Test
+    fun `refresh discards a stale read that finishes after the cache was cleared`() {
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val calls = AtomicInteger()
+        // 第一次读取模拟阻塞在 SAF 查询里的慢读取：刷新清空缓存后才返回旧值 4
+        val reader: suspend (String, Boolean) -> Long? = { _, _ ->
+            if (calls.incrementAndGet() == 1) {
+                entered.countDown()
+                release.await(20, TimeUnit.SECONDS)
+                4L
+            } else {
+                16L
+            }
+        }
+        withRepository(fileSizeReader = reader) { database, repository, _ ->
+            val target = book(folder.newFile("race.txt"))
+            database.bookDao.insert(target)
+            val latest = MutableStateFlow<Map<String, Long>?>(null)
+            val collector = launch(Dispatchers.Default) {
+                repository.metricsOf(database.bookDao.flowBookShelfLocal()).collect { latest.value = it }
+            }
+            try {
+                assertTrue(withContext(Dispatchers.IO) { entered.await(20, TimeUnit.SECONDS) })
+                repository.invalidateLocalMetrics(LocalBookshelfSort.FILE_SIZE)
+                // 先放行阻塞在刷新前的旧读取，确认旧值 4 不会回填缓存，下一轮扫描会继续读取新值 16
+                release.countDown()
+                withTimeout(20_000) { latest.first { it?.get(target.bookUrl) == 16L } }
+
+                assertEquals(16L, latest.value?.get(target.bookUrl))
+                val items = database.bookDao.flowBookShelfLocal().first()
+                assertEquals(
+                    mapOf(target.bookUrl to 16L),
+                    repository.tryGetCachedMetrics(LocalBookshelfSort.FILE_SIZE, items),
+                )
+                assertEquals(2, calls.get())
+            } finally {
+                release.countDown()
+                collector.cancelAndJoin()
+            }
+        }
+    }
+
+    @Test
+    fun `cache file never stores plain file names and drops the legacy plaintext format`() =
+        withRepository { database, repository, _ ->
+            val cacheFile = File(folder.root, "metrics-cache.json")
+            cacheFile.writeText(
+                """{"version":1,"fileSize":{"abc":{"v":1,"s":"1|私密旧书.txt|0"}}}""",
+                Charsets.UTF_8,
+            )
+            val secret = book(folder.newFile("私密书名.txt").apply { writeBytes(ByteArray(11)) })
+            database.bookDao.insert(secret)
+
+            val metrics = repository.metricsOf(database.bookDao.flowBookShelfLocal())
+                .await { it[secret.bookUrl] == 11L }
+            assertEquals(11L, metrics[secret.bookUrl])
+
+            val text = cacheFile.readText(Charsets.UTF_8)
+            assertTrue(text.contains("\"version\":2"))
+            assertFalse(text.contains("私密书名"))
+            assertFalse(text.contains("私密旧书"))
+            assertFalse(text.contains(secret.bookUrl))
+        }
+
+    @Test
+    fun `reimporting a manga directory rereads size even when the directory time is unchanged`() =
+        withRepository { database, repository, _ ->
+            val image = folder.newFile("page.png").apply { writeBytes(ByteArray(23)) }
+            val provider = registerMangaSizeProvider(image)
+            val safBook = book(image).copy(
+                bookUrl = provider.document("known.png"),
+                originName = "known.png",
+                type = BookType.local or BookType.image,
+                latestChapterTime = 100L,
+            )
+            database.bookDao.insert(safBook)
+
+            val comicDir = folder.newFolder("同名漫画")
+            val page = comicDir.resolve("001.png").apply { writeBytes(ByteArray(4)) }
+            val fixedTime = 1_700_000_000_000L
+            assertTrue(comicDir.setLastModified(fixedTime))
+            val importRepository = BookImportRepository(database, repository)
+            fun directoryDoc() = FileDoc(
+                name = comicDir.name,
+                isDir = true,
+                size = 0L,
+                lastModified = comicDir.lastModified(),
+                uri = Uri.Builder().path(comicDir.absolutePath).build(),
+            )
+
+            val book = importRepository.importMangaDirectory(directoryDoc())
+            val localBooks = database.bookDao.flowBookShelfLocal()
+            val initial = repository.metricsOf(localBooks)
+                .await { it[book.bookUrl] == 4L && it[safBook.bookUrl] == 7L }
+            assertEquals(4L, initial[book.bookUrl])
+            val safQueriesAfterInitial = provider.queryCount.get()
+
+            // 原地覆盖图片：大小变化但目录修改时间保持不变，书籍校验戳也不变
+            page.writeBytes(ByteArray(9))
+            assertTrue(comicDir.setLastModified(fixedTime))
+            assertEquals(fixedTime, comicDir.lastModified())
+            delay(350)
+            assertEquals(4L, repository.metricsOf(localBooks).first()[book.bookUrl])
+
+            // 直接调用 LocalBook.importMangaDirectory 也应按书籍失效缓存，且不影响其他已缓存的 SAF 书籍
+            io.legado.app.model.localBook.LocalBook.importMangaDirectory(directoryDoc())
+            assertEquals(fixedTime, database.bookDao.getBook(book.bookUrl)?.latestChapterTime)
+            assertEquals(9L, repository.metricsOf(localBooks).await { it[book.bookUrl] == 9L }[book.bookUrl])
+            assertEquals(safQueriesAfterInitial, provider.queryCount.get())
+
+            // 通过 BookImportRepository.importMangaDirectory 重新导入同样生效
+            page.writeBytes(ByteArray(14))
+            assertTrue(comicDir.setLastModified(fixedTime))
+            importRepository.importMangaDirectory(directoryDoc())
+            assertEquals(14L, repository.metricsOf(localBooks).await { it[book.bookUrl] == 14L }[book.bookUrl])
+            assertEquals(safQueriesAfterInitial, provider.queryCount.get())
+        }
+
+    @Test
+    fun `size sort only measures local books inside the subscribed group and reuses shared cache`() {
+        val readUrls = java.util.Collections.synchronizedList(mutableListOf<String>())
+        val reader: suspend (String, Boolean) -> Long? = { url, isMangaDir ->
+            readUrls.add(url)
+            localBookFileSize(url, isMangaDir)
+        }
+        withRepository(fileSizeReader = reader) { database, repository, _ ->
+            val image = folder.newFile("page.png").apply { writeBytes(ByteArray(23)) }
+            val provider = registerMangaSizeProvider(image)
+            val localGroup = BookGroup(groupId = 1L, groupName = "本地A", bookSort = LocalBookshelfSort.FILE_SIZE)
+            val onlineGroup = BookGroup(groupId = 2L, groupName = "纯在线", bookSort = LocalBookshelfSort.FILE_SIZE)
+            val otherGroup = BookGroup(groupId = 4L, groupName = "其他组", bookSort = 0)
+            database.bookGroupDao.insert(localGroup, onlineGroup, otherGroup)
+
+            val localA = book(folder.newFile("group-a.txt").apply { writeBytes(ByteArray(42)) })
+                .copy(group = localGroup.groupId)
+            val otherSaf = book(image).copy(
+                bookUrl = provider.tree,
+                originName = "manga",
+                type = BookType.local or BookType.image,
+                group = otherGroup.groupId,
+            )
+            val online = onlineBook("online-only").copy(group = onlineGroup.groupId)
+            database.bookDao.insert(localA, otherSaf, online)
+
+            val (onlineBooks, onlineMetrics) = withTimeout(20_000) {
+                repository.flowBooksWithLocalMetrics(
+                    database.bookDao.flowBookShelfByGroup(onlineGroup.groupId),
+                    LocalBookshelfSort.FILE_SIZE,
+                ).first { (books, _) -> books.isNotEmpty() }
+            }
+            assertEquals(listOf(online.bookUrl), onlineBooks.map { it.bookUrl })
+            assertTrue(onlineMetrics.isEmpty())
+            delay(300)
+            assertTrue(readUrls.isEmpty())
+            assertEquals(0, provider.queryCount.get())
+
+            // 订阅本地分组 A：只扫描 localA，不扫描其他分组的 SAF 漫画目录
+            val localAMetrics = withTimeout(20_000) {
+                repository.flowBooksWithLocalMetrics(
+                    database.bookDao.flowBookShelfByGroup(localGroup.groupId),
+                    LocalBookshelfSort.FILE_SIZE,
+                ).map { it.second }.first { it[localA.bookUrl] == 42L }
+            }
+            assertEquals(mapOf(localA.bookUrl to 42L), localAMetrics)
+            assertEquals(listOf(localA.bookUrl), readUrls.toList())
+            assertEquals(0, provider.queryCount.get())
+
+            // 再订阅包含全部本地书的分组：localA 命中同一份缓存不重读，仅新增扫描 otherSaf
+            val allLocalMetrics = repository.metricsOf(database.bookDao.flowBookShelfLocal())
+                .await { it[localA.bookUrl] == 42L && it[otherSaf.bookUrl] == 30L }
+            assertEquals(42L, allLocalMetrics[localA.bookUrl])
+            assertEquals(30L, allLocalMetrics[otherSaf.bookUrl])
+            assertEquals(listOf(localA.bookUrl, otherSaf.bookUrl), readUrls.toList())
+            assertTrue(provider.queryCount.get() > 0)
+        }
+    }
+
+    private fun BookshelfRepository.metricsOf(books: Flow<List<BookShelfItem>>): Flow<Map<String, Long>> =
+        flowLocalMetrics(LocalBookshelfSort.FILE_SIZE, books)
+
     private fun withRepository(
         scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-        test: suspend (AppDatabase, BookshelfRepository, TestSettings) -> Unit,
+        fileSizeReader: suspend (String, Boolean) -> Long? = ::localBookFileSize,
+        test: suspend CoroutineScope.(AppDatabase, BookshelfRepository, TestSettings) -> Unit,
     ) = runBlocking {
         val context = RuntimeEnvironment.getApplication().apply { injectAsAppCtx() }
         InMemoryAppDatabaseFixture(context).use { fixture ->
@@ -307,6 +498,7 @@ class BookshelfLocalSortTest {
                 settingsGateway = settings,
                 cacheFile = cacheFile,
                 scope = scope,
+                fileSizeReader = fileSizeReader,
             )
             try {
                 test(database, repository, settings)

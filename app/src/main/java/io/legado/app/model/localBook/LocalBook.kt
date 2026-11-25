@@ -14,6 +14,7 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.repository.BookshelfRepository
 import io.legado.app.domain.gateway.ImportBookSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
@@ -418,6 +419,7 @@ object LocalBook {
         if (existing == null) appDb.bookDao.insert(book) else {
             appDb.bookChapterDao.delByBook(bookUrl)
             appDb.bookDao.update(book)
+            BookshelfRepository.notifyBookMetricInvalidated(bookUrl)
         }
         return book
     }

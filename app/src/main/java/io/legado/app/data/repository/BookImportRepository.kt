@@ -5,19 +5,27 @@ import io.legado.app.data.entities.Book
 import io.legado.app.help.book.BookHelp
 import androidx.room.invalidationTrackerFlow
 import io.legado.app.help.book.canSafelyRebindTo
+import io.legado.app.model.localBook.LocalBook
+import io.legado.app.utils.FileDoc
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.mapLatest
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 
 class BookImportRepository(
     private val appDb: AppDatabase,
+    private val bookshelfRepository: BookshelfRepository? = null,
 ) {
+
+    fun importMangaDirectory(directory: FileDoc): Book {
+        return LocalBook.importMangaDirectory(directory).also { book ->
+            bookshelfRepository?.invalidateLocalBookMetrics(book.bookUrl)
+        }
+    }
 
     // 查询前防抖：debounce 挂在 books 表失效信号上（而非 DAO 查询结果之后），
     // 批量导入期间不再执行中间查询、不产生中间结果分配；首个信号立即放行，

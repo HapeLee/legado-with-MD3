@@ -253,7 +253,7 @@ class ImportBookViewModel(
     private fun importCurrentFolderAsManga() {
         val state = _state.value
         val directory = state.subDocs.lastOrNull() ?: state.rootDoc ?: return
-        execute { LocalBook.importMangaDirectory(directory) }
+        execute { repository.importMangaDirectory(directory) }
             .onSuccess { _effects.tryEmit(ImportBookEffect.ShowToast("漫画目录已加入书架")) }
             .onError {
                 _effects.tryEmit(

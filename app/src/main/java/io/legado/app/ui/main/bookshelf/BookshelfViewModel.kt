@@ -349,16 +349,16 @@ class BookshelfViewModel(
                 val group = groups.find { it.groupId == groupId }
                 LocalBookshelfSort.resolveEffectiveSort(group?.bookSort, sortConfig.sort)
             }.distinctUntilChanged()
-            val localMetricsFlow = effectiveSortFlow.flatMapLatest { effectiveSort ->
-                bookshelfRepository.flowLocalMetrics(effectiveSort)
-            }
+            val booksWithMetricsFlow = bookshelfRepository.flowBooksWithLocalMetrics(
+                booksFlow = bookRepository.flowBookShelfByGroup(groupId),
+                effectiveSortFlow = effectiveSortFlow,
+            )
             combine(
-                bookRepository.flowBookShelfByGroup(groupId),
+                booksWithMetricsFlow,
                 groupsFlow,
                 sortConfigFlow,
                 privateMarkersFlow,
-                localMetricsFlow,
-            ) { list, groups, sortConfig, markers, localMetrics ->
+            ) { (list, localMetrics), groups, sortConfig, markers ->
                 val group = groups.find { it.groupId == groupId }
                 val books = bookshelfRepository.sortBooks(
                     list = list,
@@ -391,26 +391,18 @@ class BookshelfViewModel(
             } else {
                 val flows = groups.map { group ->
                     val effectiveSort = LocalBookshelfSort.resolveEffectiveSort(group.bookSort, sortConfig.sort)
-                    val booksFlow = if (LocalBookshelfSort.isMetric(effectiveSort)) {
-                        combine(
-                            bookRepository.flowBookShelfByGroup(group.groupId),
-                            bookshelfRepository.flowLocalMetrics(effectiveSort),
-                        ) { books, localMetrics ->
-                            bookshelfRepository.sortBooks(
-                                list = books,
-                                group = group,
-                                sort = sortConfig.sort,
-                                sortOrder = sortConfig.sortOrder,
-                                localMetrics = localMetrics,
-                            )
-                        }
-                    } else {
-                        bookRepository.flowBookShelfByGroup(group.groupId).map { books ->
-                            bookshelfRepository.sortBooks(books, group, sortConfig.sort, sortConfig.sortOrder)
-                        }
-                    }
-                    booksFlow.map { books ->
-                        group.groupId to books.map { it.toUiItem(markers.isPrivate(it)) }.toImmutableList()
+                    bookshelfRepository.flowBooksWithLocalMetrics(
+                        booksFlow = bookRepository.flowBookShelfByGroup(group.groupId),
+                        effectiveSort = effectiveSort,
+                    ).map { (books, localMetrics) ->
+                        val sorted = bookshelfRepository.sortBooks(
+                            list = books,
+                            group = group,
+                            sort = sortConfig.sort,
+                            sortOrder = sortConfig.sortOrder,
+                            localMetrics = localMetrics,
+                        )
+                        group.groupId to sorted.map { it.toUiItem(markers.isPrivate(it)) }.toImmutableList()
                     }
                 }
                 combine(flows) { results ->

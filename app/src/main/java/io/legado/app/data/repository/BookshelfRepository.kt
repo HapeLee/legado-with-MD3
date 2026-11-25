@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -22,15 +23,23 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 import java.io.File
+import java.util.Collections
+import java.util.WeakHashMap
 import kotlin.math.max
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -39,9 +48,22 @@ class BookshelfRepository(
     private val settingsGateway: BookshelfSettingsGateway,
     cacheFile: File = File(appCtx.cacheDir, DEFAULT_CACHE_FILE_NAME),
     private val scope: CoroutineScope = defaultRepositoryScope(),
+    private val fileSizeReader: suspend (bookUrl: String, mayBeMangaDirectory: Boolean) -> Long? =
+        ::localBookFileSize,
 ) {
-    private companion object {
+    internal companion object {
         const val DEFAULT_CACHE_FILE_NAME = "local_bookshelf_metrics_v1.json"
+
+        private val activeRepositoriesLock = Any()
+        private val activeRepositories =
+            Collections.newSetFromMap(WeakHashMap<BookshelfRepository, Boolean>())
+
+        internal fun notifyBookMetricInvalidated(bookUrl: String) {
+            val snapshot = synchronized(activeRepositoriesLock) {
+                activeRepositories.toList()
+            }
+            snapshot.forEach { it.invalidateLocalBookMetrics(bookUrl) }
+        }
 
         fun defaultRepositoryScope(): CoroutineScope = CoroutineScope(
             SupervisorJob() + Dispatchers.Default + CoroutineExceptionHandler { _, throwable ->
@@ -50,32 +72,96 @@ class BookshelfRepository(
         )
     }
 
+    private data class PendingMetricTarget(
+        val target: LocalBookMetricTarget,
+        val stamp: String,
+        val token: Long,
+    )
+
     private data class CachedMetricPass(
+        val batchToken: Long,
+        val targets: List<LocalBookMetricTarget>,
         val resolved: MutableMap<String, Long>,
-        val pending: List<LocalBookMetricTarget>,
+        val pending: List<PendingMetricTarget>,
     )
 
     private val cache = LocalBookMetricsCache(cacheFile)
     private val fileSizeRefresh = MutableStateFlow(0L)
 
-    private val localTargetsFlow: Flow<List<LocalBookMetricTarget>> =
-        database.bookDao.flowLocalBookMetricTargets()
-            .debounceSkippingFirst(SHELF_INVALIDATE_DEBOUNCE_MS)
-            .distinctUntilChanged()
-
-    private val fileSizeMetricsFlow: Flow<Map<String, Long>> = buildFileSizeMetricsFlow()
+    init {
+        synchronized(activeRepositoriesLock) {
+            activeRepositories.add(this)
+        }
+        scope.coroutineContext[Job]?.invokeOnCompletion {
+            synchronized(activeRepositoriesLock) {
+                activeRepositories.remove(this)
+            }
+        }
+    }
 
     fun flowSortSettings(): Flow<BookshelfSettings> = settingsGateway.settings
 
-    fun flowLocalMetrics(sort: Int): Flow<Map<String, Long>> = when (sort) {
-        LocalBookshelfSort.FILE_SIZE -> fileSizeMetricsFlow
+    /**
+     * 按当前书单中实际参与排序的本地书按需读取/计算排序指标。
+     *
+     * - [booksFlow] 在当前收集周期内只订阅一次，排序方式在 [effectiveSortFlow] 上切换时不会重订数据库流。
+     * - 非本地指标排序或书单不含本地书时直接配对空指标，不加载缓存、不扫描其他分组的本地文件与 SAF 目录。
+     * - 多个分组同时订阅时复用同一份双层缓存。
+     */
+    fun flowBooksWithLocalMetrics(
+        booksFlow: Flow<List<BookShelfItem>>,
+        effectiveSortFlow: Flow<Int>,
+    ): Flow<Pair<List<BookShelfItem>, Map<String, Long>>> = channelFlow {
+        val sharedBooks = booksFlow.shareIn(this, SharingStarted.Eagerly, replay = 1)
+        val metricsFlow = effectiveSortFlow
+            .distinctUntilChanged()
+            .flatMapLatest { effectiveSort ->
+                flowLocalMetrics(effectiveSort, sharedBooks)
+            }
+        combine(sharedBooks, metricsFlow) { books, metrics ->
+            books to metrics
+        }.distinctUntilChanged().collect { send(it) }
+    }
+
+    fun flowBooksWithLocalMetrics(
+        booksFlow: Flow<List<BookShelfItem>>,
+        effectiveSort: Int,
+    ): Flow<Pair<List<BookShelfItem>, Map<String, Long>>> {
+        if (!LocalBookshelfSort.isMetric(effectiveSort)) {
+            return booksFlow.map { books -> books to emptyMap() }
+        }
+        return flowBooksWithLocalMetrics(booksFlow, flowOf(effectiveSort))
+    }
+
+    fun flowLocalMetrics(
+        sort: Int,
+        booksFlow: Flow<List<BookShelfItem>>,
+    ): Flow<Map<String, Long>> = when (sort) {
+        LocalBookshelfSort.FILE_SIZE -> buildFileSizeMetricsFlow(
+            booksFlow
+                .map { books -> books.extractLocalMetricTargets() }
+                .distinctUntilChanged()
+        )
         else -> flowOf(emptyMap())
     }
+
+    fun flowLocalMetrics(
+        sort: Int,
+        books: List<BookShelfItem>,
+    ): Flow<Map<String, Long>> = flowLocalMetrics(sort, flowOf(books))
 
     fun invalidateLocalMetrics(sort: Int) {
         if (sort != LocalBookshelfSort.FILE_SIZE) return
         cache.clear(sort)
         fileSizeRefresh.update { it + 1 }
+        persistCacheAsync()
+    }
+
+    fun invalidateLocalBookMetrics(bookUrl: String) {
+        if (bookUrl.isBlank()) return
+        cache.invalidateFileSize(bookUrl)
+        fileSizeRefresh.update { it + 1 }
+        persistCacheAsync()
     }
 
     /**
@@ -93,82 +179,147 @@ class BookshelfRepository(
             when (val hit = cache.lookupFileSize(book.bookUrl, stamp)) {
                 is LocalBookMetricsCache.Lookup.Hit -> result[book.bookUrl] = hit.value
                 LocalBookMetricsCache.Lookup.KnownMissing -> Unit
-                LocalBookMetricsCache.Lookup.Miss -> return null
+                is LocalBookMetricsCache.Lookup.Miss -> return null
             }
         }
         return result
     }
 
-    private fun buildFileSizeMetricsFlow(): Flow<Map<String, Long>> {
+    private fun buildFileSizeMetricsFlow(
+        targetsFlow: Flow<List<LocalBookMetricTarget>>,
+    ): Flow<Map<String, Long>> = flow {
         var hasEmitted = false
-        return combine(localTargetsFlow, fileSizeRefresh) { targets, _ -> targets }
-            .transformLatest { targets ->
-                cache.ensureLoaded()
-                val initial = collectCachedFileSizes(targets)
-                if (initial.pending.isEmpty() || !hasEmitted || initial.resolved.isNotEmpty()) {
-                    emit(HashMap(initial.resolved))
-                    hasEmitted = true
+        emitAll(
+            combine(targetsFlow, fileSizeRefresh) { targets, _ -> targets }
+                .transformLatest { targets ->
+                    if (targets.isEmpty()) {
+                        emit(emptyMap())
+                        hasEmitted = true
+                        return@transformLatest
+                    }
+                    val initial = withContext(Dispatchers.IO) {
+                        cache.ensureLoaded()
+                        collectCachedFileSizes(targets)
+                    }
+                    if (initial.pending.isEmpty()) {
+                        if (initial.targets.all { cache.isTokenValid(it.bookUrl, initial.batchToken) }) {
+                            emit(HashMap(initial.resolved))
+                            hasEmitted = true
+                        }
+                        withContext(Dispatchers.IO) {
+                            pruneAndPersistIfDirty()
+                        }
+                    } else {
+                        if ((!hasEmitted || initial.resolved.isNotEmpty()) &&
+                            initial.targets.all { cache.isTokenValid(it.bookUrl, initial.batchToken) }
+                        ) {
+                            emit(HashMap(initial.resolved))
+                            hasEmitted = true
+                        }
+                        val completed = withContext(Dispatchers.IO) {
+                            resolveFileSizes(initial)
+                        }
+                        if (completed != null) {
+                            emit(completed)
+                            hasEmitted = true
+                        }
+                    }
                 }
-                if (initial.pending.isNotEmpty()) {
-                    val completed = resolveFileSizes(targets, initial)
-                    emit(completed)
-                    hasEmitted = true
-                } else {
-                    pruneAndPersist(targets)
+                .distinctUntilChanged()
+                .catch { error ->
+                    if (error is CancellationException) throw error
+                    AppLog.put("本地文件大小排序指标计算失败: ${error.localizedMessage}", error)
+                    emit(emptyMap())
                 }
-            }
-            .distinctUntilChanged()
-            .catch { error ->
-                if (error is CancellationException) throw error
-                AppLog.put("本地文件大小排序指标计算失败: ${error.localizedMessage}", error)
-                emit(emptyMap())
-            }
-            .flowOn(Dispatchers.IO)
-            .shareIn(
-                scope = scope,
-                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-                replay = 1,
-            )
+        )
     }
 
     private fun collectCachedFileSizes(targets: List<LocalBookMetricTarget>): CachedMetricPass {
+        val batchToken = cache.currentEpoch()
         val resolved = HashMap<String, Long>(targets.size)
-        val pending = ArrayList<LocalBookMetricTarget>()
+        val pending = ArrayList<PendingMetricTarget>()
         for (target in targets) {
             val stamp = fileSizeStamp(target.type, target.originName, target.latestChapterTime)
             when (val hit = cache.lookupFileSize(target.bookUrl, stamp)) {
                 is LocalBookMetricsCache.Lookup.Hit -> resolved[target.bookUrl] = hit.value
                 LocalBookMetricsCache.Lookup.KnownMissing -> Unit
-                LocalBookMetricsCache.Lookup.Miss -> pending.add(target)
+                is LocalBookMetricsCache.Lookup.Miss -> pending.add(
+                    PendingMetricTarget(target = target, stamp = stamp, token = hit.token)
+                )
             }
         }
-        return CachedMetricPass(resolved, pending)
+        return CachedMetricPass(
+            batchToken = batchToken,
+            targets = targets,
+            resolved = resolved,
+            pending = pending,
+        )
     }
 
-    private suspend fun resolveFileSizes(
-        targets: List<LocalBookMetricTarget>,
-        pass: CachedMetricPass,
-    ): Map<String, Long> {
+    private suspend fun resolveFileSizes(pass: CachedMetricPass): Map<String, Long>? {
         try {
-            for (target in pass.pending) {
+            for (item in pass.pending) {
                 currentCoroutineContext().ensureActive()
-                val stamp = fileSizeStamp(target.type, target.originName, target.latestChapterTime)
-                val size = localBookFileSize(target.bookUrl, target.mayBeMangaDirectory)
-                cache.putFileSize(target.bookUrl, stamp, size)
-                if (size != null) {
-                    pass.resolved[target.bookUrl] = size
+                val size = when (val cached = cache.lookupFileSize(item.target.bookUrl, item.stamp)) {
+                    is LocalBookMetricsCache.Lookup.Hit -> cached.value
+                    LocalBookMetricsCache.Lookup.KnownMissing -> null
+                    is LocalBookMetricsCache.Lookup.Miss -> {
+                        if (!cache.isTokenValid(item.target.bookUrl, item.token)) {
+                            return null
+                        }
+                        val measured = fileSizeReader(item.target.bookUrl, item.target.mayBeMangaDirectory)
+                        if (!cache.putFileSize(item.target.bookUrl, item.stamp, measured, item.token)) {
+                            return null
+                        }
+                        measured
+                    }
+                }
+                currentCoroutineContext().ensureActive()
+                if (size != null && size >= 0L) {
+                    pass.resolved[item.target.bookUrl] = size
                 }
             }
-            cache.prune(targets.mapTo(HashSet(targets.size)) { it.bookUrl })
         } finally {
-            cache.persistIfDirty()
+            pruneAndPersistIfDirty()
+        }
+        if (!pass.targets.all { cache.isTokenValid(it.bookUrl, pass.batchToken) }) {
+            return null
         }
         return HashMap(pass.resolved)
     }
 
-    private fun pruneAndPersist(targets: List<LocalBookMetricTarget>) {
-        cache.prune(targets.mapTo(HashSet(targets.size)) { it.bookUrl })
+    private suspend fun pruneAndPersistIfDirty() {
+        if (!cache.isDirty()) return
+        val snapshotEpoch = cache.currentEpoch()
+        val activeUrls = database.bookDao.getLocalShelfBookUrls().toHashSet()
+        cache.prune(activeUrls, maxEpoch = snapshotEpoch)
         cache.persistIfDirty()
+    }
+
+    private fun persistCacheAsync() {
+        scope.launch(Dispatchers.IO) {
+            cache.ensureLoaded()
+            pruneAndPersistIfDirty()
+        }
+    }
+
+    private fun List<BookShelfItem>.extractLocalMetricTargets(): List<LocalBookMetricTarget> {
+        if (isEmpty()) return emptyList()
+        var targets: ArrayList<LocalBookMetricTarget>? = null
+        for (book in this) {
+            if (book.isLocal) {
+                val list = targets ?: ArrayList<LocalBookMetricTarget>().also { targets = it }
+                list.add(
+                    LocalBookMetricTarget(
+                        bookUrl = book.bookUrl,
+                        originName = book.originName,
+                        type = book.type,
+                        latestChapterTime = book.latestChapterTime,
+                    )
+                )
+            }
+        }
+        return targets ?: emptyList()
     }
 
     private fun fileSizeStamp(type: Int, originName: String, latestChapterTime: Long): String =

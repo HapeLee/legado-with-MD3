@@ -457,10 +457,10 @@ class BookshelfManageScreenViewModel(
             }.distinctUntilChanged()
             sortParamsFlow.flatMapLatest { (group, globalSort, sortOrder) ->
                 val effectiveSort = LocalBookshelfSort.resolveEffectiveSort(group?.bookSort, globalSort)
-                combine(
-                    bookRepository.flowBookShelfByGroup(groupId),
-                    bookshelfRepository.flowLocalMetrics(effectiveSort),
-                ) { shelfItems, localMetrics ->
+                bookshelfRepository.flowBooksWithLocalMetrics(
+                    booksFlow = bookRepository.flowBookShelfByGroup(groupId),
+                    effectiveSort = effectiveSort,
+                ).map { (shelfItems, localMetrics) ->
                     val sorted = bookshelfRepository.sortBooks(
                         list = shelfItems,
                         group = group,

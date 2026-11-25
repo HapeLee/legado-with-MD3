@@ -10,15 +10,16 @@ import java.security.MessageDigest
 /**
  * 本地书架排序指标（文件大小）的双层缓存：内存 + 应用缓存目录 JSON。
  *
- * - Key 采用 bookUrl 的 SHA-256 摘要，避免私密书籍路径或文件名以明文落入 cacheDir。
- * - 已知非负字节数落盘，跨冷启动复用，避免每次重启重新扫描本地文件与 SAF。
- * - 「测不到/未知」状态仅记在内存中，重启或手动刷新后可重新尝试。
+ * - Key 与校验戳（stamp）均采用 SHA-256 摘要，避免私密书籍路径或原始文件名以明文落入 cacheDir。
+ * - 刷新与单书失效在同一个同步锁内推进代次（epoch），丢弃失效前发出的慢读取回填结果。
+ * - 已知非负字节数落盘，跨冷启动复用；「测不到/未知」状态仅记在内存中，重启或刷新后可重试。
  */
 internal class LocalBookMetricsCache(
     private val cacheFile: File,
 ) {
     private companion object {
-        const val CACHE_VERSION = 1
+        const val CACHE_VERSION = 2
+        const val SHA256_HEX_LENGTH = 64
         const val KEY_VERSION = "version"
         const val KEY_FILE_SIZE = "fileSize"
         const val KEY_VALUE = "v"
@@ -27,13 +28,25 @@ internal class LocalBookMetricsCache(
 
     internal data class CachedEntry(
         val value: Long,
-        val stamp: String,
+        val stampDigest: String,
+        val updatedAtEpoch: Long = 0L,
     )
+
+    private data class UnknownEntry(
+        val stampDigest: String,
+        val updatedAtEpoch: Long,
+    )
+
+    private sealed interface DiskLoadResult {
+        data object Absent : DiskLoadResult
+        data object Invalidated : DiskLoadResult
+        data class Loaded(val entries: Map<String, CachedEntry>) : DiskLoadResult
+    }
 
     internal sealed interface Lookup {
         data class Hit(val value: Long) : Lookup
         data object KnownMissing : Lookup
-        data object Miss : Lookup
+        data class Miss(val token: Long) : Lookup
     }
 
     private val lock = Any()
@@ -43,73 +56,140 @@ internal class LocalBookMetricsCache(
     private var dirty = false
     private var clearedFileSizesBeforeLoad = false
 
+    private var epoch = 0L
+    private var clearEpoch = 0L
+    private val keyInvalidatedEpoch = HashMap<String, Long>()
+
     private val fileSizes = HashMap<String, CachedEntry>()
-    private val unknownFileSizes = HashMap<String, String>()
+    private val unknownFileSizes = HashMap<String, UnknownEntry>()
 
     fun ensureLoaded() {
         synchronized(lock) {
             if (loaded) return
         }
-        val parsed = readFromDisk()
+        val diskResult = synchronized(persistLock) {
+            readFromDisk()
+        }
         synchronized(lock) {
             if (loaded) return
-            if (parsed != null) {
-                if (!clearedFileSizesBeforeLoad) {
-                    for ((k, v) in parsed) {
-                        fileSizes.putIfAbsent(k, v)
+            when (diskResult) {
+                DiskLoadResult.Absent -> Unit
+                DiskLoadResult.Invalidated -> dirty = true
+                is DiskLoadResult.Loaded -> {
+                    if (!clearedFileSizesBeforeLoad) {
+                        for ((k, v) in diskResult.entries) {
+                            if (keyInvalidatedEpoch.containsKey(k)) {
+                                dirty = true
+                            } else {
+                                fileSizes.putIfAbsent(k, v)
+                            }
+                        }
+                    } else if (diskResult.entries.isNotEmpty()) {
+                        dirty = true
                     }
-                } else if (parsed.isNotEmpty()) {
-                    dirty = true
                 }
             }
             loaded = true
         }
     }
 
-    fun lookupFileSize(bookUrl: String, stamp: String): Lookup {
-        val key = hashUrl(bookUrl)
-        synchronized(lock) {
-            val entry = fileSizes[key]
-            if (entry != null && entry.stamp == stamp) return Lookup.Hit(entry.value)
-            if (unknownFileSizes[key] == stamp) return Lookup.KnownMissing
-            return Lookup.Miss
+    fun currentEpoch(): Long = synchronized(lock) { epoch }
+
+    fun isDirty(): Boolean = synchronized(lock) { dirty }
+
+    fun isTokenValid(bookUrl: String, token: Long): Boolean {
+        val key = sha256Hex(bookUrl)
+        return synchronized(lock) {
+            isTokenValidLocked(key, token)
         }
     }
 
-    fun putFileSize(bookUrl: String, stamp: String, value: Long?) {
-        val key = hashUrl(bookUrl)
+    fun lookupFileSize(bookUrl: String, stamp: String): Lookup {
+        val key = sha256Hex(bookUrl)
+        val stampDigest = sha256Hex(stamp)
         synchronized(lock) {
+            val entry = fileSizes[key]
+            if (entry != null && entry.stampDigest == stampDigest) return Lookup.Hit(entry.value)
+            if (unknownFileSizes[key]?.stampDigest == stampDigest) return Lookup.KnownMissing
+            return Lookup.Miss(token = epoch)
+        }
+    }
+
+    fun putFileSize(bookUrl: String, stamp: String, value: Long?, token: Long): Boolean {
+        val key = sha256Hex(bookUrl)
+        val stampDigest = sha256Hex(stamp)
+        synchronized(lock) {
+            if (!isTokenValidLocked(key, token)) return false
             if (value != null && value >= 0L) {
                 unknownFileSizes.remove(key)
-                val next = CachedEntry(value, stamp)
-                if (fileSizes[key] != next) {
-                    fileSizes[key] = next
+                val current = fileSizes[key]
+                if (current == null || current.value != value || current.stampDigest != stampDigest) {
+                    fileSizes[key] = CachedEntry(value, stampDigest, updatedAtEpoch = epoch)
                     dirty = true
                 }
             } else {
                 if (fileSizes.remove(key) != null) {
                     dirty = true
                 }
-                unknownFileSizes[key] = stamp
+                unknownFileSizes[key] = UnknownEntry(stampDigest, updatedAtEpoch = epoch)
             }
+            return true
         }
     }
 
-    fun prune(activeBookUrls: Set<String>) {
+    fun invalidateFileSize(bookUrl: String) {
+        val key = sha256Hex(bookUrl)
+        synchronized(lock) {
+            epoch += 1
+            keyInvalidatedEpoch[key] = epoch
+            if (fileSizes.remove(key) != null) {
+                dirty = true
+            }
+            unknownFileSizes.remove(key)
+        }
+    }
+
+    fun prune(activeBookUrls: Set<String>, maxEpoch: Long = Long.MAX_VALUE) {
         val activeHashes = HashSet<String>(activeBookUrls.size * 2)
         for (url in activeBookUrls) {
-            activeHashes.add(hashUrl(url))
+            activeHashes.add(sha256Hex(url))
         }
         synchronized(lock) {
-            if (fileSizes.keys.retainAll(activeHashes)) dirty = true
-            unknownFileSizes.keys.retainAll(activeHashes)
+            val sizeIterator = fileSizes.entries.iterator()
+            while (sizeIterator.hasNext()) {
+                val entry = sizeIterator.next()
+                if (entry.key !in activeHashes && entry.value.updatedAtEpoch <= maxEpoch) {
+                    sizeIterator.remove()
+                    dirty = true
+                }
+            }
+            val unknownIterator = unknownFileSizes.entries.iterator()
+            while (unknownIterator.hasNext()) {
+                val entry = unknownIterator.next()
+                if (entry.key !in activeHashes && entry.value.updatedAtEpoch <= maxEpoch) {
+                    unknownIterator.remove()
+                }
+            }
+            val invalidatedIterator = keyInvalidatedEpoch.entries.iterator()
+            while (invalidatedIterator.hasNext()) {
+                val entry = invalidatedIterator.next()
+                if (entry.key !in activeHashes && entry.value <= maxEpoch) {
+                    invalidatedIterator.remove()
+                }
+            }
         }
     }
 
     fun clear(sort: Int) {
         if (sort != LocalBookshelfSort.FILE_SIZE) return
         synchronized(lock) {
-            if (!loaded) clearedFileSizesBeforeLoad = true
+            epoch += 1
+            clearEpoch = epoch
+            keyInvalidatedEpoch.clear()
+            if (!loaded) {
+                clearedFileSizesBeforeLoad = true
+                dirty = true
+            }
             if (fileSizes.isNotEmpty()) {
                 fileSizes.clear()
                 dirty = true
@@ -119,39 +199,56 @@ internal class LocalBookMetricsCache(
     }
 
     fun persistIfDirty() {
-        val snapshot: Map<String, CachedEntry> = synchronized(lock) {
-            if (!dirty) return
-            dirty = false
-            HashMap(fileSizes)
-        }
         synchronized(persistLock) {
+            val snapshot: Map<String, CachedEntry> = synchronized(lock) {
+                if (!dirty) return
+                dirty = false
+                HashMap(fileSizes)
+            }
             writeToDisk(snapshot)
         }
     }
 
-    private fun readFromDisk(): Map<String, CachedEntry>? {
+    private fun isTokenValidLocked(key: String, token: Long): Boolean {
+        if (token < clearEpoch) return false
+        val invalidatedAt = keyInvalidatedEpoch[key]
+        if (invalidatedAt != null && token < invalidatedAt) return false
+        return true
+    }
+
+    private fun readFromDisk(): DiskLoadResult {
+        if (!cacheFile.isFile) return DiskLoadResult.Absent
         return try {
-            if (!cacheFile.isFile) return null
             val root = JSONObject(cacheFile.readText(Charsets.UTF_8))
-            if (root.optInt(KEY_VERSION, -1) != CACHE_VERSION) return null
-            parseSection(root.optJSONObject(KEY_FILE_SIZE))
+            if (root.optInt(KEY_VERSION, -1) != CACHE_VERSION) {
+                deleteCacheFileQuietly()
+                return DiskLoadResult.Invalidated
+            }
+            val parsed = parseSection(root.optJSONObject(KEY_FILE_SIZE))
+            if (parsed == null) {
+                deleteCacheFileQuietly()
+                DiskLoadResult.Invalidated
+            } else {
+                DiskLoadResult.Loaded(parsed)
+            }
         } catch (_: Exception) {
-            null
+            deleteCacheFileQuietly()
+            DiskLoadResult.Invalidated
         }
     }
 
-    private fun parseSection(section: JSONObject?): Map<String, CachedEntry> {
+    private fun parseSection(section: JSONObject?): Map<String, CachedEntry>? {
         if (section == null) return emptyMap()
         val result = HashMap<String, CachedEntry>(section.length())
         val keys = section.keys()
         while (keys.hasNext()) {
             val key = keys.next()
-            val item = section.optJSONObject(key) ?: continue
+            if (!isSha256Hex(key)) return null
+            val item = section.optJSONObject(key) ?: return null
             val value = item.optLong(KEY_VALUE, -1L)
-            val stamp = item.optString(KEY_STAMP, "")
-            if (value >= 0L && stamp.isNotEmpty()) {
-                result[key] = CachedEntry(value, stamp)
-            }
+            val stampDigest = item.optString(KEY_STAMP, "")
+            if (value < 0L || !isSha256Hex(stampDigest)) return null
+            result[key] = CachedEntry(value = value, stampDigest = stampDigest, updatedAtEpoch = 0L)
         }
         return result
     }
@@ -180,6 +277,14 @@ internal class LocalBookMetricsCache(
         }
     }
 
+    private fun deleteCacheFileQuietly() {
+        try {
+            Files.deleteIfExists(cacheFile.toPath())
+        } catch (_: Exception) {
+            cacheFile.delete()
+        }
+    }
+
     private fun encodeSection(entries: Map<String, CachedEntry>): JSONObject {
         val obj = JSONObject()
         for ((key, entry) in entries) {
@@ -187,15 +292,25 @@ internal class LocalBookMetricsCache(
                 key,
                 JSONObject().apply {
                     put(KEY_VALUE, entry.value)
-                    put(KEY_STAMP, entry.stamp)
+                    put(KEY_STAMP, entry.stampDigest)
                 }
             )
         }
         return obj
     }
 
-    private fun hashUrl(bookUrl: String): String {
-        val digest = MessageDigest.getInstance("SHA-256").digest(bookUrl.toByteArray(Charsets.UTF_8))
+    private fun isSha256Hex(value: String): Boolean {
+        if (value.length != SHA256_HEX_LENGTH) return false
+        for (ch in value) {
+            val isDigit = ch in '0'..'9'
+            val isLowerHex = ch in 'a'..'f'
+            if (!isDigit && !isLowerHex) return false
+        }
+        return true
+    }
+
+    private fun sha256Hex(input: String): String {
+        val digest = MessageDigest.getInstance("SHA-256").digest(input.toByteArray(Charsets.UTF_8))
         val hex = CharArray(digest.size * 2)
         val digits = "0123456789abcdef"
         for (i in digest.indices) {
