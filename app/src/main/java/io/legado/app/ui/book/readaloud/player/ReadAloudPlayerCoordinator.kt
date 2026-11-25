@@ -173,6 +173,7 @@ class ReadAloudPlayerCoordinator(
             isPaused = session.status != ReadAloudSessionStatus.Playing,
             speed = readAloudSettingsGateway.currentSettings.ttsSpeechRate,
             ttsFollowSys = settings.ttsFollowSys,
+            maxPlaybackSpeed = ReadAloud.maxPlaybackSpeed,
             timerMinutes = session.timerMinutes,
             timerMode = settings.timerMode,
             timerChapters = if (session.timerChapters > 0 || session.status != ReadAloudSessionStatus.Idle) {
@@ -208,6 +209,7 @@ class ReadAloudPlayerCoordinator(
             isPaused = session.status != ReadAloudSessionStatus.Playing,
             speed = readAloudSettingsGateway.currentSettings.ttsSpeechRate,
             ttsFollowSys = readAloudSettingsGateway.currentSettings.ttsFollowSys,
+            maxPlaybackSpeed = ReadAloud.maxPlaybackSpeed,
             timerMinutes = session.timerMinutes,
             timerMode = readAloudSettingsGateway.currentSettings.timerMode,
             timerChapters = if (session.timerChapters > 0 || session.status != ReadAloudSessionStatus.Idle) {
@@ -549,6 +551,7 @@ data class ReadAloudPlayerSourceState(
     val isPaused: Boolean,
     val speed: Int,
     val ttsFollowSys: Boolean,
+    val maxPlaybackSpeed: Float,
     val timerMinutes: Int,
     val timerMode: String,
     val timerChapters: Int,

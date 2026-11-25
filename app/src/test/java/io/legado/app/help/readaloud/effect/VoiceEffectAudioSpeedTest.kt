@@ -1,6 +1,7 @@
 package io.legado.app.help.readaloud.effect
 
 import io.legado.app.data.entities.VoiceEffectPreset
+import io.legado.app.help.readaloud.playback.PlaybackSpeedLimits
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -32,5 +33,27 @@ class VoiceEffectAudioSpeedTest {
     @Test
     fun playbackParametersUseTheSameFinalSpeed() {
         assertEquals(8.5f, VoiceEffectAudio.parameters(preset(2f), 8.5f).speed, 0.0001f)
+    }
+
+    @Test
+    fun exoPlayerLimitClampsFinalSpeed() {
+        assertEquals(
+            8f,
+            VoiceEffectAudio.speedOf(preset(2f), 8.5f, PlaybackSpeedLimits.EXOPLAYER_MAX),
+            0.0001f,
+        )
+    }
+
+    @Test
+    fun exoPlayerParametersUseTheSinkLimit() {
+        assertEquals(
+            8f,
+            VoiceEffectAudio.parameters(
+                preset(2f),
+                8.5f,
+                PlaybackSpeedLimits.EXOPLAYER_MAX,
+            ).speed,
+            0.0001f,
+        )
     }
 }

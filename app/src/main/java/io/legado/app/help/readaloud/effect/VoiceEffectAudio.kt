@@ -138,6 +138,10 @@ class VoiceEffectAudio {
         /**
          * 最终播放倍率范围，与朗读语速 0..80（(v + 5) / 10 = 0.5×..8.5×）对齐。
          * [MIN_SPEED]/[MAX_SPEED] 只约束变声器预设自己的倍率，不能拿来夹最终结果。
+         *
+         * 调用方要按当前播放链路传入 `maxSpeed`：HTTP/ExoPlayer 链路的上限是
+         * [io.legado.app.help.readaloud.playback.PlaybackSpeedLimits.EXOPLAYER_MAX]（8.0×），
+         * 系统 TTS 直读才是 8.5×。
          */
         const val MIN_PLAYBACK_SPEED = 0.5f
         const val MAX_PLAYBACK_SPEED = 8.5f
@@ -145,12 +149,20 @@ class VoiceEffectAudio {
         fun pitchOf(preset: VoiceEffectPreset?, base: Float = 1f): Float =
             (base * (preset?.pitch ?: 1f)).coerceIn(MIN_PITCH, MAX_PITCH)
 
-        fun speedOf(preset: VoiceEffectPreset?, base: Float = 1f): Float {
+        fun speedOf(
+            preset: VoiceEffectPreset?,
+            base: Float = 1f,
+            maxSpeed: Float = MAX_PLAYBACK_SPEED,
+        ): Float {
             val factor = (preset?.speed ?: 1f).coerceIn(MIN_SPEED, MAX_SPEED)
-            return (base * factor).coerceIn(MIN_PLAYBACK_SPEED, MAX_PLAYBACK_SPEED)
+            return (base * factor).coerceIn(MIN_PLAYBACK_SPEED, maxSpeed)
         }
 
-        fun parameters(preset: VoiceEffectPreset?, baseSpeed: Float): PlaybackParameters =
-            PlaybackParameters(speedOf(preset, baseSpeed), pitchOf(preset))
+        fun parameters(
+            preset: VoiceEffectPreset?,
+            baseSpeed: Float,
+            maxSpeed: Float = MAX_PLAYBACK_SPEED,
+        ): PlaybackParameters =
+            PlaybackParameters(speedOf(preset, baseSpeed, maxSpeed), pitchOf(preset))
     }
 }

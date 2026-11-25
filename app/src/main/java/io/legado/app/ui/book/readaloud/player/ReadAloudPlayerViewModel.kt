@@ -292,6 +292,7 @@ class ReadAloudPlayerViewModel(
             readAloudRunning = BaseReadAloudService.isRun,
             speed = source.speed,
             ttsFollowSys = source.ttsFollowSys,
+            maxPlaybackSpeed = source.maxPlaybackSpeed,
             timerMinutes = source.timerMinutes,
             timerMode = source.timerMode,
             timerChapters = source.timerChapters,

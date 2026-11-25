@@ -85,6 +85,7 @@ import io.legado.app.core.ui.player.PlayerMorphAppearance
 import io.legado.app.core.ui.player.PlayerMorphCover
 import io.legado.app.core.ui.player.TrackPlayerMorphCoverPage
 import io.legado.app.domain.model.settings.ReadAloudTimerMode
+import io.legado.app.help.readaloud.playback.PlaybackSpeedLimits
 import io.legado.app.ui.book.readaloud.ReadAloudTimerConfig
 import io.legado.app.ui.book.readaloud.ReadAloudTimerSheet
 import io.legado.app.ui.book.readaloud.ReadAloudVoiceSheet
@@ -558,8 +559,9 @@ private fun CoverPage(
                 onClick = { onIntent(ReadAloudPlayerIntent.OpenSheet(ReadAloudPlayerSheet.Voice)) },
             )
             if (state.speed != 5) {
+                val speedMax = PlaybackSpeedLimits.sliderMax(state.maxPlaybackSpeed)
                 TextCard(
-                    text = "${formatReadAloudSpeedLabel(state.speed)}x",
+                    text = "${formatReadAloudSpeedLabel(state.speed.coerceAtMost(speedMax))}x",
                     icon = Icons.Default.Speed,
                     onClick = { onIntent(ReadAloudPlayerIntent.OpenSheet(ReadAloudPlayerSheet.Speed)) },
                 )
@@ -717,7 +719,11 @@ private fun ReadAloudSpeedSheet(
     onDismissRequest: () -> Unit,
     onIntent: (ReadAloudPlayerIntent) -> Unit,
 ) {
-    var speedPreview by remember(state.speed) { mutableFloatStateOf(state.speed.toFloat()) }
+    val speedMax = PlaybackSpeedLimits.sliderMax(state.maxPlaybackSpeed)
+    val speedValue = state.speed.coerceIn(READ_ALOUD_SPEED_MIN, speedMax)
+    var speedPreview by remember(speedValue, speedMax) {
+        mutableFloatStateOf(speedValue.toFloat())
+    }
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
@@ -735,17 +741,21 @@ private fun ReadAloudSpeedSheet(
             title = stringResource(R.string.read_aloud_adjust_speed),
             value = speedPreview.coerceIn(
                 READ_ALOUD_SPEED_MIN.toFloat(),
-                READ_ALOUD_SPEED_MAX.toFloat(),
+                speedMax.toFloat(),
             ),
-            valueLabel = "${formatReadAloudSpeedLabel(speedPreview.roundToInt())}x",
+            valueLabel = "${formatReadAloudSpeedLabel(speedPreview.roundToInt().coerceAtMost(speedMax))}x",
             startLabel = stringResource(R.string.fast_rewind),
             endLabel = stringResource(R.string.fast_forward),
             onValueChange = { speedPreview = it },
             onValueChangeFinished = {
-                onIntent(ReadAloudPlayerIntent.SetSpeed(speedPreview.roundToInt()))
+                onIntent(
+                    ReadAloudPlayerIntent.SetSpeed(
+                        speedPreview.roundToInt().coerceAtMost(speedMax)
+                    )
+                )
             },
-            valueRange = READ_ALOUD_SPEED_MIN.toFloat()..READ_ALOUD_SPEED_MAX.toFloat(),
-            steps = READ_ALOUD_SPEED_MAX - READ_ALOUD_SPEED_MIN - 1,
+            valueRange = READ_ALOUD_SPEED_MIN.toFloat()..speedMax.toFloat(),
+            steps = speedMax - READ_ALOUD_SPEED_MIN - 1,
             enabled = !state.ttsFollowSys,
         )
     }
