@@ -11,13 +11,18 @@ import io.legado.app.model.localBook.localBookFileSize
 import io.legado.app.ui.main.bookshelf.BookShelfItem
 import io.legado.app.utils.cnCompare
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,6 +45,7 @@ import splitties.init.appCtx
 import java.io.File
 import java.util.Collections
 import java.util.WeakHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -53,6 +59,7 @@ class BookshelfRepository(
 ) {
     internal companion object {
         const val DEFAULT_CACHE_FILE_NAME = "local_bookshelf_metrics_v1.json"
+        private const val PERSIST_DEBOUNCE_MS = 300L
 
         private val activeRepositoriesLock = Any()
         private val activeRepositories =
@@ -76,7 +83,18 @@ class BookshelfRepository(
         val target: LocalBookMetricTarget,
         val stamp: String,
         val token: Long,
+        val generation: Long,
     )
+
+    /** 在途测量的共享键：同一本书、同一校验戳、同一刷新代次只读一次。 */
+    private data class InFlightKey(
+        val bookUrl: String,
+        val stamp: String,
+        val generation: Long,
+    )
+
+    /** @param accepted 测量结果是否已按发起时的代次写回缓存；为 false 说明期间发生了刷新或单书失效。 */
+    private class MeasureOutcome(val value: Long?, val accepted: Boolean)
 
     private data class CachedMetricPass(
         val batchToken: Long,
@@ -87,6 +105,9 @@ class BookshelfRepository(
 
     private val cache = LocalBookMetricsCache(cacheFile)
     private val fileSizeRefresh = MutableStateFlow(0L)
+    private val inFlightLock = Any()
+    private val inFlightMeasures = HashMap<InFlightKey, Deferred<MeasureOutcome>>()
+    private val persistScheduled = AtomicBoolean(false)
 
     init {
         synchronized(activeRepositoriesLock) {
@@ -152,16 +173,40 @@ class BookshelfRepository(
 
     fun invalidateLocalMetrics(sort: Int) {
         if (sort != LocalBookshelfSort.FILE_SIZE) return
-        cache.clear(sort)
+        val generation = cache.clear(sort)
+        cancelStaleMeasures { it.generation < generation }
         fileSizeRefresh.update { it + 1 }
-        persistCacheAsync()
+        schedulePersist()
     }
 
     fun invalidateLocalBookMetrics(bookUrl: String) {
         if (bookUrl.isBlank()) return
-        cache.invalidateFileSize(bookUrl)
+        val generation = cache.invalidateFileSize(bookUrl)
+        cancelStaleMeasures { it.bookUrl == bookUrl && it.generation < generation }
         fileSizeRefresh.update { it + 1 }
-        persistCacheAsync()
+        schedulePersist()
+    }
+
+    /**
+     * 取消已被刷新或单书失效作废的在途测量。
+     *
+     * 结果本来就会在写回时按代次丢弃，这里提前取消是为了让递归扫描（逐项检查取消）立即停下，
+     * 不与新一轮读取争抢同一个 DocumentsProvider；不响应取消的阻塞查询仍由写回校验兜底。
+     */
+    private fun cancelStaleMeasures(predicate: (InFlightKey) -> Boolean) {
+        val stale = synchronized(inFlightLock) {
+            val removed = ArrayList<Deferred<MeasureOutcome>>()
+            val iterator = inFlightMeasures.entries.iterator()
+            while (iterator.hasNext()) {
+                val entry = iterator.next()
+                if (predicate(entry.key)) {
+                    removed.add(entry.value)
+                    iterator.remove()
+                }
+            }
+            removed
+        }
+        stale.forEach { it.cancel() }
     }
 
     /**
@@ -244,7 +289,12 @@ class BookshelfRepository(
                 is LocalBookMetricsCache.Lookup.Hit -> resolved[target.bookUrl] = hit.value
                 LocalBookMetricsCache.Lookup.KnownMissing -> Unit
                 is LocalBookMetricsCache.Lookup.Miss -> pending.add(
-                    PendingMetricTarget(target = target, stamp = stamp, token = hit.token)
+                    PendingMetricTarget(
+                        target = target,
+                        stamp = stamp,
+                        token = hit.token,
+                        generation = hit.generation,
+                    )
                 )
             }
         }
@@ -257,35 +307,89 @@ class BookshelfRepository(
     }
 
     private suspend fun resolveFileSizes(pass: CachedMetricPass): Map<String, Long>? {
-        try {
-            for (item in pass.pending) {
-                currentCoroutineContext().ensureActive()
-                val size = when (val cached = cache.lookupFileSize(item.target.bookUrl, item.stamp)) {
-                    is LocalBookMetricsCache.Lookup.Hit -> cached.value
-                    LocalBookMetricsCache.Lookup.KnownMissing -> null
-                    is LocalBookMetricsCache.Lookup.Miss -> {
-                        if (!cache.isTokenValid(item.target.bookUrl, item.token)) {
-                            return null
-                        }
-                        val measured = fileSizeReader(item.target.bookUrl, item.target.mayBeMangaDirectory)
-                        if (!cache.putFileSize(item.target.bookUrl, item.stamp, measured, item.token)) {
-                            return null
-                        }
-                        measured
-                    }
-                }
-                currentCoroutineContext().ensureActive()
-                if (size != null && size >= 0L) {
-                    pass.resolved[item.target.bookUrl] = size
-                }
-            }
-        } finally {
-            pruneAndPersistIfDirty()
+        val completed = try {
+            resolvePendingFileSizes(pass)
+        } catch (error: Throwable) {
+            // 被取消（切换分组、书单变化）时协程已不能再执行挂起的数据库查询，
+            // 已写入内存的测量结果交给仓库作用域里的合并落盘任务处理
+            schedulePersist()
+            throw error
         }
+        pruneAndPersistIfDirty()
+        if (!completed) return null
         if (!pass.targets.all { cache.isTokenValid(it.bookUrl, pass.batchToken) }) {
             return null
         }
         return HashMap(pass.resolved)
+    }
+
+    /** @return false 表示期间发生了刷新或单书失效，本轮结果作废。 */
+    private suspend fun resolvePendingFileSizes(pass: CachedMetricPass): Boolean {
+        for (item in pass.pending) {
+            currentCoroutineContext().ensureActive()
+            val size = when (val cached = cache.lookupFileSize(item.target.bookUrl, item.stamp)) {
+                is LocalBookMetricsCache.Lookup.Hit -> cached.value
+                LocalBookMetricsCache.Lookup.KnownMissing -> null
+                is LocalBookMetricsCache.Lookup.Miss -> {
+                    if (!cache.isTokenValid(item.target.bookUrl, item.token)) {
+                        return false
+                    }
+                    // 等待共享测量是可取消的挂起点：切换分组或书单变化时，
+                    // 旧的收集周期可立即退出，不必等阻塞在 SAF 查询里的读取返回
+                    val outcome = try {
+                        sharedFileSizeMeasure(item).await()
+                    } catch (cancelled: CancellationException) {
+                        // 自身被取消就继续向上抛；否则是测量因失效被取消，本轮作废等待下一轮
+                        currentCoroutineContext().ensureActive()
+                        return false
+                    }
+                    if (!outcome.accepted) {
+                        return false
+                    }
+                    outcome.value
+                }
+            }
+            currentCoroutineContext().ensureActive()
+            if (size != null && size >= 0L) {
+                pass.resolved[item.target.bookUrl] = size
+            }
+        }
+        return true
+    }
+
+    /**
+     * 获取（或发起）一本书的共享大小测量。
+     *
+     * 书架会同时收集当前分组与全部分组的书单，冷缓存下多个订阅可能同时未命中同一本书；
+     * 这里按「书籍 + 校验戳 + 刷新代次」合并在途读取，保证同一代次内只递归读取一次。
+     * 测量在仓库作用域中执行，单个订阅取消不会打断其他仍在等待的订阅，结果写入后合并落盘；
+     * 刷新或单书失效会推进代次并取消旧代次的测量，之后的未命中会发起新读取。
+     */
+    private fun sharedFileSizeMeasure(item: PendingMetricTarget): Deferred<MeasureOutcome> {
+        val key = InFlightKey(item.target.bookUrl, item.stamp, item.generation)
+        synchronized(inFlightLock) {
+            inFlightMeasures[key]?.let { return it }
+            // 与 cancelStaleMeasures 在同一把锁内互斥：失效先推进代次再取消，
+            // 因此这里要么看到代次已失效直接放弃，要么登记后必定被随后的取消覆盖
+            if (!cache.isTokenValid(item.target.bookUrl, item.token)) {
+                return CompletableDeferred(MeasureOutcome(value = null, accepted = false))
+            }
+            val deferred = scope.async(Dispatchers.IO, start = CoroutineStart.LAZY) {
+                val measured = fileSizeReader(item.target.bookUrl, item.target.mayBeMangaDirectory)
+                ensureActive()
+                val accepted = cache.putFileSize(item.target.bookUrl, item.stamp, measured, item.token)
+                if (accepted) schedulePersist()
+                MeasureOutcome(value = measured, accepted = accepted)
+            }
+            inFlightMeasures[key] = deferred
+            deferred.invokeOnCompletion {
+                synchronized(inFlightLock) {
+                    if (inFlightMeasures[key] === deferred) inFlightMeasures.remove(key)
+                }
+            }
+            deferred.start()
+            return deferred
+        }
     }
 
     private suspend fun pruneAndPersistIfDirty() {
@@ -296,8 +400,17 @@ class BookshelfRepository(
         cache.persistIfDirty()
     }
 
-    private fun persistCacheAsync() {
+    /**
+     * 合并落盘：短时间内的多次请求（批量重导、后台测量逐本完成）只写一次缓存文件。
+     */
+    private fun schedulePersist() {
+        if (!persistScheduled.compareAndSet(false, true)) return
         scope.launch(Dispatchers.IO) {
+            try {
+                delay(PERSIST_DEBOUNCE_MS)
+            } finally {
+                persistScheduled.set(false)
+            }
             cache.ensureLoaded()
             pruneAndPersistIfDirty()
         }

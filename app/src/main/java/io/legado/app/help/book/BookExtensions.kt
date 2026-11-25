@@ -19,6 +19,7 @@ import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.HighlightTagRule
 import io.legado.app.data.entities.TagGroupRule
+import io.legado.app.data.repository.BookshelfRepository
 import io.legado.app.domain.gateway.BookExportSettingsGateway
 import io.legado.app.domain.gateway.ImportBookSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
@@ -260,6 +261,9 @@ fun Book.getLocalUri(directory: Boolean = false): Uri {
                         this.latestChapterTime = 0
                     }
                 }
+                if (oldBook.bookUrl != newBookUrl) {
+                    BookshelfRepository.notifyBookMetricInvalidated(newBookUrl)
+                }
                 localUriCache[newBookUrl] = readableUri
                 return readableUri
             }
@@ -296,6 +300,9 @@ fun Book.getLocalUri(directory: Boolean = false): Uri {
                     this.bookUrl = newBookUrl
                     this.latestChapterTime = 0
                 }
+            }
+            if (oldBook.bookUrl != newBookUrl) {
+                BookshelfRepository.notifyBookMetricInvalidated(newBookUrl)
             }
             localUriCache[newBookUrl] = readableUri
             return readableUri

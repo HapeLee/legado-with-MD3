@@ -19,21 +19,26 @@ import io.legado.app.domain.gateway.CoverSettingsGateway
 import io.legado.app.domain.model.LocalBookshelfSort
 import io.legado.app.domain.model.settings.BookshelfSettings
 import io.legado.app.domain.model.settings.CoverSettings
+import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.localBook.contentDescriptorByteSize
 import io.legado.app.model.localBook.localBookFileSize
 import io.legado.app.support.InMemoryAppDatabaseFixture
 import io.legado.app.ui.main.bookshelf.BookShelfItem
 import io.legado.app.ui.main.bookshelf.BookshelfCoverPreloader
 import io.legado.app.utils.FileDoc
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -384,7 +389,7 @@ class BookshelfLocalSortTest {
             val page = comicDir.resolve("001.png").apply { writeBytes(ByteArray(4)) }
             val fixedTime = 1_700_000_000_000L
             assertTrue(comicDir.setLastModified(fixedTime))
-            val importRepository = BookImportRepository(database, repository)
+            val importRepository = BookImportRepository(database)
             fun directoryDoc() = FileDoc(
                 name = comicDir.name,
                 isDir = true,
@@ -408,7 +413,7 @@ class BookshelfLocalSortTest {
             assertEquals(4L, repository.metricsOf(localBooks).first()[book.bookUrl])
 
             // 直接调用 LocalBook.importMangaDirectory 也应按书籍失效缓存，且不影响其他已缓存的 SAF 书籍
-            io.legado.app.model.localBook.LocalBook.importMangaDirectory(directoryDoc())
+            LocalBook.importMangaDirectory(directoryDoc())
             assertEquals(fixedTime, database.bookDao.getBook(book.bookUrl)?.latestChapterTime)
             assertEquals(9L, repository.metricsOf(localBooks).await { it[book.bookUrl] == 9L }[book.bookUrl])
             assertEquals(safQueriesAfterInitial, provider.queryCount.get())
@@ -477,6 +482,248 @@ class BookshelfLocalSortTest {
             assertEquals(30L, allLocalMetrics[otherSaf.bookUrl])
             assertEquals(listOf(localA.bookUrl, otherSaf.bookUrl), readUrls.toList())
             assertTrue(provider.queryCount.get() > 0)
+        }
+    }
+
+    @Test
+    fun `concurrent subscriptions share one in-flight measurement of the same book`() {
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val calls = AtomicInteger()
+        // 模拟慢速的 SAF 漫画递归读取：放行前所有订阅都只能等待
+        val reader: suspend (String, Boolean) -> Long? = { _, _ ->
+            calls.incrementAndGet()
+            entered.countDown()
+            release.await(20, TimeUnit.SECONDS)
+            9L
+        }
+        withRepository(fileSizeReader = reader) { database, repository, _ ->
+            val target = book(folder.newFile("shared.txt"))
+            database.bookDao.insert(target)
+            // 与书架一致：当前分组与全分组列表各自订阅同一本书的指标
+            val first = MutableStateFlow<Map<String, Long>?>(null)
+            val second = MutableStateFlow<Map<String, Long>?>(null)
+            val collectors = listOf(first, second).map { sink ->
+                launch(Dispatchers.Default) {
+                    repository.metricsOf(database.bookDao.flowBookShelfLocal()).collect { sink.value = it }
+                }
+            }
+            try {
+                assertTrue(withContext(Dispatchers.IO) { entered.await(20, TimeUnit.SECONDS) })
+                // 给第二个订阅足够时间走到缓存未命中；共享在途测量时不会发起第二次读取
+                delay(500)
+                assertEquals(1, calls.get())
+
+                release.countDown()
+                withTimeout(20_000) { first.first { it?.get(target.bookUrl) == 9L } }
+                withTimeout(20_000) { second.first { it?.get(target.bookUrl) == 9L } }
+                assertEquals(1, calls.get())
+            } finally {
+                release.countDown()
+                collectors.forEach { it.cancelAndJoin() }
+            }
+        }
+    }
+
+    @Test
+    fun `switching to an online group does not wait for a blocked local read`() {
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val reader: suspend (String, Boolean) -> Long? = { _, _ ->
+            entered.countDown()
+            release.await(20, TimeUnit.SECONDS)
+            5L
+        }
+        withRepository(fileSizeReader = reader) { database, repository, _ ->
+            val localGroup = BookGroup(groupId = 1L, groupName = "本地", bookSort = LocalBookshelfSort.FILE_SIZE)
+            val onlineGroup = BookGroup(groupId = 2L, groupName = "纯在线", bookSort = LocalBookshelfSort.FILE_SIZE)
+            database.bookGroupDao.insert(localGroup, onlineGroup)
+            val local = book(folder.newFile("slow.txt")).copy(group = localGroup.groupId)
+            val online = onlineBook("online-switch").copy(group = onlineGroup.groupId)
+            database.bookDao.insert(local, online)
+
+            // 与 BookshelfViewModel.selectedGroupBooksFlow 相同：按选中分组 flatMapLatest
+            val selectedGroup = MutableStateFlow(localGroup.groupId)
+            val latestBooks = MutableStateFlow<List<String>?>(null)
+            @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+            val collector = launch(Dispatchers.Default) {
+                selectedGroup.flatMapLatest { groupId ->
+                    repository.flowBooksWithLocalMetrics(
+                        database.bookDao.flowBookShelfByGroup(groupId),
+                        LocalBookshelfSort.FILE_SIZE,
+                    )
+                }.collect { (books, _) -> latestBooks.value = books.map { it.bookUrl } }
+            }
+            try {
+                assertTrue(withContext(Dispatchers.IO) { entered.await(20, TimeUnit.SECONDS) })
+                // 本地分组的读取仍阻塞时切到纯在线分组，新分组书单应立即发出
+                selectedGroup.value = onlineGroup.groupId
+                val switched = withTimeout(5_000) {
+                    latestBooks.first { it == listOf(online.bookUrl) }
+                }
+                assertEquals(listOf(online.bookUrl), switched)
+                assertEquals(1L, release.count)
+            } finally {
+                release.countDown()
+                collector.cancelAndJoin()
+            }
+        }
+    }
+
+    @Test
+    fun `reimporting a single file at the same path rereads size when the stamp is unchanged`() =
+        withRepository { database, repository, _ ->
+            val txt = folder.newFile("同路径重导.txt").apply { writeBytes(ByteArray(4)) }
+            val uri = Uri.fromFile(txt)
+            val bookUrl = FileDoc.fromUri(uri, false).toString()
+            // 预置已导入记录：新建导入要执行文件名规则（依赖 Koin 设置），这里只覆盖已有书籍的重导分支
+            database.bookDao.insert(book(txt).copy(bookUrl = bookUrl, latestChapterTime = 123L))
+            // 第一次重导后 latestChapterTime 固定为 0，此后同路径重导的校验戳保持不变
+            LocalBook.importFiles(uri)
+            assertEquals(0L, database.bookDao.getBook(bookUrl)?.latestChapterTime)
+
+            val localBooks = database.bookDao.flowBookShelfLocal()
+            assertEquals(4L, repository.metricsOf(localBooks).await { it[bookUrl] == 4L }[bookUrl])
+
+            // 替换同一路径的 TXT 后重导：校验戳不变，仍须按书籍失效并重读
+            txt.writeBytes(ByteArray(16))
+            delay(350)
+            assertEquals(4L, repository.metricsOf(localBooks).first()[bookUrl])
+            LocalBook.importFiles(uri)
+            assertEquals(0L, database.bookDao.getBook(bookUrl)?.latestChapterTime)
+            assertEquals(16L, repository.metricsOf(localBooks).await { it[bookUrl] == 16L }[bookUrl])
+        }
+
+    @Test
+    fun `reimporting a manga directory after removing it from the shelf does not reuse the old size`() =
+        withRepository { database, repository, _ ->
+            val comicDir = folder.newFolder("移出后再导入")
+            val page = comicDir.resolve("001.png").apply { writeBytes(ByteArray(4)) }
+            val fixedTime = 1_700_000_000_000L
+            assertTrue(comicDir.setLastModified(fixedTime))
+            fun directoryDoc() = FileDoc(
+                name = comicDir.name,
+                isDir = true,
+                size = 0L,
+                lastModified = comicDir.lastModified(),
+                uri = Uri.Builder().path(comicDir.absolutePath).build(),
+            )
+
+            val book = LocalBook.importMangaDirectory(directoryDoc())
+            val localBooks = database.bookDao.flowBookShelfLocal()
+            assertEquals(4L, repository.metricsOf(localBooks).await { it[book.bookUrl] == 4L }[book.bookUrl])
+
+            // 移出书架不会触发缓存清理；原地覆盖图片且目录时间不变，再导入走新建分支、校验戳与旧值相同
+            database.bookDao.delete(book)
+            repository.metricsOf(localBooks).await { book.bookUrl !in it }
+            page.writeBytes(ByteArray(9))
+            assertTrue(comicDir.setLastModified(fixedTime))
+            LocalBook.importMangaDirectory(directoryDoc())
+            assertEquals(9L, repository.metricsOf(localBooks).await { it[book.bookUrl] == 9L }[book.bookUrl])
+        }
+
+    @Test
+    fun `stale read issued before invalidation cannot backfill after the book is pruned`() =
+        withRepository { _, _, _ ->
+            val cache = LocalBookMetricsCache(File(folder.root, "prune-cache.json"))
+            cache.ensureLoaded()
+            val stale = cache.lookupFileSize("book-a", "stamp") as LocalBookMetricsCache.Lookup.Miss
+            val invalidatedAt = cache.invalidateFileSize("book-a")
+            // 书籍移出书架后另一次落盘触发清理：失效水位必须保留
+            cache.prune(emptySet())
+
+            assertFalse(cache.putFileSize("book-a", "stamp", 4L, stale.token))
+            val fresh = cache.lookupFileSize("book-a", "stamp") as LocalBookMetricsCache.Lookup.Miss
+            assertEquals(invalidatedAt, fresh.generation)
+            assertTrue(fresh.generation > stale.generation)
+        }
+
+    @Test
+    fun `invalidating a book cancels its stale in-flight scan and rereads`() {
+        val entered = CompletableDeferred<Unit>()
+        val cancelled = CompletableDeferred<Unit>()
+        val calls = AtomicInteger()
+        // 第一次读取模拟逐项检查取消的递归扫描：只有被取消才会结束
+        val reader: suspend (String, Boolean) -> Long? = { _, _ ->
+            if (calls.incrementAndGet() == 1) {
+                entered.complete(Unit)
+                try {
+                    awaitCancellation()
+                } finally {
+                    cancelled.complete(Unit)
+                }
+            } else {
+                16L
+            }
+        }
+        withRepository(fileSizeReader = reader) { database, repository, _ ->
+            val target = book(folder.newFile("cancel.txt"))
+            database.bookDao.insert(target)
+            val latest = MutableStateFlow<Map<String, Long>?>(null)
+            val collector = launch(Dispatchers.Default) {
+                repository.metricsOf(database.bookDao.flowBookShelfLocal()).collect { latest.value = it }
+            }
+            try {
+                withTimeout(20_000) { entered.await() }
+                repository.invalidateLocalBookMetrics(target.bookUrl)
+                withTimeout(5_000) { cancelled.await() }
+                withTimeout(20_000) { latest.first { it?.get(target.bookUrl) == 16L } }
+                assertEquals(2, calls.get())
+            } finally {
+                collector.cancelAndJoin()
+            }
+        }
+    }
+
+    @Test
+    fun `measurements finished before the subscriber is cancelled are still persisted`() {
+        val slowEntered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        lateinit var slowUrl: String
+        val reader: suspend (String, Boolean) -> Long? = { url, _ ->
+            if (url == slowUrl) {
+                slowEntered.countDown()
+                release.await(20, TimeUnit.SECONDS)
+                7L
+            } else {
+                5L
+            }
+        }
+        withRepository(fileSizeReader = reader) { database, repository, settings ->
+            val fast = book(folder.newFile("fast.txt"))
+            val slow = book(folder.newFile("slow-persist.txt"))
+            slowUrl = slow.bookUrl
+            database.bookDao.insert(fast, slow)
+            // 固定顺序：先测完 fast，再阻塞在 slow 上
+            val items = database.bookDao.flowBookShelfLocal().first()
+                .sortedBy { if (it.bookUrl == fast.bookUrl) 0 else 1 }
+            val cacheFile = File(folder.root, "metrics-cache.json")
+            val collector = launch(Dispatchers.Default) {
+                repository.metricsOf(flowOf(items)).collect { }
+            }
+            try {
+                assertTrue(withContext(Dispatchers.IO) { slowEntered.await(20, TimeUnit.SECONDS) })
+                // 模拟切换分组：唯一订阅者在等待 slow 时被取消
+                collector.cancelAndJoin()
+                withTimeout(20_000) {
+                    while (!cacheFile.isFile) delay(50)
+                }
+            } finally {
+                release.countDown()
+                collector.cancelAndJoin()
+            }
+
+            val restartedScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            try {
+                val restarted = BookshelfRepository(database, settings, cacheFile, restartedScope)
+                val fastItem = items.filter { it.bookUrl == fast.bookUrl }
+                assertEquals(
+                    mapOf(fast.bookUrl to 5L),
+                    restarted.tryGetCachedMetrics(LocalBookshelfSort.FILE_SIZE, fastItem),
+                )
+            } finally {
+                restartedScope.coroutineContext[Job]?.cancelAndJoin()
+            }
         }
     }
 

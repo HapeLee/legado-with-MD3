@@ -336,6 +336,9 @@ object LocalBook {
             appDb.bookChapterDao.delByBook(bookUrl)
             appDb.bookDao.update(book)
         }
+        // 同路径重导时 latestChapterTime 固定为 0、新建导入也可能沿用移出书架前的校验戳，
+        // 替换后的文件可能保持同一校验戳，必须按书籍失效大小缓存，否则会继续命中旧文件的大小
+        BookshelfRepository.notifyBookMetricInvalidated(bookUrl)
         return book
     }
 
@@ -394,6 +397,8 @@ object LocalBook {
         }
         oldBook.removeLocalUriCache()
         reboundBook.removeLocalUriCache()
+        // 新路径之前可能被测过大小（如曾导入后又移除），接回后同样按书籍失效
+        BookshelfRepository.notifyBookMetricInvalidated(newBookUrl)
         return reboundBook
     }
 
@@ -419,8 +424,9 @@ object LocalBook {
         if (existing == null) appDb.bookDao.insert(book) else {
             appDb.bookChapterDao.delByBook(bookUrl)
             appDb.bookDao.update(book)
-            BookshelfRepository.notifyBookMetricInvalidated(bookUrl)
         }
+        // 原地覆盖图片不改变目录时间；移出书架后再导入同一目录同样可能沿用旧校验戳
+        BookshelfRepository.notifyBookMetricInvalidated(bookUrl)
         return book
     }
 
@@ -693,6 +699,8 @@ object LocalBook {
                             localBook.origin = newBook.origin
                         }
                     }
+                    // 远程恢复的文件可能落在原路径（校验戳不变）或新路径，之前可能记为测不到
+                    BookshelfRepository.notifyBookMetricInvalidated(localBook.bookUrl)
                 }
             }
             return true

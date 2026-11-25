@@ -46,7 +46,12 @@ internal class LocalBookMetricsCache(
     internal sealed interface Lookup {
         data class Hit(val value: Long) : Lookup
         data object KnownMissing : Lookup
-        data class Miss(val token: Long) : Lookup
+        /**
+         * @param token 发起读取时的全局代次，写回时用于丢弃失效前的慢读取。
+         * @param generation 该书当前生效的刷新代次（全局刷新或单书失效中较新者），
+         * 同一本书在同一代次内的并发读取以它作为共享键。
+         */
+        data class Miss(val token: Long, val generation: Long) : Lookup
     }
 
     private val lock = Any()
@@ -111,7 +116,8 @@ internal class LocalBookMetricsCache(
             val entry = fileSizes[key]
             if (entry != null && entry.stampDigest == stampDigest) return Lookup.Hit(entry.value)
             if (unknownFileSizes[key]?.stampDigest == stampDigest) return Lookup.KnownMissing
-            return Lookup.Miss(token = epoch)
+            val generation = maxOf(clearEpoch, keyInvalidatedEpoch[key] ?: 0L)
+            return Lookup.Miss(token = epoch, generation = generation)
         }
     }
 
@@ -137,7 +143,8 @@ internal class LocalBookMetricsCache(
         }
     }
 
-    fun invalidateFileSize(bookUrl: String) {
+    /** @return 失效后该书生效的新代次；代次更旧的在途读取都应作废。 */
+    fun invalidateFileSize(bookUrl: String): Long {
         val key = sha256Hex(bookUrl)
         synchronized(lock) {
             epoch += 1
@@ -146,6 +153,7 @@ internal class LocalBookMetricsCache(
                 dirty = true
             }
             unknownFileSizes.remove(key)
+            return epoch
         }
     }
 
@@ -170,18 +178,15 @@ internal class LocalBookMetricsCache(
                     unknownIterator.remove()
                 }
             }
-            val invalidatedIterator = keyInvalidatedEpoch.entries.iterator()
-            while (invalidatedIterator.hasNext()) {
-                val entry = invalidatedIterator.next()
-                if (entry.key !in activeHashes && entry.value <= maxEpoch) {
-                    invalidatedIterator.remove()
-                }
-            }
+            // 单书失效水位不随书籍移出书架而清理：否则失效前发出、仍阻塞在 SAF 里的慢读取
+            // 返回时会因水位消失被误判为有效而回填旧值，同路径重导时共享代次也会倒退。
+            // 水位只在整体刷新推进 clearEpoch 时统一清空，进程内手动重导的条目数量很小。
         }
     }
 
-    fun clear(sort: Int) {
-        if (sort != LocalBookshelfSort.FILE_SIZE) return
+    /** @return 刷新后的新代次；代次更旧的在途读取都应作废。 */
+    fun clear(sort: Int): Long {
+        if (sort != LocalBookshelfSort.FILE_SIZE) return currentEpoch()
         synchronized(lock) {
             epoch += 1
             clearEpoch = epoch
@@ -195,6 +200,7 @@ internal class LocalBookMetricsCache(
                 dirty = true
             }
             unknownFileSizes.clear()
+            return epoch
         }
     }
 
