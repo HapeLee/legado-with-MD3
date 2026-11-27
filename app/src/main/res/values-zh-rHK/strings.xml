@@ -2061,8 +2061,8 @@
     <string name="is_unread">未讀</string>
     <string name="js_disabled">JS 已禁用</string>
     <string name="jump_to_volume">跳轉到卷</string>
-    <string name="eink_global_mode_title">電子書模式</string>
-    <string name="eink_global_mode_summary">套用電子書主題並關閉全域動畫</string>
+    <string name="eink_global_mode_title">電紙書模式</string>
+    <string name="eink_global_mode_summary">套用電紙書主題並關閉全域動畫</string>
     <string name="lab_enabled_summary">開啟以顯示實驗性功能。這些功能可能不穩定。</string>
     <string name="lab_enabled_title">啟用實驗室</string>
     <string name="lab_setting">實驗室</string>

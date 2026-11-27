@@ -11,6 +11,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -34,6 +35,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuOpen
 import androidx.compose.material.icons.filled.Menu
@@ -41,9 +44,12 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.WideNavigationRail
 import androidx.compose.material3.WideNavigationRailItem
+import androidx.compose.material3.WideNavigationRailItemDefaults
 import androidx.compose.material3.WideNavigationRailValue
+import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.rememberWideNavigationRailState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -60,9 +66,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -351,6 +361,7 @@ fun MainScreen(
     val showLabel = !isUnlabeled
     val isMochi = engine == ComposeEngine.Mochi
     val themeSettings = LocalAppUiConfiguration.current.theme
+    val isEInkTheme = themeSettings.appTheme == "4"
     val useMiuixGlassNavigation = engine == ComposeEngine.Miuix && useLiquidGlass &&
         themeSettings.useHyperOs4Components
     val mochiPageBackdrop = if (isMochi && useLiquidGlass) rememberMochiBackdrop(LegadoTheme.colorScheme.background) else null
@@ -430,13 +441,27 @@ fun MainScreen(
                         FloatingActionButton(
                             modifier = Modifier
                                 .align(Alignment.Start)
-                                .padding(start = NavigationRailDefaults.ExpandedItemHorizontalMargin),
+                                .padding(start = NavigationRailDefaults.ExpandedItemHorizontalMargin)
+                                .then(
+                                    if (isEInkTheme) {
+                                        Modifier.border(
+                                            width = 1.5.dp,
+                                            color = LegadoTheme.colorScheme.onSurface,
+                                            shape = CircleShape,
+                                        )
+                                    } else Modifier
+                                ),
+                            containerColor = if (isEInkTheme) {
+                                LegadoTheme.colorScheme.surface
+                            } else {
+                                LegadoTheme.colorScheme.primary
+                            },
                             onClick = { onNavigateToSearch(null) },
                         ) {
                             AppIcon(
                                 Icons.Default.Search,
                                 contentDescription = null,
-                                tint = Color.White
+                                tint = if (isEInkTheme) LegadoTheme.colorScheme.onSurface else Color.White
                             )
                         }
                     }
@@ -521,10 +546,50 @@ fun MainScreen(
                         Spacer(modifier = Modifier.height(8.dp))
 
                         ExtendedFloatingActionButton(
-                            modifier = Modifier.padding(start = 20.dp),
+                            modifier = Modifier
+                                .padding(start = 20.dp)
+                                .then(
+                                    if (isEInkTheme) {
+                                        Modifier.border(
+                                            width = 1.5.dp,
+                                            color = LegadoTheme.colorScheme.onSurface,
+                                            shape = FloatingActionButtonDefaults.extendedFabShape,
+                                        )
+                                    } else Modifier
+                                ),
                             onClick = { onNavigateToSearch(null) },
                             expanded = expanded,
-                            icon = { AppIcon(Icons.Default.Search, contentDescription = null) },
+                            containerColor = if (isEInkTheme) {
+                                LegadoTheme.colorScheme.surface
+                            } else {
+                                FloatingActionButtonDefaults.containerColor
+                            },
+                            contentColor = if (isEInkTheme) {
+                                LegadoTheme.colorScheme.onSurface
+                            } else {
+                                contentColorFor(FloatingActionButtonDefaults.containerColor)
+                            },
+                            elevation = if (isEInkTheme) {
+                                FloatingActionButtonDefaults.elevation(
+                                    defaultElevation = 0.dp,
+                                    pressedElevation = 0.dp,
+                                    focusedElevation = 0.dp,
+                                    hoveredElevation = 0.dp,
+                                )
+                            } else {
+                                FloatingActionButtonDefaults.elevation()
+                            },
+                            icon = {
+                                AppIcon(
+                                    Icons.Default.Search,
+                                    contentDescription = null,
+                                    tint = if (isEInkTheme) {
+                                        LegadoTheme.colorScheme.onSurface
+                                    } else {
+                                        Color.Unspecified
+                                    },
+                                )
+                            },
                             text = { AppText(stringResource(R.string.search)) }
                         )
                     }
@@ -535,17 +600,67 @@ fun MainScreen(
                     var showGroupMenu by remember { mutableStateOf(false) }
                     val haptic = LocalHapticFeedback.current
                     val destinationLabel = stringResource(destination.labelId)
+                    val railExpanded = navState.targetValue == WideNavigationRailValue.Expanded
+                    val eInkOutlineColor = LegadoTheme.colorScheme.onSurface
 
                     // 同 Miuix rail：标签文本已由 label 槽渲染，重复描述会被朗读两遍。
                     WideNavigationRailItem(
-                        modifier = Modifier.semantics(mergeDescendants = true) {},
-                        railExpanded = navState.targetValue == WideNavigationRailValue.Expanded,
+                        modifier = Modifier
+                            .semantics(mergeDescendants = true) {}
+                            .then(
+                                if (isEInkTheme && selected && railExpanded) {
+                                    Modifier.drawBehind {
+                                        val strokeWidth = 1.5.dp.toPx()
+                                        val startInset = 20.dp.toPx()
+                                        val halfStroke = strokeWidth / 2f
+                                        val indicatorHeight = 56.dp.toPx().coerceAtMost(size.height - strokeWidth)
+                                        val indicatorWidth = (size.width - startInset - halfStroke).coerceAtLeast(0f)
+                                        val top = (size.height - indicatorHeight) / 2f
+                                        drawRoundRect(
+                                            color = eInkOutlineColor,
+                                            topLeft = Offset(startInset, top),
+                                            size = Size(indicatorWidth, indicatorHeight),
+                                            cornerRadius = CornerRadius(indicatorHeight / 2f, indicatorHeight / 2f),
+                                            style = Stroke(width = strokeWidth),
+                                        )
+                                    }
+                                } else Modifier
+                            ),
+                        railExpanded = railExpanded,
                         selected = selected,
+                        colors = if (isEInkTheme) {
+                            WideNavigationRailItemDefaults.colors(
+                                selectedIndicatorColor = Color.Transparent,
+                                selectedIconColor = eInkOutlineColor,
+                                selectedTextColorTopIconPosition = eInkOutlineColor,
+                                selectedTextColorStartIconPosition = eInkOutlineColor,
+                                unselectedIconColor = eInkOutlineColor,
+                                unselectedTextColor = eInkOutlineColor,
+                            )
+                        } else {
+                            WideNavigationRailItemDefaults.colors()
+                        },
                         onClick = {
                             handleMainDestinationClick(index, destination)
                         },
                         icon = {
-                            Box {
+                            Box(
+                                modifier = if (isEInkTheme && selected && !railExpanded) {
+                                    Modifier.drawBehind {
+                                        val strokeWidth = 1.5.dp.toPx()
+                                        val w = 56.dp.toPx()
+                                        val h = 32.dp.toPx()
+                                        drawRoundRect(
+                                            color = eInkOutlineColor,
+                                            topLeft = Offset((size.width - w) / 2f, (size.height - h) / 2f),
+                                            size = Size(w, h),
+                                            cornerRadius = CornerRadius(h / 2f, h / 2f),
+                                            style = Stroke(width = strokeWidth),
+                                        )
+                                    }
+                                } else Modifier,
+                                contentAlignment = Alignment.Center,
+                            ) {
                                 NavigationIcon(
                                     destination = destination,
                                     selected = selected,

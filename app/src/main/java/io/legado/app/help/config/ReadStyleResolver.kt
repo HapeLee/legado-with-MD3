@@ -32,7 +32,8 @@ object ReadStyleResolver {
         }
 
     private val isEInkModeCompat: Boolean
-        get() = themeGateway.currentSettings.appTheme == "4"
+        get() = shellGateway.currentSettings.eInkGlobalMode ||
+            themeGateway.currentSettings.appTheme == "4"
 
     enum class ReadStyleMode {
         Day,

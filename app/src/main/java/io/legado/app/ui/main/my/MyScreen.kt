@@ -174,6 +174,15 @@ fun MyScreen(
                     },
                     onNavigate = onNavigate
                 )
+                SwitchSettingItem(
+                    title = stringResource(R.string.eink_global_mode_title),
+                    description = stringResource(R.string.eink_global_mode_summary),
+                    imageVector = AppIcons.leadingOrNull(AppIcons.EInkReader),
+                    checked = state.eInkGlobalMode,
+                    onCheckedChange = { enabled ->
+                        onIntent(MyIntent.SetEInkGlobalMode(enabled))
+                    },
+                )
             }
 
             SplicedColumnGroup(

@@ -15,7 +15,6 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
-import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
@@ -24,8 +23,6 @@ import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConfigNavScreen(
-    eInkGlobalMode: Boolean = false,
-    onEInkGlobalModeChange: (Boolean) -> Unit = {},
     onBackClick: () -> Unit,
     onNavigateToOther: () -> Unit,
     onNavigateToRead: () -> Unit,
@@ -71,14 +68,6 @@ fun ConfigNavScreen(
             )
         ) {
             item {
-                SplicedColumnGroup {
-                    SwitchSettingItem(
-                        title = stringResource(R.string.eink_global_mode_title),
-                        description = stringResource(R.string.eink_global_mode_summary),
-                        checked = eInkGlobalMode,
-                        onCheckedChange = onEInkGlobalModeChange,
-                    )
-                }
                 SplicedColumnGroup {
                     ClickableSettingItem(
                         title = stringResource(R.string.theme_setting),

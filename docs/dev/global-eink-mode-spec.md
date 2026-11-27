@@ -1,16 +1,16 @@
-# 全局电子书模式（Global E-Ink Mode）
+# 全局电纸书模式（Global E-Ink Mode）
 
 ## 1. 概述与边界
 
-全局电子书模式提供一个位于设置首页（`ConfigNavScreen`）的一键开关，开启后在运行时统一应用电子书主题（`appTheme == "4"`）并关闭全应用动画与实时模糊；关闭后无损恢复用户原有的主题、模糊与动画偏好。
+全局电纸书模式提供一个位于「我的」首页（`MyScreen`、`Web 服务` 下方）的一键开关，开启后在运行时统一应用电纸书主题（`appTheme == "4"`）并关闭全应用动画与实时模糊；关闭后无损恢复用户原有的主题、模糊与动画偏好。
 
 ### 边界约定
 
-- **唯一入口**：仅在 `ConfigNavScreen` 顶部展示「电子书模式」开关。
+- **唯一入口**：仅在 `MyScreen` 顶部卡片、`Web 服务` 正下方展示「电纸书模式」开关（带电纸书设备矢量图标）。
 - **不改写底层偏好**：开启时不覆盖持久化存储中的 `appTheme`、模糊与动画配置，避免退出时丢失用户原设定。
 - **独立边界**：
   - 外观页（`ThemeConfigScreen`）仍直接读写 `ThemeSettingsGateway` / `AppShellSettingsGateway` 原始持久化值，不添加额外提示徽章或屏蔽遮罩。
-  - 漫画二值化（`MangaSettings.enableEInk`）与阈值保持独立控制，不与全局电子书模式联动。
+  - 漫画二值化（`MangaSettings.enableEInk`）与阈值保持独立控制，不与全局电纸书模式联动。
   - 废弃的 `设置 → 实验室 → 墨水屏显示`（`LabSettings.eInkDisplay`）已移除。
 
 ---
@@ -23,7 +23,7 @@
 | 领域模型 | `domain/model/settings/AppShellSettings.kt` | `val eInkGlobalMode: Boolean = false`；`NavigationAnimationStyle.None("none")` |
 | 仓库映射 | `data/repository/FeatureSettingsRepositories.kt` | `toAppShellSettings()` / `toPrefMap()` 读写 `PreferKey.eInkGlobalMode` |
 | 备份配置 | `help/storage/BackupConfig.kt` | `PreferKey.eInkGlobalMode` 纳入 `themePrefKeys` |
-| 写入方式 | `MainNavGraph.kt` | 经 `AppShellSettingsGateway.update { it.copy(eInkGlobalMode = enabled) }` 原子提交 |
+| 写入方式 | `MyViewModel.kt` | 经 `AppShellSettingsGateway.update { it.copy(eInkGlobalMode = enabled) }` 原子提交 |
 
 ---
 
@@ -35,7 +35,7 @@
 
 | 维度 | 底层原始字段 | 有效覆写值 |
 | :--- | :--- | :--- |
-| 应用主题 | `theme.appTheme` | `"4"`（电子书主题） |
+| 应用主题 | `theme.appTheme` | `"4"`（电纸书主题） |
 | 导航动画 | `appShell.navigationAnimationStyle` | `NavigationAnimationStyle.None` |
 | 文字动画 | `appShell.textAnimationLevel` | `TextAnimationLevel.Off` |
 | 预测性返回 | `appShell.predictiveBackEnabled` | `false` |
@@ -51,6 +51,7 @@
 以下位置不直接读取 `LocalAppUiConfiguration`，均已对齐运行时有效 E-Ink 状态：
 
 - `help/config/AppConfig.kt`：`isEInkMode` = `shell.eInkGlobalMode || theme.appTheme == "4"`
+- `help/config/ReadStyleResolver.kt`：`isEInkModeCompat` = `shell.eInkGlobalMode || theme.appTheme == "4"`（驱动阅读页正文自动切换 `ReadStyleMode.EInk` 白底黑字并保留原日/夜背景）
 - `ui/config/readConfig/ReadConfig.kt`：`isEInkMode` = `shell.eInkGlobalMode || theme.appTheme == "4"`
 - `ui/book/searchContent/SearchContentViewModel.kt`：订阅 `AppUiConfigurationGateway.configuration`，取 `theme.appTheme == "4"`
 - `feature/reader/legacy/LegacyReaderPaginationStyleFactory.kt`：读取 `AppUiConfigurationGateway.currentConfiguration.theme.appTheme == "4"`
@@ -72,7 +73,8 @@
 
 ## 5. UI 规范与回归测试
 
-- **设置首页**：在原 13 项 `SplicedColumnGroup` 上方独立放置单项 `SplicedColumnGroup` + `SwitchSettingItem`，保持原有极简风格，不额外增加状态标签或粗边框。
+- **「我的」首页入口**：在顶部卡片内、`Web 服务` 正下方放置「电纸书模式」`SwitchSettingItem`，配自定义电纸书设备矢量图标（`AppIcons.EInkReader`）；设置首页不重复展示。
+- **电纸书导航栏描边**：当生效主题为电纸书（`appTheme == "4"`）时，主界面搜索按钮与活跃 Tab 指示器不使用实心/灰底背景色，改用 `1.5.dp` `outline` 外圈描边并去除阴影，确保墨水屏高对比清晰可辨。
 - **核心回归测试**：
   - `AppUiConfigurationEInkOverrideTest`：覆盖开启时覆写、保留深浅色/字体、关闭时无损还原与 `diffFrom` 语义。
   - `AppShellSettingsMappingTest`、`LabSettingsMappingTest`：覆盖偏好键原子读写与旧实验室字段清理。

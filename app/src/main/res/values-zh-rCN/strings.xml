@@ -2589,8 +2589,8 @@
     <string name="lab_setting">实验室</string>
     <string name="lab_enabled_title">启用实验室</string>
     <string name="lab_enabled_summary">开启后显示实验性功能，可能不稳定</string>
-    <string name="eink_global_mode_title">电子书模式</string>
-    <string name="eink_global_mode_summary">应用电子书主题并关闭全局动画</string>
+    <string name="eink_global_mode_title">电纸书模式</string>
+    <string name="eink_global_mode_summary">应用电纸书主题并关闭全局动画</string>
     <string name="lab_diagnostics">诊断</string>
     <string name="lab_page_estimate_diagnostics_title">导出全文页码诊断</string>
     <string name="lab_page_estimate_diagnostics_summary">分享本机最近的估算与校正记录，不会自动上传。</string>
