@@ -37,7 +37,6 @@ import io.legado.app.help.book.removeType
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.model.CacheBook
 import io.legado.app.service.ExportBookService
-import io.legado.app.ui.config.bookshelfConfig.BookshelfManageScreenConfig
 import io.legado.app.ui.main.bookshelf.toLightBook
 import io.legado.app.utils.move
 import kotlinx.collections.immutable.ImmutableList
@@ -188,7 +187,6 @@ class BookshelfManageScreenViewModel(
     private val bookSourceRepository: BookSourceRepository,
     private val bookGroupRepository: BookGroupRepository,
     private val searchRepository: SearchRepository,
-    val bookshelfManageScreenConfig: BookshelfManageScreenConfig,
     private val bookExportSettingsGateway: BookExportSettingsGateway,
     private val batchCacheDownloadUseCase: BatchCacheDownloadUseCase,
     private val cacheBookChaptersUseCase: CacheBookChaptersUseCase,

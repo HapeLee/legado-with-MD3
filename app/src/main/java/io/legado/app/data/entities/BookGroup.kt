@@ -71,13 +71,6 @@ data class BookGroup(
         }
     }
 
-    fun getRealBookSort(defaultBookSort: Int): Int {
-        if (bookSort < 0) {
-            return defaultBookSort
-        }
-        return bookSort
-    }
-
     override fun hashCode(): Int {
         return groupId.hashCode()
     }

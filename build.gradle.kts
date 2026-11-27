@@ -265,7 +265,6 @@ val verifyConfigArchitecture = tasks.register<VerifyConfigArchitectureTask>(
             // 护栏缺席期间 main 新增（整书页码估算），随合并冻结
             "io/legado/app/ui/book/read/pageestimate/ExactChapterPageCountStore.kt" to 3,
             "io/legado/app/ui/book/search/SearchScope.kt" to 4,
-            "io/legado/app/ui/config/bookshelfConfig/BookshelfManageScreenConfig.kt" to 1,
             "io/legado/app/ui/main/MainNavGraph.kt" to 2,
             "io/legado/app/ui/rss/article/RssArticlesCompose.kt" to 1,
             "io/legado/app/ui/rss/read/RssJsExtensions.kt" to 8,

@@ -2,6 +2,7 @@ package io.legado.app.data.repository
 
 import io.legado.app.data.AppDatabase
 import io.legado.app.data.entities.Book
+import io.legado.app.domain.model.LocalBookMetricInvalidation
 import io.legado.app.help.book.BookHelp
 import androidx.room.invalidationTrackerFlow
 import io.legado.app.help.book.canSafelyRebindTo
@@ -54,7 +55,7 @@ class BookImportRepository(
                 BookHelp.updateCacheFolder(book, reboundBook)
             }
             // 新路径之前可能被测过大小或记为测不到，接回后按书籍失效
-            BookshelfRepository.notifyBookMetricInvalidated(filePath)
+            LocalBookMetricInvalidation.notifyChanged(filePath)
             reboundBook
         }
 }

@@ -164,7 +164,7 @@ class BookshelfLocalSortTest {
             assertFalse(cacheFile.readText().contains("changing.txt"))
 
             val restartedScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-            val restartedRepo = BookshelfRepository(database, settings, cacheFile, restartedScope)
+            val restartedRepo = BookshelfRepository(database.bookDao, settings, cacheFile, restartedScope)
             try {
                 val restarted = restartedRepo.metricsOf(database.bookDao.flowBookShelfLocal())
                     .await { it[safBook.bookUrl] == 7L && it[changing.bookUrl] == 3L }
@@ -715,7 +715,7 @@ class BookshelfLocalSortTest {
 
             val restartedScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
             try {
-                val restarted = BookshelfRepository(database, settings, cacheFile, restartedScope)
+                val restarted = BookshelfRepository(database.bookDao, settings, cacheFile, restartedScope)
                 val fastItem = items.filter { it.bookUrl == fast.bookUrl }
                 assertEquals(
                     mapOf(fast.bookUrl to 5L),
@@ -741,7 +741,7 @@ class BookshelfLocalSortTest {
             val settings = TestSettings()
             val cacheFile = File(folder.root, "metrics-cache.json")
             val repository = BookshelfRepository(
-                database = database,
+                bookDao = database.bookDao,
                 settingsGateway = settings,
                 cacheFile = cacheFile,
                 scope = scope,

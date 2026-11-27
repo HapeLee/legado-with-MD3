@@ -302,7 +302,6 @@ import io.legado.app.ui.config.ai.AiProviderEditViewModel
 import io.legado.app.ui.config.ai.prompt.AiPromptConfigViewModel
 import io.legado.app.ui.config.ai.summary.AiSummaryConfigViewModel
 import io.legado.app.ui.config.backupConfig.BackupConfigViewModel
-import io.legado.app.ui.config.bookshelfConfig.BookshelfManageScreenConfig
 import io.legado.app.ui.config.coverConfig.CoverAlbumManageViewModel
 import io.legado.app.ui.config.coverConfig.CoverConfigViewModel
 import io.legado.app.ui.config.bubble.BubbleConfigViewModel
@@ -511,7 +510,6 @@ val appModule = module {
     factory { GetReadRecordOverviewUseCase() }
     singleOf(::ShrinkDatabaseUseCase)
     singleOf(::WebDavBackupUseCase)
-    singleOf(::BookshelfManageScreenConfig)
     singleOf(::ThemePackageManager)
 
     single<UploadRepository> { DirectLinkUploadRepository() }
@@ -871,7 +869,6 @@ val appModule = module {
             bookSourceRepository = get(),
             bookGroupRepository = get(),
             searchRepository = get(),
-            bookshelfManageScreenConfig = get(),
             bookExportSettingsGateway = get(),
             batchCacheDownloadUseCase = get(),
             cacheBookChaptersUseCase = get(),

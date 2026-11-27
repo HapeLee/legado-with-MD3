@@ -1,10 +1,11 @@
 package io.legado.app.data.repository
 
 import io.legado.app.constant.AppLog
-import io.legado.app.data.AppDatabase
+import io.legado.app.data.dao.BookDao
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.model.LocalBookMetricTarget
 import io.legado.app.domain.gateway.BookshelfSettingsGateway
+import io.legado.app.domain.model.LocalBookMetricInvalidation
 import io.legado.app.domain.model.LocalBookshelfSort
 import io.legado.app.domain.model.settings.BookshelfSettings
 import io.legado.app.model.localBook.localBookFileSize
@@ -43,14 +44,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 import java.io.File
-import java.util.Collections
-import java.util.WeakHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class BookshelfRepository(
-    private val database: AppDatabase,
+    private val bookDao: BookDao,
     private val settingsGateway: BookshelfSettingsGateway,
     cacheFile: File = File(appCtx.cacheDir, DEFAULT_CACHE_FILE_NAME),
     private val scope: CoroutineScope = defaultRepositoryScope(),
@@ -60,17 +59,6 @@ class BookshelfRepository(
     internal companion object {
         const val DEFAULT_CACHE_FILE_NAME = "local_bookshelf_metrics_v1.json"
         private const val PERSIST_DEBOUNCE_MS = 300L
-
-        private val activeRepositoriesLock = Any()
-        private val activeRepositories =
-            Collections.newSetFromMap(WeakHashMap<BookshelfRepository, Boolean>())
-
-        internal fun notifyBookMetricInvalidated(bookUrl: String) {
-            val snapshot = synchronized(activeRepositoriesLock) {
-                activeRepositories.toList()
-            }
-            snapshot.forEach { it.invalidateLocalBookMetrics(bookUrl) }
-        }
 
         fun defaultRepositoryScope(): CoroutineScope = CoroutineScope(
             SupervisorJob() + Dispatchers.Default + CoroutineExceptionHandler { _, throwable ->
@@ -109,14 +97,13 @@ class BookshelfRepository(
     private val inFlightMeasures = HashMap<InFlightKey, Deferred<MeasureOutcome>>()
     private val persistScheduled = AtomicBoolean(false)
 
+    /** 导入/重导/重绑发出的单书失效；订阅时会把仓库创建前积压的信号一并补发。 */
+    private val metricInvalidationListener: (String) -> Unit = { invalidateLocalBookMetrics(it) }
+
     init {
-        synchronized(activeRepositoriesLock) {
-            activeRepositories.add(this)
-        }
+        LocalBookMetricInvalidation.register(metricInvalidationListener)
         scope.coroutineContext[Job]?.invokeOnCompletion {
-            synchronized(activeRepositoriesLock) {
-                activeRepositories.remove(this)
-            }
+            LocalBookMetricInvalidation.unregister(metricInvalidationListener)
         }
     }
 
@@ -395,7 +382,7 @@ class BookshelfRepository(
     private suspend fun pruneAndPersistIfDirty() {
         if (!cache.isDirty()) return
         val snapshotEpoch = cache.currentEpoch()
-        val activeUrls = database.bookDao.getLocalShelfBookUrls().toHashSet()
+        val activeUrls = bookDao.getLocalShelfBookUrls().toHashSet()
         cache.prune(activeUrls, maxEpoch = snapshotEpoch)
         cache.persistIfDirty()
     }

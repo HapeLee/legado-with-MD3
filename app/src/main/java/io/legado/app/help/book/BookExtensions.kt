@@ -19,7 +19,7 @@ import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.HighlightTagRule
 import io.legado.app.data.entities.TagGroupRule
-import io.legado.app.data.repository.BookshelfRepository
+import io.legado.app.domain.model.LocalBookMetricInvalidation
 import io.legado.app.domain.gateway.BookExportSettingsGateway
 import io.legado.app.domain.gateway.ImportBookSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
@@ -262,7 +262,7 @@ fun Book.getLocalUri(directory: Boolean = false): Uri {
                     }
                 }
                 if (oldBook.bookUrl != newBookUrl) {
-                    BookshelfRepository.notifyBookMetricInvalidated(newBookUrl)
+                    LocalBookMetricInvalidation.notifyChanged(newBookUrl)
                 }
                 localUriCache[newBookUrl] = readableUri
                 return readableUri
@@ -302,7 +302,7 @@ fun Book.getLocalUri(directory: Boolean = false): Uri {
                 }
             }
             if (oldBook.bookUrl != newBookUrl) {
-                BookshelfRepository.notifyBookMetricInvalidated(newBookUrl)
+                LocalBookMetricInvalidation.notifyChanged(newBookUrl)
             }
             localUriCache[newBookUrl] = readableUri
             return readableUri
