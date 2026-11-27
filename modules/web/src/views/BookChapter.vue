@@ -99,7 +99,10 @@
             v-if="showContent"
           />
         </div>
-        <div class="loading" ref="loading"></div>
+        <div v-if="continuationFailed" class="chapter-retry">
+          <span role="status">下一章加载失败</span>
+          <el-button size="small" @click.stop="retryContinuation">重试加载下一章</el-button>
+        </div>
         <div class="bottom-bar" ref="bottom"></div>
       </div>
     </div>
@@ -109,7 +112,7 @@
 <script setup lang="ts">
 import jump from '@/plugins/jump'
 import settings from '@/config/themeConfig'
-import API, { type ReaderWebParagraph } from '@api'
+import API, { type ReaderWebChapter, type ReaderWebParagraph } from '@api'
 import { useLoading } from '@/hooks/loading'
 import { useThrottleFn } from '@vueuse/shared'
 import { isNullOrBlank } from '@/utils/utils'
@@ -117,7 +120,7 @@ import { initXboxGamepad } from '@/utils/xboxGamepad'
 
 const content = ref()
 // loading spinner
-const { isLoading, loadingWrapper } = useLoading(content, '正在获取信息')
+const { loadingWrapper } = useLoading(content, '正在获取信息')
 const store = useBookStore()
 
 const {
@@ -159,32 +162,7 @@ watch(
   { deep: 1 },
 )
 
-// 无限滚动
 const infiniteLoading = computed(() => store.config.infiniteLoading)
-let scrollObserver: IntersectionObserver | null
-const loading = ref()
-watchEffect(() => {
-  if (!infiniteLoading.value) {
-    scrollObserver?.disconnect()
-  } else {
-    scrollObserver?.observe(loading.value)
-  }
-})
-const loadMore = () => {
-  const index = chapterData.value.slice(-1)[0].index
-  if (catalog.value.length - 1 > index) {
-    getContent(index + 1, false)
-    store.saveBookProgress() // 保存的是上一章的进度，不是预载的本章进度
-  }
-}
-// IntersectionObserver回调 底部加载
-const onReachBottom = (entries: IntersectionObserverEntry[]) => {
-  if (isLoading.value) return
-  for (const { isIntersecting } of entries) {
-    if (!isIntersecting) return
-    loadMore()
-  }
-}
 
 // 自动翻页（滚动模式，行为对齐App端）
 const autoPagePaused = ref(false)
@@ -225,7 +203,7 @@ const startAutoPage = () => {
     const elapsed = now - autoPageLastFrame
     autoPageLastFrame = now
     // 与App端一致：每帧滚动 视口高度 / (速度秒数 × 1000ms) × 本帧毫秒数
-    window.scrollBy(0, (window.innerHeight / autoPageDurationMs()) * elapsed)
+    if (!pendingPage) window.scrollBy(0, (window.innerHeight / autoPageDurationMs()) * elapsed)
     // 未开启无限加载时章末不会再有新内容：停在章末，不继续空转
     if (!infiniteLoading.value && atChapterEnd()) {
       pauseAutoPage(0)
@@ -272,15 +250,17 @@ watch(
 // 打开目录/设置弹窗时暂停，关闭后恢复
 watch([popCataVisible, readSettingsVisible], ([cata, settings]) => {
   if (cata || settings) {
+    cancelPendingPage()
     pauseAutoPage(0)
   } else {
     resumeAutoPage()
   }
 })
 // 用户滚轮/触摸交互时暂停，停止操作一段时间后自动恢复（touchmove 保证长按拖动期间持续暂停）
-const onUserWheel = () => pauseAutoPage()
-const onUserTouch = () => pauseAutoPage()
-const onUserTouchMove = () => pauseAutoPage()
+const onUserScrollInput = () => {
+  cancelPendingPage()
+  pauseAutoPage()
+}
 
 // 字体
 const fontFamily = computed(() => {
@@ -351,6 +331,7 @@ const onResize = () => {
   store.setMiniInterface(window.innerWidth < 776)
   const width = store.config.readWidth /**包含padding */
   checkPageWidth(width)
+  scheduleContinuation()
 }
 /** 判断阅读宽度是否超出页面或者低于默认值640 */
 const checkPageWidth = (readWidth: number) => {
@@ -366,10 +347,12 @@ watch(
 const top = ref()
 const bottom = ref()
 const toTop = () => {
+  cancelPendingPage()
   pauseAutoPage()
   jump(top.value)
 }
 const toBottom = () => {
+  cancelPendingPage()
   pauseAutoPage()
   jump(bottom.value)
 }
@@ -385,16 +368,29 @@ const chapterData = ref<{ index: number; content: ReaderWebParagraph[]; title: s
   [],
 )
 const noPoint = ref(true)
-const getContent = (index: number, reloadChapter = true, chapterPos = 0) => {
-  if (reloadChapter) {
-    //展示进度条
-    store.setShowContent(false)
-    //强制滚回顶层
-    jump(top.value, { duration: 0 })
-    //从目录，按钮切换章节时保存进度 预加载时不保存
-    saveReadingBookProgressToBrowser(index, chapterPos)
-    chapterData.value = []
+const prepareChapter = (bookUrl: string, index: number, data: ReaderWebChapter) => {
+  const content = data.paragraphs.map(paragraph => ({ ...paragraph }))
+  for (const paragraph of content) {
+    if (/<img\b/.test(paragraph.html) && !/^\s*<img[^>]*src[^>]+>$/.test(paragraph.html)) {
+      const document = new DOMParser().parseFromString(paragraph.html, 'text/html')
+      for (const image of document.querySelectorAll('img[src]')) {
+        image.setAttribute('src', API.getProxyImageUrl(
+          bookUrl, image.getAttribute('src')!, store.config.readWidth,
+        ))
+      }
+      paragraph.html = document.body.innerHTML
+    }
   }
+  return { index, content, title: data.title }
+}
+
+const getContent = (index: number, chapterPos = 0) => {
+  resetContinuation()
+  store.setShowContent(false)
+  // 正文重置后立即回到顶部，避免滚动动画与后续进度定位竞争。
+  window.scrollTo({ top: 0, behavior: 'instant' })
+  saveReadingBookProgressToBrowser(index, chapterPos)
+  chapterData.value = []
   const bookUrl = store.readingBook.bookUrl
   const { title, index: chapterIndex } = catalog.value[index]
 
@@ -402,21 +398,8 @@ const getContent = (index: number, reloadChapter = true, chapterPos = 0) => {
     API.getBookContent(bookUrl, chapterIndex).then(
       res => {
         if (res.data.isSuccess) {
-          const data = res.data.data
-          const content = data.paragraphs.map(paragraph => ({ ...paragraph }))
-          for (const paragraph of content) {
-            if (/<img\b/.test(paragraph.html) && !/^\s*<img[^>]*src[^>]+>$/.test(paragraph.html)) {
-              const document = new DOMParser().parseFromString(paragraph.html, 'text/html')
-              for (const image of document.querySelectorAll('img[src]')) {
-                image.setAttribute('src', API.getProxyImageUrl(
-                  bookUrl, image.getAttribute('src')!, store.config.readWidth,
-                ))
-              }
-              paragraph.html = document.body.innerHTML
-            }
-          }
-          chapterData.value.push({ index, content, title: data.title })
-          if (reloadChapter) toChapterPos(chapterPos)
+          chapterData.value.push(prepareChapter(bookUrl, index, res.data.data))
+          toChapterPos(chapterPos)
         } else {
           ElMessage({ message: res.data.errorMsg, type: 'error' })
           const content = [{ html: res.data.errorMsg, start: 0, endExclusive: 0 }]
@@ -438,6 +421,96 @@ const getContent = (index: number, reloadChapter = true, chapterPos = 0) => {
     ),
   )
 }
+
+// 无限加载使用实际可滚动距离，空格在正文追加后仍以第一次按键的绝对位置为准。
+const continuationFailed = ref(false)
+let continuationRequest: AbortController | undefined
+let continuationFrame = 0
+let pendingPage: { target: number; waitingAt: number } | undefined
+let leavingReader = false
+
+const cancelPendingPage = () => {
+  pendingPage = undefined
+}
+
+const resetContinuation = () => {
+  cancelPendingPage()
+  continuationRequest?.abort()
+  continuationRequest = undefined
+  continuationFailed.value = false
+  cancelAnimationFrame(continuationFrame)
+  continuationFrame = 0
+}
+
+const nextChapterIndex = () => {
+  const lastChapter = chapterData.value[chapterData.value.length - 1]
+  if (lastChapter && catalog.value[lastChapter.index + 1]) return lastChapter.index + 1
+}
+
+const viewportHeight = () => document.documentElement.clientHeight
+const scrollEnd = () => Math.max(
+  0,
+  (document.scrollingElement ?? document.documentElement).scrollHeight - viewportHeight(),
+)
+const scrollToPageEnd = (top: number) => window.scrollTo({ top, behavior: 'instant' })
+
+const loadContinuation = async (index: number) => {
+  const request = new AbortController()
+  continuationRequest = request
+  const bookUrl = store.readingBook.bookUrl
+  try {
+    const { data } = await API.getBookContent(bookUrl, catalog.value[index].index, request.signal)
+    if (request.signal.aborted) return
+    if (!data.isSuccess) {
+      continuationFailed.value = true
+      cancelPendingPage()
+      return
+    }
+    chapterData.value.push(prepareChapter(bookUrl, index, data.data))
+    await nextTick()
+  } catch {
+    if (request.signal.aborted) return
+    continuationFailed.value = true
+    cancelPendingPage()
+  } finally {
+    if (continuationRequest === request) {
+      continuationRequest = undefined
+      scheduleContinuation()
+    }
+  }
+}
+
+const scheduleContinuation = () => {
+  if (continuationFrame || leavingReader || !infiniteLoading.value || !showContent.value) return
+  continuationFrame = requestAnimationFrame(() => {
+    continuationFrame = 0
+    const index = nextChapterIndex()
+    const end = scrollEnd()
+    if (pendingPage && (pendingPage.target <= end || index === undefined)) {
+      scrollToPageEnd(Math.min(pendingPage.target, end))
+      cancelPendingPage()
+    }
+    if (index === undefined || continuationRequest || continuationFailed.value) return
+    if (pendingPage || end - window.scrollY <= 1.5 * viewportHeight()) {
+      void loadContinuation(index)
+    }
+  })
+}
+
+const retryContinuation = () => {
+  continuationFailed.value = false
+  scheduleContinuation()
+}
+
+const onReaderScroll = () => {
+  if (pendingPage && Math.abs(window.scrollY - pendingPage.waitingAt) > 1) cancelPendingPage()
+  scheduleContinuation()
+}
+
+watch([infiniteLoading, showContent], ([enabled, visible]) => {
+  if (enabled && visible) scheduleContinuation()
+  else resetContinuation()
+})
 
 // 章节进度跳转和计算
 const chapter = ref()
@@ -486,6 +559,7 @@ const onVisibilityChange = () => {
     store.saveBookProgress()
   }
   if (document.visibilityState === 'hidden') {
+    cancelPendingPage()
     pauseAutoPage(0)
   } else {
     resumeAutoPage()
@@ -582,20 +656,46 @@ const handleKeyPress = (event: KeyboardEvent) => {
   }
 }
 
-// 阻止默认滚动事件
-const ignoreKeyPress = (event: KeyboardEvent) => {
+const onReaderKeyDown = (event: KeyboardEvent) => {
   if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
     event.preventDefault()
     event.stopPropagation()
   }
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End'].includes(event.key)) {
+    cancelPendingPage()
+  }
+  if (
+    event.defaultPrevented || event.key !== ' ' || event.shiftKey || event.ctrlKey ||
+    event.altKey || event.metaKey || event.isComposing || leavingReader ||
+    !infiniteLoading.value || !showContent.value ||
+    popCataVisible.value || readSettingsVisible.value
+  ) return
+  if (event.target instanceof Element && event.target.closest(
+    'button, input, select, textarea, a[href], summary, [contenteditable], [tabindex], [role="button"]',
+  )) return
+
+  event.preventDefault()
+  if (event.repeat || pendingPage || !canJump) return
+  pauseAutoPage()
+  const target = window.scrollY + Math.max(1, viewportHeight() - 100)
+  const end = scrollEnd()
+  if (target > end && nextChapterIndex() !== undefined) {
+    continuationFailed.value = false
+    pendingPage = { target, waitingAt: end }
+  }
+  scrollToPageEnd(Math.min(target, end))
+  scheduleContinuation()
 }
 
 onMounted(async () => {
   await store.loadWebConfig()
+  if (leavingReader) return
   if (store.config.autoPage) startAutoPage()
-  window.addEventListener('wheel', onUserWheel, { passive: true })
-  window.addEventListener('touchstart', onUserTouch, { passive: true })
-  window.addEventListener('touchmove', onUserTouchMove, { passive: true })
+  window.addEventListener('scroll', onReaderScroll, { passive: true })
+  window.addEventListener('wheel', onUserScrollInput, { passive: true })
+  window.addEventListener('touchstart', onUserScrollInput, { passive: true })
+  window.addEventListener('touchmove', onUserScrollInput, { passive: true })
+  window.addEventListener('pointerdown', cancelPendingPage, { passive: true })
   //获取书籍数据
   const bookUrl = sessionStorage.getItem('bookUrl')
   const name = sessionStorage.getItem('bookName')
@@ -621,17 +721,13 @@ onMounted(async () => {
   window.addEventListener('resize', onResize)
   loadingWrapper(
     store.loadWebCatalog(book).then(chapters => {
+      if (leavingReader) return
       store.setReadingBook(book)
-      getContent(chapterIndex, true, chapterPos)
+      getContent(chapterIndex, chapterPos)
       window.addEventListener('keyup', handleKeyPress)
-      window.addEventListener('keydown', ignoreKeyPress)
+      window.addEventListener('keydown', onReaderKeyDown)
       // 兼容Safari < 14
       document.addEventListener('visibilitychange', onVisibilityChange)
-      //监听底部加载
-      scrollObserver = new IntersectionObserver(onReachBottom, {
-        rootMargin: '-100% 0% 20% 0%',
-      })
-      if (infiniteLoading.value === true) scrollObserver.observe(loading.value)
       //第二次点击同一本书 页面标题不会变化
       document.title = '...'
       document.title = (name as string) + ' | ' + chapters[chapterIndex].title
@@ -645,12 +741,16 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  leavingReader = true
+  resetContinuation()
   window.removeEventListener('keyup', handleKeyPress)
-  window.removeEventListener('keydown', ignoreKeyPress)
+  window.removeEventListener('keydown', onReaderKeyDown)
   window.removeEventListener('resize', onResize)
-  window.removeEventListener('wheel', onUserWheel)
-  window.removeEventListener('touchstart', onUserTouch)
-  window.removeEventListener('touchmove', onUserTouchMove)
+  window.removeEventListener('scroll', onReaderScroll)
+  window.removeEventListener('wheel', onUserScrollInput)
+  window.removeEventListener('touchstart', onUserScrollInput)
+  window.removeEventListener('touchmove', onUserScrollInput)
+  window.removeEventListener('pointerdown', cancelPendingPage)
   // 兼容Safari < 14
   document.removeEventListener('visibilitychange', onVisibilityChange)
   stopAutoPage()
@@ -660,8 +760,6 @@ onUnmounted(() => {
   }
   readSettingsVisible.value = false
   popCataVisible.value = false
-  scrollObserver?.disconnect()
-  scrollObserver = null
 })
 
 const addToBookShelfConfirm = async () => {
@@ -692,6 +790,8 @@ const addToBookShelfConfirm = async () => {
 }
 onBeforeRouteLeave(async (to, from, next) => {
   console.log('onBeforeRouteLeave')
+  leavingReader = true
+  resetContinuation()
   // 弹窗时停止响应按键翻页
   window.removeEventListener('keyup', handleKeyPress)
   await addToBookShelfConfirm()
@@ -802,6 +902,13 @@ onBeforeRouteLeave(async (to, from, next) => {
       .bottom-bar,
       .top-bar {
         height: 64px;
+      }
+
+      .chapter-retry {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 16px;
       }
     }
   }

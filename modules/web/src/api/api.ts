@@ -82,12 +82,14 @@ export type ReaderWebChapter = { title: string; characterCount: number; paragrap
 const getBookContent = (
   /** @type {string} */ bookUrl: string,
   /** @type {number} */ chapterIndex: number,
+  signal?: AbortSignal,
 ) =>
   ajax.get<LeagdoApiResponse<ReaderWebChapter>>(
     'getBookContent?format=semantic&url=' +
       encodeURIComponent(bookUrl) +
       '&index=' +
       chapterIndex,
+    { signal },
   )
 
 // webSocket
