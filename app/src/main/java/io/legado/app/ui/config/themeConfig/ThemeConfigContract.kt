@@ -14,7 +14,6 @@ data class ThemeConfigUiState(
     val fontFolder: String = "",
     val activeSheet: ThemeConfigSheet? = null,
     val activeDialog: ThemeConfigDialog? = null,
-    val showEInkTheme: Boolean = false,
 )
 
 sealed interface ThemeConfigSheet {

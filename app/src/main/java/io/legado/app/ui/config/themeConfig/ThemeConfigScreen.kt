@@ -143,9 +143,6 @@ fun ThemeConfigScreen(
                 val themes = remember(themeItems, themeValues) {
                     themeItems.zip(themeValues).toList()
                 }
-                val visibleThemes = themes.filter { (_, value) ->
-                    value != "4" || state.showEInkTheme
-                }
 
                 if (!useBuiltInPaletteEngine) {
                     Column(
@@ -178,7 +175,7 @@ fun ThemeConfigScreen(
                             SearchableSetting("theme.theme") {
                                 ThemeColorSelector(
                                     context = context,
-                                    themes = visibleThemes,
+                                    themes = themes,
                                     selectedTheme = theme.appTheme,
                                     isDark = isDarkTheme,
                                     isAmoled = theme.isPureBlack,
@@ -286,8 +283,8 @@ fun ThemeConfigScreen(
                                 DropdownListSettingItem(
                                     title = stringResource(R.string.theme),
                                     selectedValue = theme.appTheme,
-                                    displayEntries = visibleThemes.map { it.first }.toTypedArray(),
-                                    entryValues = visibleThemes.map { it.second }.toTypedArray(),
+                                    displayEntries = themes.map { it.first }.toTypedArray(),
+                                    entryValues = themes.map { it.second }.toTypedArray(),
                                     onValueChange = { value ->
                                         onIntent(ThemeConfigIntent.SelectTheme(value))
                                     }
