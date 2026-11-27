@@ -105,6 +105,8 @@ class VoiceEffectViewModel(
 
     private fun refresh() = launchIo {
         // 会话级效果挂不上时（系统 TTS 直读）要在列表里说出来，不能让用户以为预设没存住
+        // 链路解析在后台做，这里只读最近一次结果
+        ReadAloud.requestIdlePlaybackChainResolution()
         val sessionOk = ReadAloud.supportsSessionAudioEffect
         val rows = VoiceEffectStore.list().map { preset ->
             val dropped = !sessionOk && VoiceEffectStore.needsSessionEffect(preset)

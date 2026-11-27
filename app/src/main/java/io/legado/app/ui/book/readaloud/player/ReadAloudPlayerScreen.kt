@@ -85,7 +85,7 @@ import io.legado.app.core.ui.player.PlayerMorphAppearance
 import io.legado.app.core.ui.player.PlayerMorphCover
 import io.legado.app.core.ui.player.TrackPlayerMorphCoverPage
 import io.legado.app.domain.model.settings.ReadAloudTimerMode
-import io.legado.app.help.readaloud.playback.PlaybackSpeedLimits
+import io.legado.app.domain.model.readaloud.ReadAloudSpeedLimit
 import io.legado.app.ui.book.readaloud.ReadAloudTimerConfig
 import io.legado.app.ui.book.readaloud.ReadAloudTimerSheet
 import io.legado.app.ui.book.readaloud.ReadAloudVoiceSheet
@@ -559,7 +559,7 @@ private fun CoverPage(
                 onClick = { onIntent(ReadAloudPlayerIntent.OpenSheet(ReadAloudPlayerSheet.Voice)) },
             )
             if (state.speed != 5) {
-                val speedMax = PlaybackSpeedLimits.sliderMax(state.maxPlaybackSpeed)
+                val speedMax = ReadAloudSpeedLimit.sliderMax(state.maxPlaybackSpeed)
                 TextCard(
                     text = "${formatReadAloudSpeedLabel(state.speed.coerceAtMost(speedMax))}x",
                     icon = Icons.Default.Speed,
@@ -719,7 +719,7 @@ private fun ReadAloudSpeedSheet(
     onDismissRequest: () -> Unit,
     onIntent: (ReadAloudPlayerIntent) -> Unit,
 ) {
-    val speedMax = PlaybackSpeedLimits.sliderMax(state.maxPlaybackSpeed)
+    val speedMax = ReadAloudSpeedLimit.sliderMax(state.maxPlaybackSpeed)
     val speedValue = state.speed.coerceIn(READ_ALOUD_SPEED_MIN, speedMax)
     var speedPreview by remember(speedValue, speedMax) {
         mutableFloatStateOf(speedValue.toFloat())

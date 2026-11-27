@@ -32,7 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.domain.model.settings.ReadAloudTimerMode
-import io.legado.app.help.readaloud.playback.PlaybackSpeedLimits
+import io.legado.app.domain.model.readaloud.ReadAloudSpeedLimit
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookUiState
 import io.legado.app.ui.theme.LegadoTheme
@@ -61,7 +61,7 @@ fun ReadAloudContent(
     modifier: Modifier = Modifier,
 ) {
     val ttsSpeechRate = state.readAloudTtsSpeechRate
-    val speedMax = PlaybackSpeedLimits.sliderMax(state.readAloudMaxPlaybackSpeed)
+    val speedMax = ReadAloudSpeedLimit.sliderMax(state.readAloudMaxPlaybackSpeed)
     val speedValue = ttsSpeechRate.coerceIn(0, speedMax)
     var speechRatePreview by remember(speedValue, speedMax) {
         mutableFloatStateOf(speedValue.toFloat())

@@ -29,8 +29,11 @@ import io.legado.app.utils.startForegroundServiceCompat
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
@@ -46,22 +49,69 @@ object ReadAloud {
         get() = selectedAloudClass ?: getReadAloudClass().also { selectedAloudClass = it }
         set(value) { selectedAloudClass = value }
     val ttsEngine get() = (bookSession.book ?: ReadBook.book)?.getTtsEngine() ?: aloudSettingsGateway.currentSettings.ttsEngine
+
+    // 链路解析会挪到后台线程（见 requestIdlePlaybackChainResolution），这些副产物对所有线程可见
+    @Volatile
     var httpTTS: HttpTTS? = null
+    @Volatile
     var coordinatorDefaultEngineType: String = ReadAloudVoice.ENGINE_SYSTEM
         private set
+    @Volatile
     var coordinatorDefaultEngineId: String = ""
         private set
+    @Volatile
     var coordinatorDefaultSpeakerId: String = ""
         private set
+
+    /**
+     * 空闲态（朗读服务未运行）解析出的播放链路；`null` = 还没解析出来。
+     *
+     * 解析要读 Room 里的 HTTP TTS 记录、必要时还要 `runBlocking` 取角色绑定，因此不能在主线程做：
+     * 界面只订阅这个结果，由 [requestIdlePlaybackChainResolution] 在后台解析。
+     */
+    private val idlePlaybackChain = MutableStateFlow<Boolean?>(null)
+
+    /** `true` = ExoPlayer 链路，`false` = 系统 TTS 直读，`null` = 尚未解析完成。 */
+    val idleExoPlayerChain = idlePlaybackChain.asStateFlow()
+
+    private val chainResolver = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var chainResolveJob: Job? = null
+    private var chainRequestKey: String? = null
+
+    /**
+     * 在后台解析一次空闲态播放链路；同一组输入只解析一次，可在主线程调用。
+     *
+     * 朗读服务运行期间不解析：那时链路由已启动的服务类决定，见 [usesExoPlayerPlayback]。
+     */
+    fun requestIdlePlaybackChainResolution() {
+        if (BaseReadAloudService.isRun) return
+        val engine = ttsEngine
+        val useMultiSpeaker = aloudSettingsGateway.currentSettings.useMultiSpeaker
+        val bookUrl = (bookSession.book ?: ReadBook.book)?.bookUrl.orEmpty()
+        val key = "$engine|$useMultiSpeaker|$bookUrl"
+        if (key == chainRequestKey) return
+        chainRequestKey = key
+        chainResolveJob?.cancel()
+        chainResolveJob = chainResolver.launch {
+            val resolved = runCatching { getReadAloudClass() }.getOrNull() ?: return@launch
+            idlePlaybackChain.value = resolved != TTSReadAloudService::class.java
+        }
+    }
 
     /**
      * 当前朗读是否走文件合成 + ExoPlayer（HTTP / 云端 / 系统文件合成），而不是系统 TTS 直读。
      *
      * 两条链路的音频输出端不同：ExoPlayer 的默认音频链路受 `DefaultAudioSink` 的
      * 8.0× 上限约束，系统 TTS 直读则由引擎自己实现语速。
+     *
+     * 空闲态读后台解析结果；解析完成前按 ExoPlayer 链路上限处理（宁可先报低，也不虚标 8.5×）。
      */
     val usesExoPlayerPlayback: Boolean
-        get() = (if (BaseReadAloudService.isRun) aloudClass else getReadAloudClass()) != TTSReadAloudService::class.java
+        get() = if (BaseReadAloudService.isRun) {
+            aloudClass != TTSReadAloudService::class.java
+        } else {
+            idlePlaybackChain.value ?: true
+        }
 
     /**
      * 变声器的混响 / 金属感这一层现在能不能生效。
@@ -196,11 +246,20 @@ object ReadAloud {
     fun upReadAloudClass() {
         stop(appCtx)
         aloudClass = getReadAloudClass()
+        publishIdleChainIfIdle()
     }
 
     /** Re-evaluates the configured engine after the current service has stopped. */
     fun refreshReadAloudClass() {
         aloudClass = getReadAloudClass()
+        publishIdleChainIfIdle()
+    }
+
+    /** 已经解析过服务类时顺手更新订阅值，省掉一次后台重解析。 */
+    private fun publishIdleChainIfIdle() {
+        if (!BaseReadAloudService.isRun) {
+            idlePlaybackChain.value = aloudClass != TTSReadAloudService::class.java
+        }
     }
 
     fun play(

@@ -1,6 +1,6 @@
 package io.legado.app.ui.book.readaloud.player
 
-import io.legado.app.help.readaloud.playback.PlaybackSpeedLimits
+import io.legado.app.domain.model.readaloud.ReadAloudSpeedLimit
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -72,8 +72,8 @@ class ReadAloudPlayerSpeedRangeTest {
     @Test
     fun `slider max follows the active playback pipeline cap`() {
         // ExoPlayer 默认音频链路（DefaultAudioSink）封顶 8.0×，对应滑杆 75
-        assertEquals(75, PlaybackSpeedLimits.sliderMax(8f))
+        assertEquals(75, ReadAloudSpeedLimit.sliderMax(8f))
         // 系统 TTS 直读沿用 8.5×，对应滑杆 80
-        assertEquals(80, PlaybackSpeedLimits.sliderMax(8.5f))
+        assertEquals(80, ReadAloudSpeedLimit.sliderMax(8.5f))
     }
 }

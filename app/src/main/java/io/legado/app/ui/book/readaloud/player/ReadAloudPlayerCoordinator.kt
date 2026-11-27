@@ -47,6 +47,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
@@ -149,7 +150,8 @@ class ReadAloudPlayerCoordinator(
         bookWithChapters,
         readAloudSettingsGateway.settings,
         voiceGateway.observeVoices(),
-    ) { session, (book, chapters, bindings), settings, voicesList ->
+        ReadAloud.idleExoPlayerChain,
+    ) { session, (book, chapters, bindings), settings, voicesList, _ ->
         val playback = session.playback
         val currentEngine = (ReadAloud.bookSession.book ?: ReadBook.book)?.getTtsEngine()
             ?: settings.ttsEngine
@@ -184,6 +186,9 @@ class ReadAloudPlayerCoordinator(
             finishCurrentChapterAfterTimer = settings.finishCurrentChapterAfterTimer,
             voices = voiceItems,
         )
+    }.onStart {
+        // 打开播放页时补一次空闲链路解析，避免上限仍停在默认值
+        ReadAloud.requestIdlePlaybackChainResolution()
     }
 
     fun snapshot(): ReadAloudPlayerSourceState {
