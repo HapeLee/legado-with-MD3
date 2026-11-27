@@ -2,11 +2,14 @@
 
 ## 1. 概述与边界
 
-全局电纸书模式提供一个位于「我的」首页（`MyScreen`、`Web 服务` 下方）的一键开关，开启后在运行时统一应用电纸书主题（`appTheme == "4"`）并关闭全应用动画与实时模糊；关闭后无损恢复用户原有的主题、模糊与动画偏好。
+全局电纸书模式提供位于「我的」首页（`MyScreen`、`Web 服务` 下方）的常驻一键开关，并在首次安装引导页「主题样式」步骤（`OnboardingScreen`）提供同款初始化入口。开启后在运行时统一应用电纸书主题（`appTheme == "4"`）并关闭全应用动画与实时模糊；关闭后无损恢复用户原有的主题、模糊与动画偏好。
 
 ### 边界约定
 
-- **唯一入口**：仅在 `MyScreen` 顶部卡片、`Web 服务` 正下方展示「电纸书模式」开关（带电纸书设备矢量图标）。
+- **限定入口**：
+  - 常驻入口：`MyScreen` 顶部卡片、`Web 服务` 正下方展示「电纸书模式」开关（带电纸书设备矢量图标 `AppIcons.EInkReader`）。
+  - 首次引导入口：`OnboardingScreen` 第 4 步「主题样式」卡片底部提供同款开关，开启后即时禁用上方明暗模式与主题色块选择且不覆写其持久化值。
+  - 设置首页不重复展示该开关。
 - **不改写底层偏好**：开启时不覆盖持久化存储中的 `appTheme`、模糊与动画配置，避免退出时丢失用户原设定。
 - **独立边界**：
   - 外观页（`ThemeConfigScreen`）仍直接读写 `ThemeSettingsGateway` / `AppShellSettingsGateway` 原始持久化值，不添加额外提示徽章或屏蔽遮罩。
@@ -23,7 +26,7 @@
 | 领域模型 | `domain/model/settings/AppShellSettings.kt` | `val eInkGlobalMode: Boolean = false`；`NavigationAnimationStyle.None("none")` |
 | 仓库映射 | `data/repository/FeatureSettingsRepositories.kt` | `toAppShellSettings()` / `toPrefMap()` 读写 `PreferKey.eInkGlobalMode` |
 | 备份配置 | `help/storage/BackupConfig.kt` | `PreferKey.eInkGlobalMode` 纳入 `themePrefKeys` |
-| 写入方式 | `MyViewModel.kt` | 经 `AppShellSettingsGateway.update { it.copy(eInkGlobalMode = enabled) }` 原子提交 |
+| 写入方式 | `MyViewModel.kt`、`OnboardingViewModel.kt` | 经 `AppShellSettingsGateway.update { it.copy(eInkGlobalMode = enabled) }` 原子提交 |
 
 ---
 
@@ -73,7 +76,9 @@
 
 ## 5. UI 规范与回归测试
 
-- **「我的」首页入口**：在顶部卡片内、`Web 服务` 正下方放置「电纸书模式」`SwitchSettingItem`，配自定义电纸书设备矢量图标（`AppIcons.EInkReader`）；设置首页不重复展示。
+- **入口规范**：
+  - **「我的」首页常驻入口**：在顶部卡片内、`Web 服务` 正下方放置「电纸书模式」`SwitchSettingItem`，配自定义电纸书设备矢量图标（`AppIcons.EInkReader`）；设置首页不重复展示。
+  - **首次安装引导页入口**：在 `OnboardingScreen`「主题样式」卡片的主题色块下方以分割线隔开，放置同款「电纸书模式」开关行（复用 `AppIcons.EInkReader` 与 `AdaptiveSwitch`），开启时上方明暗模式与主题色块呈禁用态。
 - **电纸书导航栏描边**：当生效主题为电纸书（`appTheme == "4"`）时，主界面搜索按钮与活跃 Tab 指示器不使用实心/灰底背景色，改用 `1.5.dp` `outline` 外圈描边并去除阴影，确保墨水屏高对比清晰可辨。
 - **核心回归测试**：
   - `AppUiConfigurationEInkOverrideTest`：覆盖开启时覆写、保留深浅色/字体、关闭时无损还原与 `diffFrom` 语义。

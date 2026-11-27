@@ -45,6 +45,7 @@ class OnboardingViewModel(
             bookFolderUri = otherSettingsGateway.currentSettings.defaultBookTreeUri,
             theme = themeSettingsGateway.currentSettings,
             themeMode = appShellSettingsGateway.currentSettings.themeMode,
+            eInkGlobalMode = appShellSettingsGateway.currentSettings.eInkGlobalMode,
         )
     )
     val uiState = _uiState.asStateFlow()
@@ -69,6 +70,16 @@ class OnboardingViewModel(
         viewModelScope.launch {
             themeSettingsGateway.settings.collect { theme ->
                 _uiState.update { it.copy(theme = theme) }
+            }
+        }
+        viewModelScope.launch {
+            appShellSettingsGateway.settings.collect { shell ->
+                _uiState.update {
+                    it.copy(
+                        themeMode = shell.themeMode,
+                        eInkGlobalMode = shell.eInkGlobalMode,
+                    )
+                }
             }
         }
     }
@@ -121,6 +132,10 @@ class OnboardingViewModel(
                 appShellSettingsGateway.update { it.copy(themeMode = intent.value) }
                 _uiState.update { it.copy(themeMode = intent.value) }
                 _effects.tryEmit(OnboardingEffect.ApplyDayNight)
+            }
+            is OnboardingIntent.SetEInkGlobalMode -> viewModelScope.launch {
+                appShellSettingsGateway.update { it.copy(eInkGlobalMode = intent.enabled) }
+                _uiState.update { it.copy(eInkGlobalMode = intent.enabled) }
             }
             OnboardingIntent.DismissRestoreError ->
                 _uiState.update { it.copy(restoreErrorMessage = null) }

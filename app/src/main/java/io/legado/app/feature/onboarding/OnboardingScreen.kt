@@ -18,10 +18,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -32,6 +34,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -39,10 +43,13 @@ import io.legado.app.R
 import io.legado.app.ui.config.themeConfig.ThemeColorSelector
 import io.legado.app.ui.config.themeConfig.ThemeModeSelector
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AdaptiveSwitch
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
@@ -339,7 +346,8 @@ private fun ThemePage(state: OnboardingUiState, onIntent: (OnboardingIntent) -> 
         Box {
             ThemeModeSelector(
                 selectedMode = state.themeMode,
-                onModeSelected = { onIntent(OnboardingIntent.SetThemeMode(it)) }
+                onModeSelected = { onIntent(OnboardingIntent.SetThemeMode(it)) },
+                enabled = !state.eInkGlobalMode,
             )
         }
         Box(modifier = Modifier.padding(top = 16.dp)) {
@@ -352,7 +360,51 @@ private fun ThemePage(state: OnboardingUiState, onIntent: (OnboardingIntent) -> 
                 paletteStyle = state.theme.paletteStyle,
                 customLightSeedColor = state.theme.customPrimary,
                 customNightSeedColor = state.theme.customNightPrimary,
-                onThemeSelected = { onIntent(OnboardingIntent.SelectTheme(it)) }
+                onThemeSelected = { onIntent(OnboardingIntent.SelectTheme(it)) },
+                enabled = !state.eInkGlobalMode,
+            )
+        }
+        HorizontalDivider(
+            modifier = Modifier.padding(vertical = 16.dp),
+            color = LegadoTheme.colorScheme.outlineVariant,
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .toggleable(
+                    value = state.eInkGlobalMode,
+                    role = Role.Switch,
+                    onValueChange = { onIntent(OnboardingIntent.SetEInkGlobalMode(it)) },
+                )
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AppIcon(
+                imageVector = AppIcons.EInkReader,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+            )
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 16.dp),
+            ) {
+                AppText(
+                    text = stringResource(R.string.eink_global_mode_title),
+                    style = LegadoTheme.typography.bodyLarge,
+                )
+                AppText(
+                    text = stringResource(R.string.eink_global_mode_summary),
+                    style = LegadoTheme.typography.bodySmall,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            AdaptiveSwitch(
+                modifier = Modifier.clearAndSetSemantics { },
+                checked = state.eInkGlobalMode,
+                onCheckedChange = { onIntent(OnboardingIntent.SetEInkGlobalMode(it)) },
+                includeStateSemantics = false,
             )
         }
     }
