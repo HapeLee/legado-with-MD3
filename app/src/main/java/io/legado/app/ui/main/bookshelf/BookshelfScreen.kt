@@ -33,6 +33,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -113,6 +114,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.core.ui.bookshelf.DimensionalBookshelf
+import io.legado.app.core.ui.bookshelf.DimensionalShelfBook
+import io.legado.app.core.ui.bookshelf.dimensionalBookshelfHeight
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.domain.model.PrivateUnlockTarget
 import io.legado.app.help.security.BiometricUnlockLauncher
@@ -131,6 +135,7 @@ import io.legado.app.ui.theme.adaptiveContentPaddingBookshelf
 import io.legado.app.ui.theme.adaptiveContentPaddingBookshelfCoverGrid
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.theme.bookshelfCoverGridSidePadding
+import io.legado.app.ui.theme.extendIntoHorizontalPadding
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.AppScaffold
@@ -428,6 +433,16 @@ fun BookshelfScreen(
         key(group.groupId) {
             groupGridStates[group.groupId] = rememberLazyGridState()
         }
+    }
+    var revealDimensionalShelfForGroup by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(revealDimensionalShelfForGroup, uiState.settings.bookshelfDimensionalShelf) {
+        val groupId = revealDimensionalShelfForGroup ?: return@LaunchedEffect
+        if (!uiState.settings.bookshelfDimensionalShelf) return@LaunchedEffect
+        val grid = groupGridStates[groupId]
+        if (grid != null && grid.firstVisibleItemIndex <= 1 && grid.firstVisibleItemScrollOffset == 0) {
+            grid.requestScrollToItem(0)
+        }
+        revealDimensionalShelfForGroup = null
     }
     val latestGroups by rememberUpdatedState(uiState.groups)
     val latestSelectedGroupId by rememberUpdatedState(uiState.selectedGroupId)
@@ -1273,6 +1288,15 @@ fun BookshelfScreen(
         selectedBookUrls = selectedBookUrls,
         importLauncher = importLauncher,
         exportLauncher = exportLauncher,
+        onDimensionalShelfChange = { enabled ->
+            val groupId = uiState.selectedGroupId
+            val grid = groupGridStates[groupId]
+            revealDimensionalShelfForGroup = groupId.takeIf {
+                enabled && !uiState.settings.bookshelfDimensionalShelf &&
+                    grid?.firstVisibleItemIndex == 0 && grid.firstVisibleItemScrollOffset == 0
+            }
+            onIntent(BookshelfIntent.UpdateSetting { it.copy(bookshelfDimensionalShelf = enabled) })
+        },
         clearSelection = clearSelection
     )
 }
@@ -1506,12 +1530,14 @@ private fun BookshelfOverlays(
     selectedBookUrls: Set<String>,
     importLauncher: ManagedActivityResultLauncher<Array<String>, Uri?>,
     exportLauncher: ManagedActivityResultLauncher<String, Uri?>,
+    onDimensionalShelfChange: (Boolean) -> Unit,
     clearSelection: () -> Unit
 ) {
     BookshelfConfigSheet(
         show = activeOverlay == BookshelfOverlay.ConfigSheet,
         settings = uiState.settings,
         onUpdate = { onIntent(BookshelfIntent.UpdateSetting(it)) },
+        onDimensionalShelfChange = onDimensionalShelfChange,
         enableCustomTagColors = uiState.enableCustomTagColors,
         customTagColors = uiState.customTagColors,
         themeColor = uiState.themeColor,
@@ -1908,6 +1934,42 @@ fun BookshelfPage(
     // 折叠只在非编辑、非搜索态生效：编辑态要保住「网格索引 == 书索引」供拖拽重排，
     // 搜索态要能直接看到命中的那一卷，不能被收纳夹吞掉。
     val collapseSeries = !uiState.isEditMode && !uiState.isSearch
+    val leadingContent: (@Composable () -> Unit)? =
+        if (uiState.settings.bookshelfDimensionalShelf && collapseSeries && !canReorderBooks) {
+            val featuredBooks = remember(books, uiState.privateAccess, uiState.privateSettings) {
+                books.asSequence()
+                    .filterNot(uiState::isBookLocked)
+                    .map { it.book }
+                    .toList()
+            }
+            val shelfBooks = remember(featuredBooks) {
+                featuredBooks.map { book ->
+                    DimensionalShelfBook(
+                        key = book.bookUrl,
+                        bookUrl = book.bookUrl,
+                        title = book.name,
+                        author = book.author,
+                        cover = book.getDisplayCover(),
+                        origin = book.origin,
+                    )
+                }.toImmutableList()
+            }
+            if (shelfBooks.isEmpty()) null else {
+                {
+                    DimensionalBookshelf(
+                        books = shelfBooks,
+                        onOpen = { onBookClick(featuredBooks[it], null) },
+                        onPreview = { onBookLongClick(featuredBooks[it], null) },
+                        modifier = Modifier
+                            .extendIntoHorizontalPadding(seriesEdgeInset)
+                            .padding(vertical = BookshelfLeadingVerticalPadding),
+                        preferCache = true,
+                    )
+                }
+            }
+        } else {
+            null
+        }
     val expandedSeriesName = uiState.expandedSeriesName
     val entries = remember(
         displayBooks,
@@ -1953,7 +2015,7 @@ fun BookshelfPage(
         }
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .then(
@@ -1962,6 +2024,14 @@ fun BookshelfPage(
                 }
             )
     ) {
+        val leadingItemHeight = if (showFastScroll && leadingContent != null) {
+            val shelfHeight = dimensionalBookshelfHeight(maxWidth)
+            with(LocalDensity.current) {
+                (shelfHeight.roundToPx() + 2 * BookshelfLeadingVerticalPadding.roundToPx()).toDp()
+            }
+        } else {
+            null
+        }
         FastScrollLazyVerticalGrid(
             columns = gridCells,
             state = gridState,
@@ -1988,8 +2058,14 @@ fun BookshelfPage(
             // 沉浸网格下卡片不再留内边距，间距收窄到 1dp 就是封面之间唯一的间隙。
             verticalArrangement = Arrangement.spacedBy(if (isGridMode) gridSpacing else 0.dp),
             horizontalArrangement = Arrangement.spacedBy(gridSpacing),
-            showFastScroll = showFastScroll
+            showFastScroll = showFastScroll,
+            leadingItemHeight = leadingItemHeight,
         ) {
+            if (leadingContent != null) {
+                item(key = BookshelfLeadingItemKey, span = { GridItemSpan(maxLineSpan) }) {
+                    leadingContent()
+                }
+            }
             itemsIndexed(
                 items = entries,
                 key = { _, entry -> entry.key },
@@ -2204,3 +2280,6 @@ fun BookshelfPage(
         }
     }
 }
+
+private const val BookshelfLeadingItemKey = "bookshelf:leading"
+private val BookshelfLeadingVerticalPadding = 8.dp

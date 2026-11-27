@@ -19,6 +19,7 @@ data class HomeUiState(
     val dailyGoalMinutes: Int = DEFAULT_DAILY_READING_GOAL_MINUTES,
     val recentBook: HomeRecentBookUi? = null,
     val recentBooks: ImmutableList<HomeRecentBookUi> = persistentListOf(),
+    val dimensionalShelfBooks: ImmutableList<HomeRecentBookUi> = persistentListOf(),
     val selectedSourceSetUrl: String? = null,
     val visibleSections: ImmutableSet<HomeDashboardSection> =
         DEFAULT_HOME_DASHBOARD_SECTIONS.toImmutableSet(),

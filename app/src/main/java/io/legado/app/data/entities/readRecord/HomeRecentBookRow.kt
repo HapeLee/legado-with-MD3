@@ -10,5 +10,6 @@ data class HomeRecentBookRow(
     val chapterTitle: String?,
     val totalChapterNum: Int?,
     val chapterIndex: Int?,
+    val isPrivate: Boolean,
 )
 

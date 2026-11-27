@@ -4074,4 +4074,13 @@
     <string name="bookshelf_series_pick_cover">Set cover</string>
     <string name="bookshelf_series_reset_cover">Use volume covers</string>
     <string name="bookshelf_series">Book series</string>
+    <string name="dimensional_bookshelf">3D bookshelf</string>
+    <string name="dimensional_bookshelf_summary">Show an interactive shelf above the book collection</string>
+    <string name="dimensional_bookshelf_open_book">Open book</string>
+    <string name="dimensional_bookshelf_preview_book">Preview book</string>
+    <string name="dimensional_bookshelf_book_position">Book %1$d of %2$d</string>
+    <string name="dimensional_bookshelf_spine_number" translatable="false">%1$02d</string>
+    <string name="dimensional_bookshelf_counter" translatable="false">%1$02d / %2$02d</string>
+    <string name="dimensional_bookshelf_previous_book">Previous book</string>
+    <string name="dimensional_bookshelf_next_book">Next book</string>
 </resources>

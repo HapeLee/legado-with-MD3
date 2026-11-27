@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.widget.components.coui.rememberAppVerticalOverscrollEffect
 
@@ -101,9 +102,13 @@ fun FastScrollLazyVerticalGrid(
     horizontalArrangement: Arrangement.Horizontal = Arrangement.Start,
     userScrollEnabled: Boolean = true,
     showFastScroll: Boolean = true,
+    leadingItemHeight: Dp? = null,
     content: LazyGridScope.() -> Unit,
 ) {
     if (showFastScroll) {
+        val leadingItemExtent = leadingItemHeight?.let {
+            with(LocalDensity.current) { it.roundToPx() + verticalArrangement.spacing.roundToPx() }
+        }
         VerticalGridFastScroller(
             state = state,
             columns = columns,
@@ -111,6 +116,7 @@ fun FastScrollLazyVerticalGrid(
             contentPadding = contentPadding,
             modifier = modifier,
             topContentPadding = contentPadding.calculateTopPadding(),
+            leadingItemExtent = leadingItemExtent,
         ) {
             LazyVerticalGrid(
                 columns = columns,

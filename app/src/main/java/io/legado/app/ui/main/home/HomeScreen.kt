@@ -84,6 +84,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.core.ui.bookshelf.DimensionalBookshelf
+import io.legado.app.core.ui.bookshelf.DimensionalShelfBook
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.model.HomeDashboardSection
@@ -102,6 +104,7 @@ import io.legado.app.ui.main.homepage.HomepageModuleManageSheet
 import io.legado.app.ui.main.homepage.HomepageUiState
 import io.legado.app.ui.main.homepage.HomepageViewModel
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.extendIntoHorizontalPadding
 import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
@@ -346,6 +349,11 @@ fun HomeRouteScreen(
         onToggleHomepageManage = homepageViewModel::toggleManageMode,
         onNavigateToReadRecord = onNavigateToReadRecord,
         onNavigateToReadRecordOverview = onNavigateToReadRecordOverview,
+        onDashboardBookDetails = { book ->
+            book.bookUrl?.let { url ->
+                onNavigateToBookInfo(book.name, book.author, url, book.origin, book.coverPath, null)
+            }
+        },
         onHomepageBookLongClick = { book, sharedCoverKey ->
             previewBook = book
             previewSharedCoverKey = sharedCoverKey
@@ -401,6 +409,7 @@ fun HomeScreen(
     onToggleHomepageManage: () -> Unit,
     onNavigateToReadRecord: () -> Unit = {},
     onNavigateToReadRecordOverview: () -> Unit = {},
+    onDashboardBookDetails: (HomeRecentBookUi) -> Unit = {},
     onHomepageBookLongClick: (SearchBook, String?) -> Unit = { _, _ -> },
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
@@ -573,9 +582,9 @@ fun HomeScreen(
                             onIntent = onIntent,
                             onNavigateToReadRecord = onNavigateToReadRecord,
                             onNavigateToReadRecordOverview = onNavigateToReadRecordOverview,
+                            onBookDetails = onDashboardBookDetails,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
-                            modifier = Modifier.padding(horizontal = 16.dp),
                         )
                     }
 
@@ -674,19 +683,47 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeDashboardContent(
+internal fun HomeDashboardContent(
     state: HomeUiState,
     onIntent: (HomeIntent) -> Unit,
     onNavigateToReadRecord: () -> Unit,
     onNavigateToReadRecordOverview: () -> Unit,
+    onBookDetails: (HomeRecentBookUi) -> Unit,
     modifier: Modifier = Modifier,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
+    val sidePadding = 16.dp
     Column(
-        modifier = modifier,
+        modifier = modifier.padding(horizontal = sidePadding),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        if (HomeDashboardSection.DimensionalBookshelf in state.visibleSections &&
+            state.dimensionalShelfBooks.isNotEmpty()
+        ) {
+            val books = state.dimensionalShelfBooks
+            val shelfBooks = remember(books) {
+                books.map { book ->
+                    val url = requireNotNull(book.bookUrl)
+                    DimensionalShelfBook(
+                        key = url,
+                        bookUrl = url,
+                        title = book.name,
+                        author = book.author,
+                        cover = book.coverPath,
+                        origin = book.origin,
+                    )
+                }.toImmutableList()
+            }
+            DimensionalBookshelf(
+                books = shelfBooks,
+                onOpen = { onIntent(HomeIntent.RecentHistoryBookClick(shelfBooks[it].bookUrl)) },
+                onPreview = { onBookDetails(books[it]) },
+                modifier = Modifier.extendIntoHorizontalPadding(sidePadding),
+                preferCache = true,
+            )
+        }
+
         if (HomeDashboardSection.RecentBook in state.visibleSections) {
             RecentBookCard(
                 book = state.recentBook,
@@ -1453,6 +1490,7 @@ private fun HomeDashboardSection.labelRes(): Int = when (this) {
     HomeDashboardSection.RecentBooks -> R.string.home_recent_books
     HomeDashboardSection.DailyGoal -> R.string.home_today_reading_goal
     HomeDashboardSection.WebDavBackup -> R.string.home_webdav_backup
+    HomeDashboardSection.DimensionalBookshelf -> R.string.dimensional_bookshelf
 }
 
 private fun bookAccessibilityLabel(

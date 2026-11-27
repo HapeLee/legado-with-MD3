@@ -4070,4 +4070,11 @@
     <string name="bookshelf_series_pick_cover">设置封面</string>
     <string name="bookshelf_series_reset_cover">恢复卷封面</string>
     <string name="bookshelf_series">书籍系列</string>
+    <string name="dimensional_bookshelf">立体书架</string>
+    <string name="dimensional_bookshelf_summary">在常规书籍布局上方显示可横滑的立体书架</string>
+    <string name="dimensional_bookshelf_open_book">打开书籍</string>
+    <string name="dimensional_bookshelf_preview_book">查看书籍</string>
+    <string name="dimensional_bookshelf_book_position">第 %1$d 本，共 %2$d 本</string>
+    <string name="dimensional_bookshelf_previous_book">上一本</string>
+    <string name="dimensional_bookshelf_next_book">下一本</string>
 </resources>

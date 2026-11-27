@@ -33,7 +33,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -50,6 +49,7 @@ import io.legado.app.ui.config.themeConfig.TagColorPair
 import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.theme.BookshelfCoverInnerInset
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.extendIntoHorizontalPadding
 import io.legado.app.ui.theme.isMiuixHyperOs4Enabled
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
@@ -310,21 +310,7 @@ internal fun BookshelfSeriesPanel(
             .fillMaxWidth()
             // 抽屉壳向两侧铺出书架网格的内容边距：顶部进度矩形与底部操作区横贯到屏幕边，
             // 而布局上报的宽度仍是网格内容宽，不影响 LazyGrid 的列排布。
-            .layout { measurable, constraints ->
-                val extra = edgeInset.roundToPx()
-                if (extra == 0 || !constraints.hasBoundedWidth) {
-                    val placeable = measurable.measure(constraints)
-                    layout(placeable.width, placeable.height) { placeable.place(0, 0) }
-                } else {
-                    val width = constraints.maxWidth + extra * 2
-                    val placeable = measurable.measure(
-                        constraints.copy(minWidth = width, maxWidth = width)
-                    )
-                    layout(constraints.maxWidth, placeable.height) {
-                        placeable.place(-extra, 0)
-                    }
-                }
-            }
+            .extendIntoHorizontalPadding(edgeInset)
     ) {
         // 顶部：整块矩形作为进度填充区，thumb 实心、向起点渐隐，不再单占一行
         Box(

@@ -14,6 +14,7 @@ import io.legado.app.domain.usecase.WebDavBackupUseCase
 import io.legado.app.utils.isContentScheme
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -71,6 +72,14 @@ class HomeViewModel(
                 .take(6)
                 .map { it.toUi() }
                 .toImmutableList(),
+            dimensionalShelfBooks = if (HomeDashboardSection.DimensionalBookshelf in visibleSections) {
+                dashboard.recentBooks
+                    .filter { !it.isPrivate && !it.bookUrl.isNullOrBlank() }
+                    .map { it.toUi() }
+                    .toImmutableList()
+            } else {
+                persistentListOf()
+            },
             selectedSourceSetUrl = selectedSourceUrl,
             visibleSections = visibleSections.toImmutableSet(),
             latestBackup = backup.latest?.toUi(),

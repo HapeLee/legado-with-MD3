@@ -62,7 +62,9 @@ interface ReadRecordDao {
             book.customCoverUrl AS customCoverUrl,
             book.durChapterTitle AS chapterTitle,
             book.totalChapterNum AS totalChapterNum,
-            book.durChapterIndex AS chapterIndex
+            book.durChapterIndex AS chapterIndex,
+            CASE WHEN book.isPrivate = 1 OR (book.`group` & $PRIVATE_GROUP_MASK) <> 0
+                THEN 1 ELSE 0 END AS isPrivate
         FROM recent
         LEFT JOIN books AS book ON book.bookUrl = (
             SELECT candidate.bookUrl

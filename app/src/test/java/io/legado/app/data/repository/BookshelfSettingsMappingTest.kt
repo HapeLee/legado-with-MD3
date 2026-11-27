@@ -23,8 +23,8 @@ class BookshelfSettingsMappingTest {
     }
 
     @Test
-    fun `Bookshelf 54 键写读映射逐字段对应`() {
-        assertEquals(54, BookshelfSettings().toPrefMap().size)
+    fun `Bookshelf 55 键写读映射逐字段对应`() {
+        assertEquals(55, BookshelfSettings().toPrefMap().size)
         bookshelfMappingSamples().forEach { expected ->
             assertEquals(expected.expectedPrefMap(), expected.toPrefMap())
             assertEquals(
@@ -161,6 +161,7 @@ private fun bookshelfMappingSamples(): List<BookshelfSettings> {
         base.copy(bookshelfTitleSmallFont = true),
         base.copy(bookshelfTitleCenter = true),
         base.copy(bookshelfCoverShadow = true),
+        base.copy(bookshelfDimensionalShelf = true),
         base.copy(bookshelfGridFixedColumns = true),
         base.copy(bookshelfGridFixedCoverWidth = true),
         base.copy(bookshelfGridImmersive = true),
@@ -212,6 +213,7 @@ private fun BookshelfSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.bookshelfTitleCenter to bookshelfTitleCenter,
     PreferKey.bookshelfTitleMaxLines to bookshelfTitleMaxLines,
     PreferKey.bookshelfCoverShadow to bookshelfCoverShadow,
+    PreferKey.bookshelfDimensionalShelf to bookshelfDimensionalShelf,
     PreferKey.bookshelfCardColor to bookshelfCardColor,
     PreferKey.bookshelfCardColorDark to bookshelfCardColorDark,
     PreferKey.bookshelfGroupListStyle to bookshelfGroupListStyle,

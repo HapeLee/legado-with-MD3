@@ -37,6 +37,7 @@ class HomeDashboardRepository(
                         row.customCoverUrl
                     },
                     chapterTitle = row.chapterTitle,
+                    isPrivate = row.isPrivate,
                     chapterProgress = if (
                         row.totalChapterNum != null &&
                         row.totalChapterNum > 0 &&

@@ -136,6 +136,7 @@ fun BookCoverImage(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     requestBuilder: ImageRequest.Builder.() -> Unit = {},
     onImageAspectRatio: ((Float) -> Unit)? = null,
+    builtInFallback: (@Composable BoxScope.() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val isNight = LegadoTheme.isDark
@@ -214,14 +215,18 @@ fun BookCoverImage(
         }
 
         if (showDefaultIcon) {
-            Icon(
-                Icons.Default.Book,
-                contentDescription = null,
-                tint = LegadoTheme.colorScheme.secondary,
-                modifier = Modifier
-                    .fillMaxSize(0.35f)
-                    .align(Alignment.Center)
-            )
+            if (builtInFallback != null) {
+                builtInFallback()
+            } else {
+                Icon(
+                    Icons.Default.Book,
+                    contentDescription = null,
+                    tint = LegadoTheme.colorScheme.secondary,
+                    modifier = Modifier
+                        .fillMaxSize(0.35f)
+                        .align(Alignment.Center)
+                )
+            }
         }
 
         if (finalPath != null) {
@@ -313,6 +318,8 @@ fun CoilBookCover(
     showBadgeDot: Boolean = false,
     leftBottomText: String? = null,
     onImageAspectRatio: ((Float) -> Unit)? = null,
+    /** Replaces the built-in icon and text while retaining user-configured default cover art. */
+    builtInFallback: (@Composable BoxScope.() -> Unit)? = null,
 ) {
     val coverSettings = LocalAppUiConfiguration.current.cover
     val isNight = LegadoTheme.isDark
@@ -425,18 +432,17 @@ fun CoilBookCover(
                 onError?.invoke()
                 onLoadFinish?.invoke()
             },
-            sharedCoverKey = sharedCoverKey
+            sharedCoverKey = sharedCoverKey,
+            builtInFallback = if (builtInFallback == null) null else {
+                { Box(Modifier.fillMaxSize().then(contentBlurModifier), content = builtInFallback) }
+            },
         )
 
-        if (
+        val showDefaultText =
             finalPath == null ||
             onlineCoverLoadFailed ||
-            (
-                sharedCoverKey == null &&
-                    showLoadingPlaceholder &&
-                    !isOnlineCoverLoaded
-                )
-        ) {
+            (sharedCoverKey == null && showLoadingPlaceholder && !isOnlineCoverLoaded)
+        if (showDefaultText && (builtInFallback == null || hasCustomDefault)) {
             // 占位文字（默认封面上的书名/作者）也一起模糊：
             // 它露的是真实字符串，锁定态不能比正常态更清晰
             Box(

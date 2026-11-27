@@ -397,6 +397,7 @@ object BackupConfig {
         PreferKey.bookshelfTitleCenter,
         PreferKey.bookshelfTitleMaxLines,
         PreferKey.bookshelfCoverShadow,
+        PreferKey.bookshelfDimensionalShelf,
         PreferKey.bookshelfSearchActionDirectToSearch,
         PreferKey.bookshelfCardColor,
         PreferKey.bookshelfCardColorDark,

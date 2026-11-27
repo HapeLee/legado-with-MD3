@@ -5,12 +5,26 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.offset
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 
 /** Space occupied by a host's bottom overlay, including its remaining system inset. */
 internal val LocalBottomOverlayPadding = compositionLocalOf { 0.dp }
+
+/** Measure and draw into a parent's symmetric padding without changing the space it reserves. */
+internal fun Modifier.extendIntoHorizontalPadding(padding: Dp): Modifier {
+    if (padding == 0.dp) return this
+    return layout { measurable, constraints ->
+        val inset = if (constraints.hasBoundedWidth) padding.roundToPx() else 0
+        val child = measurable.measure(constraints.offset(horizontal = 2 * inset))
+        layout(child.width - 2 * inset, child.height) {
+            child.place(-inset, 0)
+        }
+    }
+}
 
 @Composable
 fun Modifier.adaptiveHorizontalPadding(): Modifier {

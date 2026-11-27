@@ -373,6 +373,7 @@ object PreferKey {
     const val bookshelfTitleCenter = "bookshelfTitleCenter"
     const val bookshelfTitleMaxLines = "bookshelfTitleMaxLines"
     const val bookshelfCoverShadow = "bookshelfCoverShadow"
+    const val bookshelfDimensionalShelf = "bookshelfDimensionalShelf"
     const val bookshelfSearchActionDirectToSearch = "bookshelfSearchActionDirectToSearch"
     const val bookshelfCardColor = "bookshelfCardColor"
     const val bookshelfCardColorDark = "bookshelfCardColorDark"

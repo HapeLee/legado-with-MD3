@@ -24,7 +24,7 @@ data class GroupBookCount(
     val count: Int
 )
 
-private const val PRIVATE_GROUP_MASK =
+internal const val PRIVATE_GROUP_MASK =
     "(SELECT COALESCE(SUM(groupId), 0) FROM book_groups WHERE groupId > 0 AND isPrivate = 1)"
 
 private const val PUBLIC_GROUP_MASK =

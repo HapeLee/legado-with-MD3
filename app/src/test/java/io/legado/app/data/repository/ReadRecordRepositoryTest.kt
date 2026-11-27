@@ -5,9 +5,11 @@ import androidx.room.Room
 import androidx.room.withTransaction
 import io.legado.app.data.AppDatabase
 import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
+import io.legado.app.domain.model.HomeDashboardSection
 import io.legado.app.help.config.AppConfigStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -41,6 +43,41 @@ class ReadRecordRepositoryTest {
 
     @After
     fun tearDown() = database.close()
+
+    @Test
+    fun `home history identifies private books without losing history rows`() = runBlocking {
+        val publicBook = Book(bookUrl = "public", name = "Public")
+        val privateBook = Book(bookUrl = "private", name = "Private", isPrivate = true)
+        val groupBook = Book(bookUrl = "group-book", name = "Group book", group = 2L)
+        database.bookGroupDao.insert(BookGroup(groupId = 2L, isPrivate = true))
+        database.bookDao.insert(publicBook, privateBook, groupBook)
+        database.readRecordDao.insert(
+            ReadRecord(bookName = publicBook.name, lastRead = 1),
+            ReadRecord(bookName = privateBook.name, lastRead = 2),
+            ReadRecord(bookName = groupBook.name, lastRead = 3),
+            ReadRecord(bookName = "Removed book", lastRead = 4),
+        )
+
+        val dashboard = HomeDashboardRepository(database.readRecordDao, SettingsRepository())
+        val recent = dashboard.observeRecentBooks(7).first()
+
+        assertEquals(
+            listOf(null to false, groupBook.bookUrl to true, privateBook.bookUrl to true, publicBook.bookUrl to false),
+            recent.map { it.bookUrl to it.isPrivate },
+        )
+    }
+
+    @Test
+    fun `the 3D bookshelf can be saved alongside existing dashboard sections`() = runBlocking {
+        val dashboard = HomeDashboardRepository(database.readRecordDao, SettingsRepository())
+        val existing = setOf(HomeDashboardSection.RecentBook, HomeDashboardSection.RecentBooks)
+        dashboard.updateVisibleSections(existing)
+        assertEquals(existing, dashboard.observeVisibleSections().first())
+
+        val enabled = existing + HomeDashboardSection.DimensionalBookshelf
+        dashboard.updateVisibleSections(enabled)
+        assertEquals(enabled, dashboard.observeVisibleSections().first())
+    }
 
     @Test
     fun `per book recording switch persists without changing progress or affecting another copy`() = runBlocking {

@@ -52,6 +52,7 @@ fun BookshelfConfigSheet(
     show: Boolean,
     settings: BookshelfSettings,
     onUpdate: ((BookshelfSettings) -> BookshelfSettings) -> Unit,
+    onDimensionalShelfChange: (Boolean) -> Unit,
     enableCustomTagColors: Boolean,
     customTagColors: List<TagColorPair>,
     themeColor: Int,
@@ -130,6 +131,14 @@ fun BookshelfConfigSheet(
             )
 
             PillHeaderDivider(title = stringResource(R.string.bookshelf_section_layout))
+
+            CompactSwitchSettingItem(
+                title = stringResource(R.string.dimensional_bookshelf),
+                description = stringResource(R.string.dimensional_bookshelf_summary),
+                checked = settings.bookshelfDimensionalShelf,
+                color = LegadoTheme.colorScheme.surface,
+                onCheckedChange = onDimensionalShelfChange,
+            )
 
             // Layout Mode (non-folder)
             val layoutMode =
