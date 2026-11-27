@@ -341,6 +341,8 @@ data class ReadBookUiState(
     val readAloudStreamAudio: Boolean = false,
     val readAloudTtsFollowSys: Boolean = false,
     val readAloudTtsSpeechRate: Int = 10,
+    /** 当前朗读链路的最终播放倍率上限；系统 TTS 8.5×，HTTP/ExoPlayer 8.0×。 */
+    val readAloudMaxPlaybackSpeed: Float = 8.5f,
     val readAloudTtsTimer: Int = 0,
     /** 分钟定时到点后读完本章再停；只对分钟模式有意义。 */
     val readAloudFinishCurrentChapterAfterTimer: Boolean = false,

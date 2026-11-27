@@ -71,6 +71,7 @@ import io.legado.app.help.readaloud.playback.CloudTtsEmotionMapper
 import io.legado.app.help.readaloud.playback.CloudTtsRoleInstructionMapper
 import io.legado.app.help.readaloud.playback.HttpTtsAudioSynthesizer
 import io.legado.app.help.readaloud.playback.HttpTtsEmotionMapper
+import io.legado.app.help.readaloud.playback.PlaybackSpeedLimits
 import io.legado.app.help.readaloud.playback.ReadAloudAudioStore
 import io.legado.app.help.readaloud.playback.SystemTtsFileSynthesizer
 import io.legado.app.help.readaloud.playback.httpTtsAudioCacheSourceKey
@@ -135,9 +136,12 @@ class HttpReadAloudService : BaseReadAloudService(),
     /**
      * 全局语速倍率, 由设置里的朗读语速换算而来, 在播放端 (ExoPlayer) 变速,
      * 对所有来源的音频 (http/系统/云端合成) 统一生效。
+     *
+     * ExoPlayer 的默认音频链路在 DefaultAudioSink.setPlaybackParameters() 里把倍率夹到
+     * 8.0×；这里先按同一上限收敛，保证进度估算与 UI 显示的倍率一致。
      */
     private val globalPlaybackSpeed: Float
-        get() = (speechRatePlay + 5) / 10f
+        get() = ((speechRatePlay + 5) / 10f).coerceAtMost(PlaybackSpeedLimits.EXOPLAYER_MAX)
 
     /**
      * 源级合成语速倍率, 仅当源接口支持语速参数 ({{speakSpeed}}) 时影响返回的音频。
@@ -213,9 +217,13 @@ class HttpReadAloudService : BaseReadAloudService(),
         }
     }
 
-    /** 某一句应该有的播放参数：这一句的音高/语速 × 全局语速。 */
+    /** 某一句应该有的播放参数：这一句的音高/语速 × 全局语速，最终再按 ExoPlayer 链路封顶。 */
     private fun playbackParametersFor(index: Int) =
-        VoiceEffectAudio.parameters(cueEffect(index), globalPlaybackSpeed)
+        VoiceEffectAudio.parameters(
+            cueEffect(index),
+            globalPlaybackSpeed,
+            PlaybackSpeedLimits.EXOPLAYER_MAX,
+        )
 
     /**
      * 换句时把这一句的音高/语速设到播放器上。

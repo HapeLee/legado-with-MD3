@@ -12,6 +12,7 @@ import io.legado.app.domain.model.PlaybackTimer
 import io.legado.app.domain.model.readaloud.ReadAloudEngineSelection
 import io.legado.app.domain.model.readaloud.ReadAloudVoice
 import io.legado.app.help.readaloud.effect.VoiceEffectStore
+import io.legado.app.help.readaloud.playback.PlaybackSpeedLimits
 import io.legado.app.help.readaloud.playback.ReadAloudAudioStore
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.model.ReadAloud.getReadAloudClass
@@ -54,6 +55,15 @@ object ReadAloud {
         private set
 
     /**
+     * 当前朗读是否走文件合成 + ExoPlayer（HTTP / 云端 / 系统文件合成），而不是系统 TTS 直读。
+     *
+     * 两条链路的音频输出端不同：ExoPlayer 的默认音频链路受 `DefaultAudioSink` 的
+     * 8.0× 上限约束，系统 TTS 直读则由引擎自己实现语速。
+     */
+    val usesExoPlayerPlayback: Boolean
+        get() = (if (BaseReadAloudService.isRun) aloudClass else getReadAloudClass()) != TTSReadAloudService::class.java
+
+    /**
      * 变声器的混响 / 金属感这一层现在能不能生效。
      *
      * 它们是挂在朗读播放器**自己的音频会话**上的平台 AudioEffect：只有走文件合成 +
@@ -62,7 +72,15 @@ object ReadAloud {
      * 管理页拿它来标「当前引擎不生效」，免得用户以为预设坏了。
      */
     val supportsSessionAudioEffect: Boolean
-        get() = (if (BaseReadAloudService.isRun) aloudClass else getReadAloudClass()) != TTSReadAloudService::class.java
+        get() = usesExoPlayerPlayback
+
+    /** 当前朗读链路允许的最终播放倍率；UI 的滑杆上限也按它计算。 */
+    val maxPlaybackSpeed: Float
+        get() = if (usesExoPlayerPlayback) {
+            PlaybackSpeedLimits.EXOPLAYER_MAX
+        } else {
+            PlaybackSpeedLimits.SYSTEM_TTS_MAX
+        }
 
     private fun getReadAloudClass(): Class<*> {        val ttsEngine = ttsEngine
         GSON.fromJsonObject<ReadAloudEngineSelection>(ttsEngine).getOrNull()

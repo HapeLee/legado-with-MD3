@@ -82,7 +82,7 @@ class CueSpeechPresetTest {
             effect = effect(speed = 2f, pitch = 2f),
         )
 
-        assertEquals(2f, result.rate!!, 0.0001f) // 1f × 2f，封顶 MAX_SPEED = 2f
+        assertEquals(2f, result.rate!!, 0.0001f) // 1f × 2f，预设倍率封顶 MAX_SPEED = 2f
         assertEquals(2f, result.pitch, 0.0001f)
     }
 
@@ -98,5 +98,29 @@ class CueSpeechPresetTest {
         val result = preset(characterPitch = 0.8f, effect = effect(pitch = 1.5f))
 
         assertEquals(1.2f, result.pitch, 0.0001f) // 0.8 × 1.5
+    }
+
+    @Test
+    fun globalRateAboveEffectSafetyRangeIsNotCapped() {
+        val result = preset(speechRateSetting = 80)
+
+        // 滑块 80 → (80 + 5) / 10 = 8.5×，不能被预设倍率范围 0.5..2.0 夹掉
+        assertEquals(8.5f, result.rate!!, 0.0001f)
+    }
+
+    @Test
+    fun effectSpeedMultipliesHighGlobalRate() {
+        val result = preset(speechRateSetting = 30, effect = effect(speed = 1.25f))
+
+        // 3.5 × 1.25 = 4.375，预设倍率与全局语速保持相乘
+        assertEquals(4.375f, result.rate!!, 0.0001f)
+    }
+
+    @Test
+    fun finalRateStopsAtPlaybackMax() {
+        val result = preset(speechRateSetting = 80, effect = effect(speed = 2f))
+
+        // 8.5 × 2 超过最终播放上限，只夹最终结果，预设编辑器仍按 0.5..2.0 校验
+        assertEquals(8.5f, result.rate!!, 0.0001f)
     }
 }

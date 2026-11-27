@@ -40,6 +40,10 @@ data class ReadAloudPlayerUiState(
      */
     val readAloudRunning: Boolean = false,
     val speed: Int = 10,
+    /** 跟随系统 TTS 语速；开启时 [speed] 不参与下发，滑杆保持禁用。 */
+    val ttsFollowSys: Boolean = true,
+    /** 当前朗读链路的最终播放倍率上限；系统 TTS 8.5×，HTTP/ExoPlayer 8.0×。 */
+    val maxPlaybackSpeed: Float = 8.5f,
     val timerMinutes: Int = 0,
     /** 分钟定时到点后读完本章再停；只对分钟模式有意义。 */
     val finishCurrentChapterAfterTimer: Boolean = false,
@@ -86,6 +90,9 @@ sealed interface ReadAloudPlayerIntent {
     data class SelectChapter(val index: Int) : ReadAloudPlayerIntent
     data class SetBgMode(val value: Int) : ReadAloudPlayerIntent
     data class SetSpeed(val value: Int) : ReadAloudPlayerIntent
+
+    /** 跟随系统语速开关；与经典朗读面板的 switch 同一份设置。 */
+    data class SetTtsFollowSys(val value: Boolean) : ReadAloudPlayerIntent
     data class SetTimer(val minutes: Int) : ReadAloudPlayerIntent
 
     /** 切换定时模式；切到分钟模式会清掉章节配额，反之亦然。 */

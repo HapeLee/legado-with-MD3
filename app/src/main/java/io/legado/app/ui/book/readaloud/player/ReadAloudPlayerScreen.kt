@@ -18,11 +18,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -83,11 +85,13 @@ import io.legado.app.core.ui.player.PlayerMorphAppearance
 import io.legado.app.core.ui.player.PlayerMorphCover
 import io.legado.app.core.ui.player.TrackPlayerMorphCoverPage
 import io.legado.app.domain.model.settings.ReadAloudTimerMode
+import io.legado.app.help.readaloud.playback.PlaybackSpeedLimits
 import io.legado.app.ui.book.readaloud.ReadAloudTimerConfig
 import io.legado.app.ui.book.readaloud.ReadAloudTimerSheet
 import io.legado.app.ui.book.readaloud.ReadAloudVoiceSheet
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.hazeStyle.HazeLegado
+import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.util.rememberBlurBackdrop
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.button.series.MediumPlainButton
@@ -555,8 +559,9 @@ private fun CoverPage(
                 onClick = { onIntent(ReadAloudPlayerIntent.OpenSheet(ReadAloudPlayerSheet.Voice)) },
             )
             if (state.speed != 5) {
+                val speedMax = PlaybackSpeedLimits.sliderMax(state.maxPlaybackSpeed)
                 TextCard(
-                    text = "${formatReadAloudSpeedLabel(state.speed)}x",
+                    text = "${formatReadAloudSpeedLabel(state.speed.coerceAtMost(speedMax))}x",
                     icon = Icons.Default.Speed,
                     onClick = { onIntent(ReadAloudPlayerIntent.OpenSheet(ReadAloudPlayerSheet.Speed)) },
                 )
@@ -714,27 +719,44 @@ private fun ReadAloudSpeedSheet(
     onDismissRequest: () -> Unit,
     onIntent: (ReadAloudPlayerIntent) -> Unit,
 ) {
-    var speedPreview by remember(state.speed) { mutableFloatStateOf(state.speed.toFloat()) }
+    val speedMax = PlaybackSpeedLimits.sliderMax(state.maxPlaybackSpeed)
+    val speedValue = state.speed.coerceIn(READ_ALOUD_SPEED_MIN, speedMax)
+    var speedPreview by remember(speedValue, speedMax) {
+        mutableFloatStateOf(speedValue.toFloat())
+    }
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.read_aloud_adjust_speed),
     ) {
+        TinySwitchSettingItem(
+            title = stringResource(R.string.flow_sys),
+            checked = state.ttsFollowSys,
+            onCheckedChange = {
+                onIntent(ReadAloudPlayerIntent.SetTtsFollowSys(it))
+            },
+        )
+        Spacer(Modifier.height(8.dp))
         PlayerAdjustmentSlider(
             title = stringResource(R.string.read_aloud_adjust_speed),
             value = speedPreview.coerceIn(
                 READ_ALOUD_SPEED_MIN.toFloat(),
-                READ_ALOUD_SPEED_MAX.toFloat(),
+                speedMax.toFloat(),
             ),
-            valueLabel = "${formatReadAloudSpeedLabel(speedPreview.roundToInt())}x",
+            valueLabel = "${formatReadAloudSpeedLabel(speedPreview.roundToInt().coerceAtMost(speedMax))}x",
             startLabel = stringResource(R.string.fast_rewind),
             endLabel = stringResource(R.string.fast_forward),
             onValueChange = { speedPreview = it },
             onValueChangeFinished = {
-                onIntent(ReadAloudPlayerIntent.SetSpeed(speedPreview.roundToInt()))
+                onIntent(
+                    ReadAloudPlayerIntent.SetSpeed(
+                        speedPreview.roundToInt().coerceAtMost(speedMax)
+                    )
+                )
             },
-            valueRange = READ_ALOUD_SPEED_MIN.toFloat()..READ_ALOUD_SPEED_MAX.toFloat(),
-            steps = READ_ALOUD_SPEED_MAX - READ_ALOUD_SPEED_MIN - 1,
+            valueRange = READ_ALOUD_SPEED_MIN.toFloat()..speedMax.toFloat(),
+            steps = speedMax - READ_ALOUD_SPEED_MIN - 1,
+            enabled = !state.ttsFollowSys,
         )
     }
 }
