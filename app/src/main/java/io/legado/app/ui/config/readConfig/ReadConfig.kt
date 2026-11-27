@@ -31,7 +31,7 @@ object ReadConfig {
     private val theme get() = GlobalContext.get().get<ThemeSettingsGateway>().currentSettings
     private val preferences get() = AppConfigStore.preferences
 
-    val isEInkMode get() = theme.appTheme == "4"
+    val isEInkMode get() = shell.eInkGlobalMode || theme.appTheme == "4"
     val isNightTheme: Boolean
         get() = when (shell.themeMode) {
             "1" -> false

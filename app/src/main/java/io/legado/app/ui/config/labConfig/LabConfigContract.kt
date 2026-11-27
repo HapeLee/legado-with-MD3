@@ -11,7 +11,6 @@ data class LabConfigUiState(
 
 sealed interface LabConfigIntent {
     data class SetEnabled(val value: Boolean) : LabConfigIntent
-    data class SetEInkDisplay(val value: Boolean) : LabConfigIntent
     data object ExportPageEstimateDiagnostics : LabConfigIntent
 }
 

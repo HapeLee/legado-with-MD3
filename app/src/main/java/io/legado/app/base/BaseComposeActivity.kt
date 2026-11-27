@@ -3,6 +3,7 @@ package io.legado.app.base
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -13,7 +14,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.MotionDurationScale
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.compositionContext
+import androidx.compose.ui.platform.createLifecycleAwareWindowRecomposer
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.os.LocaleListCompat
 import androidx.core.view.WindowCompat
@@ -57,6 +61,7 @@ abstract class BaseComposeActivity(
     private val appUiConfigurationGateway by inject<AppUiConfigurationGateway>()
     private val themeSettingsGateway by inject<ThemeSettingsGateway>()
     private var lastUiConfiguration: AppUiConfiguration? = null
+    private var motionDurationScale: DynamicMotionDurationScale? = null
 
     @Composable
     protected abstract fun Content()
@@ -79,9 +84,30 @@ abstract class BaseComposeActivity(
         // Compose 入口
         val initialUiConfiguration = appUiConfigurationGateway.currentConfiguration
         val initialThemeSettings = themeSettingsGateway.currentSettings
+        if (initialUiConfiguration.appShell.eInkGlobalMode) {
+            applyZeroActivityTransition(isOpen = true)
+        }
+        val systemScale = runCatching {
+            Settings.Global.getFloat(
+                contentResolver,
+                Settings.Global.ANIMATOR_DURATION_SCALE,
+                1f,
+            )
+        }.getOrDefault(1f)
+        val durationScale = DynamicMotionDurationScale(
+            systemScale = systemScale,
+            initialDisabled = initialUiConfiguration.appShell.eInkGlobalMode,
+        ).also { motionDurationScale = it }
+        window.decorView.compositionContext = window.decorView.createLifecycleAwareWindowRecomposer(
+            coroutineContext = durationScale,
+            lifecycle = lifecycle,
+        )
         setContent {
             val uiConfiguration by appUiConfigurationGateway.configuration
                 .collectAsStateWithLifecycle(initialUiConfiguration)
+            SideEffect {
+                durationScale.disableAnimations = uiConfiguration.appShell.eInkGlobalMode
+            }
             AppTheme(configuration = uiConfiguration) {
                 SyncWindowBackground()
                 val themeSettings by themeSettingsGateway.settings
@@ -225,6 +251,26 @@ abstract class BaseComposeActivity(
         }
     }
 
+    override fun finish() {
+        super.finish()
+        if (appUiConfigurationGateway.currentConfiguration.appShell.eInkGlobalMode) {
+            applyZeroActivityTransition(isOpen = false)
+        }
+    }
+
+    private fun applyZeroActivityTransition(isOpen: Boolean) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            overrideActivityTransition(
+                if (isOpen) OVERRIDE_TRANSITION_OPEN else OVERRIDE_TRANSITION_CLOSE,
+                0,
+                0,
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            overridePendingTransition(0, 0)
+        }
+    }
+
     override fun onDestroy() {
         traceConfiguration(
             "onDestroy changingConfigurations=0x${changingConfigurations.toString(16)} " +
@@ -239,6 +285,17 @@ abstract class BaseComposeActivity(
             "UiConfiguration",
             "${javaClass.simpleName}@${System.identityHashCode(this)} $event",
         )
+    }
+
+    private class DynamicMotionDurationScale(
+        private val systemScale: Float,
+        initialDisabled: Boolean,
+    ) : MotionDurationScale {
+        @Volatile
+        var disableAnimations: Boolean = initialDisabled
+
+        override val scaleFactor: Float
+            get() = if (disableAnimations) 0f else systemScale
     }
 
 }

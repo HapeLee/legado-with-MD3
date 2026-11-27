@@ -446,7 +446,7 @@ fun ThemeConfigScreen(
                         )
                     }
                     SearchableSetting("theme.navigation_animation") {
-                        val styles = NavigationAnimationStyle.entries
+                        val styles = NavigationAnimationStyle.entries.filter { it != NavigationAnimationStyle.None }
                         DropdownListSettingItem(
                             title = stringResource(R.string.navigation_animation),
                             selectedValue = appShell.navigationAnimationStyle.storedValue,
@@ -455,6 +455,7 @@ fun ThemeConfigScreen(
                                     NavigationAnimationStyle.Default -> stringResource(R.string.text_default)
                                     NavigationAnimationStyle.Miuix -> "Miuix"
                                     NavigationAnimationStyle.Scale -> stringResource(R.string.navigation_animation_scale)
+                                    NavigationAnimationStyle.None -> stringResource(R.string.text_default)
                                 }
                             }.toTypedArray(),
                             entryValues = styles.map { it.storedValue }.toTypedArray(),

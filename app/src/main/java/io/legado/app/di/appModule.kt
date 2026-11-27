@@ -895,7 +895,7 @@ val appModule = module {
             searchResultIndex = route.searchResultIndex,
             bookRepository = get(),
             searchContentRepository = get(),
-            themeSettingsGateway = get(),
+            appUiConfigurationGateway = get(),
         )
     }
 }

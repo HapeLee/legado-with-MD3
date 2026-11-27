@@ -2405,10 +2405,8 @@
     <string name="lab_setting">實驗室</string>
     <string name="lab_enabled_title">啟用實驗室</string>
     <string name="lab_enabled_summary">開啟以顯示實驗性功能。這些功能可能不穩定。</string>
-    <string name="lab_display">顯示</string>
-    <string name="lab_eink_display_title">電子墨水屏顯示</string>
-    <string name="lab_eink_display_summary">在平板介面中顯示電子墨水屏選項</string>
-    <string name="lab_eink_display_hint">您可以在主題 → 顯示選項中調整電子墨水屏顯示設定</string>
+    <string name="eink_global_mode_title">電子書模式</string>
+    <string name="eink_global_mode_summary">套用電子書主題並關閉全域動畫</string>
     <string name="eye_protection">護眼模式</string>
     <string name="eye_protection_enabled">啟用護眼模式</string>
     <string name="eye_protection_enabled_summary">透過暖色色調減少藍光</string>

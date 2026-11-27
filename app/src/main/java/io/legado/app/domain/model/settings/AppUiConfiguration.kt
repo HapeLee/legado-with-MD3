@@ -13,6 +13,28 @@ data class AppUiConfiguration(
             "2" -> true
             else -> isSystemDarkTheme
         }
+
+    fun applyRuntimeOverrides(): AppUiConfiguration {
+        if (!appShell.eInkGlobalMode) return this
+        return copy(
+            appShell = appShell.copy(
+                navigationAnimationStyle = NavigationAnimationStyle.None,
+                textAnimationLevel = TextAnimationLevel.Off,
+                predictiveBackEnabled = false,
+                readerSharedElementEnabled = false,
+                swipeAnimation = false,
+                useFloatingBottomBarLiquidGlass = false,
+            ),
+            theme = theme.copy(
+                appTheme = "4",
+                enableBlur = false,
+                enableProgressiveBlur = false,
+                mochiTopBarLiquidGlass = false,
+                mochiScrollEdgeBlurEnabled = false,
+                miuixTopBarLiquidGlass = false,
+            ),
+        )
+    }
 }
 
 data class AppUiConfigurationDiff(

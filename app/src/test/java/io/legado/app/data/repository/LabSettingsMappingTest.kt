@@ -16,7 +16,6 @@ class LabSettingsMappingTest {
     fun `实验室设置各字段写读映射往返恒等`() {
         val samples = listOf(
             LabSettings(enabled = true),
-            LabSettings(eInkDisplay = true),
             LabSettings(eyeProtection = true),
         )
 

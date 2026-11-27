@@ -687,7 +687,16 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteSettings> {
+        val appShellSettingsGateway: io.legado.app.domain.gateway.AppShellSettingsGateway = org.koin.compose.koinInject()
+        val scope = rememberCoroutineScope()
+        val eInkGlobalMode = io.legado.app.ui.theme.LocalAppUiConfiguration.current.appShell.eInkGlobalMode
         ConfigNavScreen(
+            eInkGlobalMode = eInkGlobalMode,
+            onEInkGlobalModeChange = { enabled ->
+                scope.launch {
+                    appShellSettingsGateway.update { it.copy(eInkGlobalMode = enabled) }
+                }
+            },
             onBackClick = { onNavigateBack() },
             onNavigateToOther = { pushRoute(MainRouteSettingsOther) },
             onNavigateToRead = { pushRoute(MainRouteSettingsRead) },

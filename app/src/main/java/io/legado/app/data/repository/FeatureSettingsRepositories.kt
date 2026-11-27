@@ -221,13 +221,11 @@ internal fun CoverSettings.toPrefMap(): Map<String, Any?> = mapOf(
 
 internal fun Preferences.toLabSettings(): LabSettings = LabSettings(
     enabled = compatDsBoolean(PreferKey.labEnabled) ?: false,
-    eInkDisplay = compatDsBoolean(PreferKey.labEInkDisplay) ?: false,
     eyeProtection = compatDsBoolean(PreferKey.labEyeProtection) ?: false,
 )
 
 internal fun LabSettings.toPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.labEnabled to enabled,
-    PreferKey.labEInkDisplay to eInkDisplay,
     PreferKey.labEyeProtection to eyeProtection,
 )
 
@@ -321,6 +319,7 @@ internal fun Preferences.toAppShellSettings(): AppShellSettings = AppShellSettin
     navIconRssSelected = compatDsString(PreferKey.navIconRssSelected) ?: "",
     navIconMySelected = compatDsString(PreferKey.navIconMySelected) ?: "",
     launcherIcon = compatDsString(PreferKey.launcherIcon) ?: "ic_launcher",
+    eInkGlobalMode = compatDsBoolean(PreferKey.eInkGlobalMode) ?: false,
 )
 
 internal fun AppShellSettings.toPrefMap(): Map<String, Any?> = mapOf(
@@ -357,6 +356,7 @@ internal fun AppShellSettings.toPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.navIconRssSelected to navIconRssSelected,
     PreferKey.navIconMySelected to navIconMySelected,
     PreferKey.launcherIcon to launcherIcon,
+    PreferKey.eInkGlobalMode to eInkGlobalMode,
 )
 
 internal fun Preferences.toThemeSettings(): ThemeSettings = ThemeSettings(

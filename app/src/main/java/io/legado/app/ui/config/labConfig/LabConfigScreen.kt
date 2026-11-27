@@ -3,10 +3,7 @@ package io.legado.app.ui.config.labConfig
 import io.legado.app.feature.settings.search.SearchableSetting
 import io.legado.app.feature.settings.search.SearchableSettingsList
 import android.content.Intent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -17,13 +14,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
-import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
@@ -94,21 +89,6 @@ fun LabConfigScreen(
                         )
                     }
                 }
-                AnimatedVisibility(visible = settings.enabled) {
-                    SplicedColumnGroup(title = stringResource(R.string.lab_display)) {
-                        SearchableSetting("lab.lab_eink_display_title") {
-                            SwitchSettingItem(
-                                title = stringResource(R.string.lab_eink_display_title),
-                                description = stringResource(R.string.lab_eink_display_summary),
-                                checked = settings.eInkDisplay,
-                                onCheckedChange = { onIntent(LabConfigIntent.SetEInkDisplay(it)) },
-                            )
-                        }
-                        if (settings.eInkDisplay) {
-                            HintText(R.string.lab_eink_display_hint)
-                        }
-                    }
-                }
                 SplicedColumnGroup(title = stringResource(R.string.lab_diagnostics)) {
                     SearchableSetting("lab.lab_page_estimate_diagnostics_title") {
                         ClickableSettingItem(
@@ -129,14 +109,4 @@ fun LabConfigScreen(
             }
         }
     }
-}
-
-@Composable
-private fun HintText(textRes: Int) {
-    AppText(
-        text = stringResource(textRes),
-        style = LegadoTheme.typography.labelSmall,
-        color = LegadoTheme.colorScheme.primary,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-    )
 }

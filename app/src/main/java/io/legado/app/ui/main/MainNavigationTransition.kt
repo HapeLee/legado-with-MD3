@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -69,6 +70,9 @@ internal fun AnimatedContentTransitionScope<Scene<NavKey>>.navigationPreset(
     layoutDirection: LayoutDirection,
     swipeEdge: Int? = null,
 ): ContentTransform? {
+    if (style == NavigationAnimationStyle.None) {
+        return EnterTransition.None togetherWith ExitTransition.None
+    }
     if (initialState !is NavigationPageScene || targetState !is NavigationPageScene) return null
     val direction = if (layoutDirection == LayoutDirection.Rtl) -1 else 1
     return when (style) {
@@ -76,6 +80,7 @@ internal fun AnimatedContentTransitionScope<Scene<NavKey>>.navigationPreset(
         NavigationAnimationStyle.Miuix -> sidePushTransform(forward, direction, swipeEdge != null)
         NavigationAnimationStyle.Scale -> if (forward) sidePushTransform(true, direction, false)
             else scaleTransform(direction, swipeEdge)
+        NavigationAnimationStyle.None -> EnterTransition.None togetherWith ExitTransition.None
     }
 }
 
@@ -137,7 +142,7 @@ internal data class NavigationPageScene(
     override val content: @Composable () -> Unit = {
         val style = LocalAppUiConfiguration.current.appShell.navigationAnimationStyle
         val modifier = when (style) {
-            NavigationAnimationStyle.Default -> Modifier
+            NavigationAnimationStyle.Default, NavigationAnimationStyle.None -> Modifier
             NavigationAnimationStyle.Miuix -> Modifier.fillMaxSize().sidePushSurface(displayLeft)
             NavigationAnimationStyle.Scale -> Modifier.fillMaxSize().scalePageCorners()
         }

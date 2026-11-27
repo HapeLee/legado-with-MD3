@@ -1,8 +1,8 @@
 package io.legado.app.feature.reader.legacy
 
 import android.os.Build
+import io.legado.app.domain.gateway.AppUiConfigurationGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
-import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.feature.reader.core.layout.ReaderColumnMode
 import io.legado.app.feature.reader.core.layout.ReaderPageUnderline
 import io.legado.app.feature.reader.core.model.ReaderEmphasisUnderline
@@ -25,10 +25,10 @@ import splitties.init.appCtx
 /** Builds the direct renderer's shaping snapshot from persisted reader settings. */
 object LegacyReaderPaginationStyleFactory : KoinComponent {
     private val readSettings: ReadSettingsGateway by inject()
-    private val themeSettings: ThemeSettingsGateway by inject()
+    private val appUiConfiguration: AppUiConfigurationGateway by inject()
     fun create(): ReaderAndroidPaginationStyle {
         val settings = readSettings.currentSettings
-        val isEInkMode = themeSettings.currentSettings.appTheme == "4"
+        val isEInkMode = appUiConfiguration.currentConfiguration.theme.appTheme == "4"
         val bodyStyle = ReaderTextStyle(
             colorArgb = ReadBookConfig.textColor,
             fontSizePx = ReadBookConfig.textSize.toFloat().spToPx(),
