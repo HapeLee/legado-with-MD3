@@ -12,10 +12,12 @@ import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.repository.BookGroupRepository
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceRepository
+import io.legado.app.data.repository.BookshelfRepository
 import io.legado.app.data.repository.SearchRepository
 import io.legado.app.domain.gateway.BookExportSettingsGateway
 import io.legado.app.domain.gateway.BookshelfSettingsGateway
 import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
+import io.legado.app.domain.model.LocalBookshelfSort
 import io.legado.app.domain.model.settings.BookExportSettings
 import io.legado.app.domain.model.manga.MangaExportFormat
 import io.legado.app.feature.bookexport.BookExportOptions
@@ -37,7 +39,6 @@ import io.legado.app.model.CacheBook
 import io.legado.app.service.ExportBookService
 import io.legado.app.ui.config.bookshelfConfig.BookshelfManageScreenConfig
 import io.legado.app.ui.main.bookshelf.toLightBook
-import io.legado.app.utils.cnCompare
 import io.legado.app.utils.move
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableSet
@@ -46,6 +47,7 @@ import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -53,13 +55,15 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.koin.core.context.GlobalContext
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.math.max
 import kotlin.math.min
 
 private val bookshelfSettingsGateway get() = GlobalContext.get().get<BookshelfSettingsGateway>()
@@ -180,6 +184,7 @@ sealed interface BookshelfManageScreenEffect {
 class BookshelfManageScreenViewModel(
     application: Application,
     private val bookRepository: BookRepository,
+    private val bookshelfRepository: BookshelfRepository,
     private val bookSourceRepository: BookSourceRepository,
     private val bookGroupRepository: BookGroupRepository,
     private val searchRepository: SearchRepository,
@@ -437,41 +442,40 @@ class BookshelfManageScreenViewModel(
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun observeBooks(groupId: Long) {
         booksJob?.cancel()
         booksJob = viewModelScope.launch {
-            bookRepository.flowBookShelfByGroup(groupId).map { books ->
-                val booksDownload = books.map { it.toLightBook() }
-                val bookSort = bookshelfManageScreenConfig.getBookSortByGroupId(groupId)
-                val isDescending = bookshelfManageScreenConfig.bookshelfSortOrder == 1
-                bookSort to when (bookSort) {
-                    1 -> if (isDescending) booksDownload.sortedByDescending { it.latestChapterTime }
-                    else booksDownload.sortedBy { it.latestChapterTime }
-
-                    2 -> if (isDescending) {
-                        booksDownload.sortedWith { o1, o2 -> o2.name.cnCompare(o1.name) }
-                    } else {
-                        booksDownload.sortedWith { o1, o2 -> o1.name.cnCompare(o2.name) }
-                    }
-
-                    3 -> if (isDescending) booksDownload.sortedByDescending { it.order }
-                    else booksDownload.sortedBy { it.order }
-
-                    4 -> if (isDescending) booksDownload.sortedByDescending {
-                        max(it.latestChapterTime, it.durChapterTime)
-                    } else booksDownload.sortedBy {
-                        max(it.latestChapterTime, it.durChapterTime)
-                    }
-
-                    else -> if (isDescending) booksDownload.sortedByDescending { it.durChapterTime }
-                    else booksDownload.sortedBy { it.durChapterTime }
+            val groupFlow = bookGroupRepository.flowAll()
+                .map { groups -> groups.find { it.groupId == groupId } }
+                .distinctUntilChanged()
+            val sortParamsFlow = combine(
+                groupFlow,
+                bookshelfRepository.flowSortSettings(),
+            ) { group, settings ->
+                Triple(group, settings.bookshelfSort, settings.bookshelfSortOrder)
+            }.distinctUntilChanged()
+            sortParamsFlow.flatMapLatest { (group, globalSort, sortOrder) ->
+                val effectiveSort = LocalBookshelfSort.resolveEffectiveSort(group?.bookSort, globalSort)
+                bookshelfRepository.flowBooksWithLocalMetrics(
+                    booksFlow = bookRepository.flowBookShelfByGroup(groupId),
+                    effectiveSort = effectiveSort,
+                ).map { (shelfItems, localMetrics) ->
+                    val sorted = bookshelfRepository.sortBooks(
+                        list = shelfItems,
+                        group = group,
+                        sort = globalSort,
+                        sortOrder = sortOrder,
+                        localMetrics = localMetrics,
+                    ).map { it.toLightBook() }
+                    Triple(effectiveSort, sortOrder, sorted)
                 }
-            }.collect { (bookSort, books) ->
+            }.collect { (bookSort, sortOrder, books) ->
                 _uiState.update {
                     it.copy(
                         books = books,
                         bookSort = bookSort,
-                        bookSortOrder = bookshelfManageScreenConfig.bookshelfSortOrder
+                        bookSortOrder = sortOrder
                     )
                 }
                 loadCacheCounts(books)

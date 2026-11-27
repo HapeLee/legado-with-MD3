@@ -113,7 +113,7 @@ fun GroupEditContent(
     var isSaving by remember(group) { mutableStateOf(false) }
 
     val sortOptions = stringArrayResource(R.array.book_sort)
-    val sortEntryValues = remember(sortOptions) {
+    val sortEntryValues = remember(sortOptions.size) {
         Array(sortOptions.size) { (it - 1).toString() }
     }
     val canSetPrivate = group == null || group.groupId > 0

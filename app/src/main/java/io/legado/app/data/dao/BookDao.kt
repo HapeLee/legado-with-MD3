@@ -220,6 +220,17 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE type & ${BookType.local} > 0")
     suspend fun getLocal(): List<Book>
 
+    /** 本地书排序指标计算所需的轻量投影（包含私密分组内的本地书，不拉取大文本简介）。 */
+    @Query(
+        """
+        SELECT bookUrl
+        FROM books
+        WHERE type & ${BookType.local} > 0
+          AND type & ${BookType.notShelf} = 0
+        """
+    )
+    suspend fun getLocalShelfBookUrls(): List<String>
+
     @Query(
         """
         SELECT 

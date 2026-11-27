@@ -101,11 +101,15 @@ fun BookshelfConfigSheet(
 
             PillHeaderDivider(title = stringResource(R.string.sort))
 
+            val sortEntries = stringArrayResource(R.array.bookshelf_px_array)
+            val sortEntryValues = remember(sortEntries.size) {
+                Array(sortEntries.size) { it.toString() }
+            }
             CompactDropdownSettingItem(
                 title = stringResource(R.string.sort),
                 selectedValue = settings.bookshelfSort.toString(),
-                displayEntries = stringArrayResource(R.array.bookshelf_px_array),
-                entryValues = Array(stringArrayResource(R.array.bookshelf_px_array).size) { it.toString() },
+                displayEntries = sortEntries,
+                entryValues = sortEntryValues,
                 onValueChange = { value ->
                     onUpdate { it.copy(bookshelfSort = value.toInt()) }
                 }

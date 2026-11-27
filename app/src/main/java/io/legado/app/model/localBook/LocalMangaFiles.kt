@@ -19,10 +19,13 @@ import io.legado.app.utils.compress.LibArchiveUtils
 import io.legado.app.utils.openInputStream
 import io.legado.app.utils.openReadPfd
 import io.legado.app.utils.treeChildren
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlin.io.path.invariantSeparatorsPathString
 import splitties.init.appCtx
 import java.io.File
 import java.io.FileNotFoundException
+import java.io.IOException
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -161,12 +164,34 @@ internal object LocalMangaFiles {
             if (children == null) {
                 visitResolvedDirectory(book.getLocalUri(directory = true), visitImage)
             } else {
-                visitFiles(children, "", visitImage)
+                visitFiles(children, "") { path, image -> visitImage(path) { image.toLocalMangaImageUrl() } }
             }
         }
         if (!foundImage) {
             throw LocalMangaDirectoryEmptyException(appCtx.getString(R.string.chapter_list_empty))
         }
+    }
+
+    suspend fun directoryByteSize(directory: File): Long {
+        val context = currentCoroutineContext()
+        context.ensureActive()
+        var total = 0L
+        visitFiles(listDirectory(directory), "", context::ensureActive) { path, image ->
+            val size = localFileByteSize(image) ?: throw IOException("Unknown image size: $path")
+            total = Math.addExact(total, size)
+        }
+        return total
+    }
+
+    suspend fun directoryByteSize(directory: Uri): Long {
+        val context = currentCoroutineContext()
+        var total = 0L
+        visitDocuments(directory, "", context::ensureActive) { path, image ->
+            val size = image.size.takeIf { it >= 0L } ?: contentDescriptorByteSize(image.uri)
+                ?: throw IOException("Unknown image size: $path")
+            total = Math.addExact(total, size)
+        }
+        return total
     }
 
     private inline fun withDirectoryAccess(action: () -> Unit) {
@@ -181,23 +206,27 @@ internal object LocalMangaFiles {
 
     private fun visitResolvedDirectory(uri: Uri, visit: (String, () -> String) -> Unit) {
         if (uri.scheme == "content") {
-            visitDocuments(uri, "", visit)
+            visitDocuments(uri, "") { path, image -> visit(path) { image.uri.toString() } }
         } else {
-            visitFiles(listDirectory(File(requireNotNull(uri.path))), "", visit)
+            visitFiles(listDirectory(File(requireNotNull(uri.path))), "") { path, image ->
+                visit(path) { image.toLocalMangaImageUrl() }
+            }
         }
     }
 
     private fun visitFiles(
         children: Array<File>,
         prefix: String,
-        visit: (String, () -> String) -> Unit,
+        checkActive: () -> Unit = {},
+        visit: (String, File) -> Unit,
     ) {
         children.forEach { child ->
+            checkActive()
             val path = prefix + child.name
             if (child.isDirectory && !Files.isSymbolicLink(child.toPath())) {
-                visitFiles(listDirectory(child), "$path/", visit)
+                visitFiles(listDirectory(child), "$path/", checkActive, visit)
             } else if (isLocalMangaImage(child.name) && child.isFile) {
-                visit(path) { child.toLocalMangaImageUrl() }
+                visit(path, child)
             }
         }
     }
@@ -205,15 +234,18 @@ internal object LocalMangaFiles {
     private fun visitDocuments(
         uri: Uri,
         prefix: String,
-        visit: (String, () -> String) -> Unit,
+        checkActive: () -> Unit = {},
+        visit: (String, FileDoc) -> Unit,
     ) {
+        checkActive()
         val id = DocumentsContract.getDocumentId(uri)
-        treeChildren(appCtx, uri, id, requireCursor = true).forEach { child ->
+        treeChildren(appCtx, uri, id, requireCursor = true, unknownSize = -1L).forEach { child ->
+            checkActive()
             val path = prefix + child.name
             if (child.isDir) {
-                visitDocuments(child.uri, "$path/", visit)
+                visitDocuments(child.uri, "$path/", checkActive, visit)
             } else if (isLocalMangaImage(child.name)) {
-                visit(path) { child.uri.toString() }
+                visit(path, child)
             }
         }
     }
@@ -222,10 +254,10 @@ internal object LocalMangaFiles {
         if (!directory.isDirectory) throw FileNotFoundException(directory.path)
         return directory.listFiles() ?: throw SecurityException(directory.path)
     }
-
-    private fun localFile(url: String): File =
-        if (url.startsWith("file:", ignoreCase = true)) File(URI(url)) else File(url)
 }
+
+internal fun localFile(url: String): File =
+    if (url.startsWith("file:", ignoreCase = true)) File(URI(url)) else File(url)
 
 /** Resolve the authorized document itself; a tree URI can point at a nested document. */
 internal fun readableMangaDirectoryUri(uri: Uri): Uri {

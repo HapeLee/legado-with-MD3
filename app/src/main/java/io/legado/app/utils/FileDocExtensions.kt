@@ -162,6 +162,7 @@ fun treeChildren(
     treeUri: Uri,
     documentId: String,
     requireCursor: Boolean = false,
+    unknownSize: Long = 0L,
 ): List<FileDoc> {
     /**
      * DocumentFile 的 listFiles() 非常的慢,所以这里直接从数据库查询
@@ -192,8 +193,8 @@ fun treeChildren(
                     name = cursor.getString(nci),
                     isDir = cursor.getString(mci) ==
                             DocumentsContract.Document.MIME_TYPE_DIR,
-                    size = cursor.getLong(sci),
-                    lastModified = cursor.getLong(dci),
+                    size = if (sci >= 0 && !cursor.isNull(sci)) cursor.getLong(sci) else unknownSize,
+                    lastModified = if (dci >= 0) cursor.getLong(dci) else 0L,
                     uri = if (isTree) {
                         DocumentsContract.buildDocumentUriUsingTree(treeUri, cursor.getString(ici))
                     } else {

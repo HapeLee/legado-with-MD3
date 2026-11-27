@@ -22,6 +22,7 @@ import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.gateway.PrivateAccessGateway
 import io.legado.app.domain.gateway.PrivateContentGateway
 import io.legado.app.domain.gateway.ThemeSettingsGateway
+import io.legado.app.domain.model.LocalBookshelfSort
 import io.legado.app.domain.model.PrivateAccessState
 import io.legado.app.domain.model.PrivateUnlockTarget
 import io.legado.app.domain.model.isPrivateBook
@@ -344,20 +345,31 @@ class BookshelfViewModel(
     @OptIn(ExperimentalCoroutinesApi::class)
     private val selectedGroupBooksFlow: SharedFlow<SelectedGroupBooksState> = groupIdFlow
         .flatMapLatest { groupId ->
+            val effectiveSortFlow = combine(groupsFlow, sortConfigFlow) { groups, sortConfig ->
+                val group = groups.find { it.groupId == groupId }
+                LocalBookshelfSort.resolveEffectiveSort(group?.bookSort, sortConfig.sort)
+            }.distinctUntilChanged()
+            val booksWithMetricsFlow = bookshelfRepository.flowBooksWithLocalMetrics(
+                booksFlow = bookRepository.flowBookShelfByGroup(groupId),
+                effectiveSortFlow = effectiveSortFlow,
+            )
             combine(
-                bookRepository.flowBookShelfByGroup(groupId),
+                booksWithMetricsFlow,
                 groupsFlow,
                 sortConfigFlow,
-                privateMarkersFlow
-            ) { list, groups, sortConfig, markers ->
+                privateMarkersFlow,
+            ) { (list, localMetrics), groups, sortConfig, markers ->
+                val group = groups.find { it.groupId == groupId }
+                val books = bookshelfRepository.sortBooks(
+                    list = list,
+                    group = group,
+                    sort = sortConfig.sort,
+                    sortOrder = sortConfig.sortOrder,
+                    localMetrics = localMetrics,
+                )
                 SelectedGroupBooksState(
                     groupId = groupId,
-                    books = bookshelfRepository.sortBooks(
-                        list,
-                        groups.find { it.groupId == groupId },
-                        sortConfig.sort,
-                        sortConfig.sortOrder
-                    ).map { it.toUiItem(markers.isPrivate(it)) },
+                    books = books.map { it.toUiItem(markers.isPrivate(it)) },
                     sortConfig = sortConfig
                 )
             }
@@ -378,13 +390,19 @@ class BookshelfViewModel(
                 flowOf(persistentMapOf())
             } else {
                 val flows = groups.map { group ->
-                    bookRepository.flowBookShelfByGroup(group.groupId).map { books ->
-                        group.groupId to bookshelfRepository.sortBooks(
-                            books,
-                            group,
-                            sortConfig.sort,
-                            sortConfig.sortOrder
-                        ).map { it.toUiItem(markers.isPrivate(it)) }.toImmutableList()
+                    val effectiveSort = LocalBookshelfSort.resolveEffectiveSort(group.bookSort, sortConfig.sort)
+                    bookshelfRepository.flowBooksWithLocalMetrics(
+                        booksFlow = bookRepository.flowBookShelfByGroup(group.groupId),
+                        effectiveSort = effectiveSort,
+                    ).map { (books, localMetrics) ->
+                        val sorted = bookshelfRepository.sortBooks(
+                            list = books,
+                            group = group,
+                            sort = sortConfig.sort,
+                            sortOrder = sortConfig.sortOrder,
+                            localMetrics = localMetrics,
+                        )
+                        group.groupId to sorted.map { it.toUiItem(markers.isPrivate(it)) }.toImmutableList()
                     }
                 }
                 combine(flows) { results ->
@@ -1213,6 +1231,14 @@ class BookshelfViewModel(
 
     fun refreshBooks(books: List<BookUiItem>) {
         if (isRefreshingFlow.value) return
+        val selectedGroup = uiState.value.groups.find { it.groupId == uiState.value.selectedGroupId }
+        val effectiveSort = LocalBookshelfSort.resolveEffectiveSort(
+            selectedGroup?.bookSort,
+            bookshelfSettings.value.bookshelfSort,
+        )
+        if (LocalBookshelfSort.isMetric(effectiveSort) && books.any { it.book.isLocal }) {
+            bookshelfRepository.invalidateLocalMetrics(effectiveSort)
+        }
         isRefreshingFlow.value = true
         val limit = bookshelfSettings.value.bookshelfRefreshingLimit
         val list = if (limit > 0) books.take(limit) else books
