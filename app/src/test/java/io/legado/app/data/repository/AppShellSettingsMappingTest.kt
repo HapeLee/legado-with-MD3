@@ -151,7 +151,7 @@ class AppShellSettingsMappingTest {
     }
 
     @Test
-    fun `全局电子书模式默认关闭且可独立原子写入并读取`() {
+    fun `全局电纸书模式默认关闭且可独立原子写入并读取`() {
         assertEquals(
             false,
             emptyMap<String, Any?>().toTestPreferences()

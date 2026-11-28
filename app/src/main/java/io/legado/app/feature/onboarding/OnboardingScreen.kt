@@ -403,7 +403,7 @@ private fun ThemePage(state: OnboardingUiState, onIntent: (OnboardingIntent) -> 
             AdaptiveSwitch(
                 modifier = Modifier.clearAndSetSemantics { },
                 checked = state.eInkGlobalMode,
-                onCheckedChange = { onIntent(OnboardingIntent.SetEInkGlobalMode(it)) },
+                onCheckedChange = null,
                 includeStateSemantics = false,
             )
         }

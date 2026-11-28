@@ -8,7 +8,7 @@ import io.legado.app.domain.gateway.DownloadCacheSettingsGateway
 import io.legado.app.domain.gateway.OtherSettingsGateway
 import io.legado.app.domain.gateway.ReadAloudSettingsGateway
 import io.legado.app.domain.gateway.ReadSettingsGateway
-import io.legado.app.domain.gateway.ThemeSettingsGateway
+import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.AppConfigStore
 import io.legado.app.help.config.compatDsBoolean
 import io.legado.app.utils.isNightMode
@@ -28,10 +28,9 @@ object ReadConfig {
     private val cache get() = GlobalContext.get().get<DownloadCacheSettingsGateway>().currentSettings
     private val other get() = GlobalContext.get().get<OtherSettingsGateway>().currentSettings
     private val shell get() = GlobalContext.get().get<AppShellSettingsGateway>().currentSettings
-    private val theme get() = GlobalContext.get().get<ThemeSettingsGateway>().currentSettings
     private val preferences get() = AppConfigStore.preferences
 
-    val isEInkMode get() = shell.eInkGlobalMode || theme.appTheme == "4"
+    val isEInkMode get() = AppConfig.isEInkMode
     val isNightTheme: Boolean
         get() = when (shell.themeMode) {
             "1" -> false

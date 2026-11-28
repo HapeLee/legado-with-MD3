@@ -4,7 +4,9 @@ import androidx.compose.foundation.IndicationNodeFactory
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -75,7 +77,7 @@ private fun AppThemePreview(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun AppThemeActual(
     configuration: AppUiConfiguration,
@@ -190,7 +192,10 @@ private fun AppThemeActual(
 
     val effectiveContent: @Composable () -> Unit = if (appShellSettings.eInkGlobalMode) {
         {
-            CompositionLocalProvider(LocalIndication provides NoIndication) {
+            CompositionLocalProvider(
+                LocalIndication provides NoIndication,
+                LocalRippleConfiguration provides null,
+            ) {
                 content()
             }
         }

@@ -23,7 +23,7 @@ import top.yukonga.miuix.kmp.basic.Switch as MiuixSwitch
 @Composable
 fun AdaptiveSwitch(
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
+    onCheckedChange: ((Boolean) -> Unit)?,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     checkedIcon: ImageVector = Icons.Filled.Check,
@@ -35,7 +35,7 @@ fun AdaptiveSwitch(
     when (composeEngine) {
         ComposeEngine.Oxygen -> {
             io.oxygenx.material3.ProvideMaterial3Content {
-                io.oxygenx.ui.basic.Switch(checked, onCheckedChange, modifier, enabled)
+                io.oxygenx.ui.basic.Switch(checked, onCheckedChange ?: {}, modifier, enabled)
             }
         }
         ComposeEngine.Miuix -> {
@@ -53,10 +53,10 @@ fun AdaptiveSwitch(
             )
         }
         ComposeEngine.Mochi -> {
-            AppMochiSwitch(checked, onCheckedChange, modifier, enabled, includeStateSemantics)
+            AppMochiSwitch(checked, onCheckedChange ?: {}, modifier, enabled, includeStateSemantics)
         }
         ComposeEngine.Coui -> {
-            AppCouiSwitch(checked, onCheckedChange, modifier, enabled, includeStateSemantics)
+            AppCouiSwitch(checked, onCheckedChange ?: {}, modifier, enabled, includeStateSemantics)
         }
         ComposeEngine.Material -> {
             IconSwitch(
@@ -132,7 +132,7 @@ fun TinySwitch(
 fun IconSwitch(
     modifier: Modifier,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
+    onCheckedChange: ((Boolean) -> Unit)?,
     enabled: Boolean = true,
     checkedIcon: ImageVector = Icons.Filled.Check,
     uncheckedIcon: ImageVector? = null,

@@ -18,7 +18,7 @@ data class AppUiConfiguration(
         if (!appShell.eInkGlobalMode) return this
         return copy(
             appShell = appShell.copy(
-                navigationAnimationStyle = NavigationAnimationStyle.None,
+                navigationAnimationEnabled = false,
                 textAnimationLevel = TextAnimationLevel.Off,
                 predictiveBackEnabled = false,
                 readerSharedElementEnabled = false,

@@ -16,6 +16,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -152,6 +153,7 @@ import io.legado.app.ui.widget.components.menu.AppActionGroup
 import io.legado.app.ui.widget.components.menu.AppActionMenu
 import io.legado.app.ui.widget.components.navigation.AppNavigationBar
 import io.legado.app.ui.widget.components.navigation.AppNavigationBarItem
+import io.legado.app.ui.widget.components.navigation.NoOpMutableInteractionSource
 import io.legado.app.ui.widget.components.pager.rememberPagerFlingPassThroughConnection
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.sendToClip
@@ -607,27 +609,17 @@ fun MainScreen(
                     WideNavigationRailItem(
                         modifier = Modifier
                             .semantics(mergeDescendants = true) {}
-                            .then(
-                                if (isEInkTheme && selected && railExpanded) {
-                                    Modifier.drawBehind {
-                                        val strokeWidth = 1.5.dp.toPx()
-                                        val startInset = 20.dp.toPx()
-                                        val halfStroke = strokeWidth / 2f
-                                        val indicatorHeight = 56.dp.toPx().coerceAtMost(size.height - strokeWidth)
-                                        val indicatorWidth = (size.width - startInset - halfStroke).coerceAtLeast(0f)
-                                        val top = (size.height - indicatorHeight) / 2f
-                                        drawRoundRect(
-                                            color = eInkOutlineColor,
-                                            topLeft = Offset(startInset, top),
-                                            size = Size(indicatorWidth, indicatorHeight),
-                                            cornerRadius = CornerRadius(indicatorHeight / 2f, indicatorHeight / 2f),
-                                            style = Stroke(width = strokeWidth),
-                                        )
-                                    }
-                                } else Modifier
+                            .eInkExpandedRailIndicatorOutline(
+                                enabled = isEInkTheme && selected && railExpanded,
+                                outlineColor = eInkOutlineColor,
                             ),
                         railExpanded = railExpanded,
                         selected = selected,
+                        interactionSource = if (LocalAppUiConfiguration.current.appShell.eInkGlobalMode) {
+                            NoOpMutableInteractionSource
+                        } else {
+                            null
+                        },
                         colors = if (isEInkTheme) {
                             WideNavigationRailItemDefaults.colors(
                                 selectedIndicatorColor = Color.Transparent,
@@ -644,22 +636,9 @@ fun MainScreen(
                             handleMainDestinationClick(index, destination)
                         },
                         icon = {
-                            Box(
-                                modifier = if (isEInkTheme && selected && !railExpanded) {
-                                    Modifier.drawBehind {
-                                        val strokeWidth = 1.5.dp.toPx()
-                                        val w = 56.dp.toPx()
-                                        val h = 32.dp.toPx()
-                                        drawRoundRect(
-                                            color = eInkOutlineColor,
-                                            topLeft = Offset((size.width - w) / 2f, (size.height - h) / 2f),
-                                            size = Size(w, h),
-                                            cornerRadius = CornerRadius(h / 2f, h / 2f),
-                                            style = Stroke(width = strokeWidth),
-                                        )
-                                    }
-                                } else Modifier,
-                                contentAlignment = Alignment.Center,
+                            EInkRailCollapsedIconIndicator(
+                                showOutline = isEInkTheme && selected && !railExpanded,
+                                outlineColor = eInkOutlineColor,
                             ) {
                                 NavigationIcon(
                                     destination = destination,
@@ -1281,4 +1260,65 @@ private fun NavigationIcon(
             tint = tint,
         )
     }
+}
+
+private val EInkRailOutlineStrokeWidth = 1.5.dp
+// 与 Material 3 WideNavigationRailItem 内部胶囊指示器尺寸对齐：
+// 展开态左侧缩进 20dp、高度 56dp；收起态围绕图标 56dp x 32dp。
+// M3 当前未暴露 selectedIndicator 描边参数，因此仅在电纸书主题下补绘外圈描边。
+private val EInkRailExpandedStartInset = 20.dp
+private val EInkRailExpandedIndicatorHeight = 56.dp
+private val EInkRailCollapsedIndicatorWidth = 56.dp
+private val EInkRailCollapsedIndicatorHeight = 32.dp
+
+private fun Modifier.eInkExpandedRailIndicatorOutline(
+    enabled: Boolean,
+    outlineColor: Color,
+): Modifier = if (!enabled) {
+    this
+} else {
+    drawBehind {
+        val strokeWidth = EInkRailOutlineStrokeWidth.toPx()
+        val startInset = EInkRailExpandedStartInset.toPx()
+        val halfStroke = strokeWidth / 2f
+        val indicatorHeight = EInkRailExpandedIndicatorHeight.toPx()
+            .coerceAtMost(size.height - strokeWidth)
+        val indicatorWidth = (size.width - startInset - halfStroke).coerceAtLeast(0f)
+        val top = (size.height - indicatorHeight) / 2f
+        drawRoundRect(
+            color = outlineColor,
+            topLeft = Offset(startInset, top),
+            size = Size(indicatorWidth, indicatorHeight),
+            cornerRadius = CornerRadius(indicatorHeight / 2f, indicatorHeight / 2f),
+            style = Stroke(width = strokeWidth),
+        )
+    }
+}
+
+@Composable
+private fun EInkRailCollapsedIconIndicator(
+    showOutline: Boolean,
+    outlineColor: Color,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    Box(
+        modifier = if (showOutline) {
+            Modifier.drawBehind {
+                val strokeWidth = EInkRailOutlineStrokeWidth.toPx()
+                val w = EInkRailCollapsedIndicatorWidth.toPx()
+                val h = EInkRailCollapsedIndicatorHeight.toPx()
+                drawRoundRect(
+                    color = outlineColor,
+                    topLeft = Offset((size.width - w) / 2f, (size.height - h) / 2f),
+                    size = Size(w, h),
+                    cornerRadius = CornerRadius(h / 2f, h / 2f),
+                    style = Stroke(width = strokeWidth),
+                )
+            }
+        } else {
+            Modifier
+        },
+        contentAlignment = Alignment.Center,
+        content = content,
+    )
 }

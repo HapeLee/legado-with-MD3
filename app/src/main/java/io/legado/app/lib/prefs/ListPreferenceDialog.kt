@@ -7,13 +7,12 @@ import android.view.WindowManager
 import androidx.preference.ListPreferenceDialogFragmentCompat
 import androidx.preference.PreferenceDialogFragmentCompat
 import io.legado.app.R
+import io.legado.app.help.config.AppConfig
 //import io.legado.app.lib.theme.accentColor
 //import io.legado.app.lib.theme.filletBackground
 import io.legado.app.utils.dpToPx
 
 class ListPreferenceDialog : ListPreferenceDialogFragmentCompat() {
-
-    private val themeSettingsGateway get() = org.koin.core.context.GlobalContext.get().get<io.legado.app.domain.gateway.ThemeSettingsGateway>()
 
     companion object {
 
@@ -45,7 +44,7 @@ class ListPreferenceDialog : ListPreferenceDialogFragmentCompat() {
 
     override fun onStart() {
         super.onStart()
-        if (themeSettingsGateway.currentSettings.appTheme == "4") {
+        if (AppConfig.isEInkMode) {
             dialog?.window?.let {
                 it.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
                 val attr = it.attributes

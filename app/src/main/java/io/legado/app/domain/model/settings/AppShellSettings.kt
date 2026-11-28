@@ -34,6 +34,8 @@ data class AppShellSettings(
     val navIconMySelected: String = "",
     val launcherIcon: String = "ic_launcher",
     val navigationAnimationStyle: NavigationAnimationStyle = NavigationAnimationStyle.Default,
+    /** 运行时导航动画总开关，仅由 `AppUiConfiguration.applyRuntimeOverrides()` 控制，不落库。 */
+    val navigationAnimationEnabled: Boolean = true,
     val textAnimationLevel: TextAnimationLevel = TextAnimationLevel.Slide,
     val eInkGlobalMode: Boolean = false,
 )
@@ -54,8 +56,7 @@ enum class TextAnimationLevel(val storedValue: String) {
 enum class NavigationAnimationStyle(val storedValue: String) {
     Default("default"),
     Miuix("miuix"),
-    Scale("scale"),
-    None("none");
+    Scale("scale");
 
     companion object {
         fun fromStoredValue(value: String?): NavigationAnimationStyle = when (value) {

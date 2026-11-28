@@ -29,11 +29,12 @@ internal fun AppCouiFloatingActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     containerColor: Color,
+    contentColor: Color = Color.White,
     content: @Composable () -> Unit,
 ) {
     // 原生 Fab 提供 COUI 的内容色；项目的 M3 Icon/Text 也需要相同的内容色。
     val fabContent: @Composable () -> Unit = {
-        CompositionLocalProvider(LocalContentColor provides Color.White, content = content)
+        CompositionLocalProvider(LocalContentColor provides contentColor, content = content)
     }
     val backdrop = LocalCouiPageBackdrop.current
     // 与标签行共用同一个渲染器工厂，材质不可用时返回 null 而不是抛给页面。
@@ -58,7 +59,7 @@ internal fun AppCouiFloatingActionButton(
             shape = CouiFabDefaults.circleShape,
             material = material,
             shadow = shadow,
-            contentColor = Color.White,
+            contentColor = contentColor,
             content = fabContent,
         )
     } else {
@@ -67,7 +68,7 @@ internal fun AppCouiFloatingActionButton(
             modifier = modifier,
             shape = CouiFabDefaults.circleShape,
             containerColor = containerColor,
-            contentColor = Color.White,
+            contentColor = contentColor,
             content = fabContent,
         )
     }

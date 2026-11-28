@@ -14,7 +14,7 @@ import org.junit.Test
 class AppUiConfigurationEInkOverrideTest {
 
     @Test
-    fun `开启全局电子书模式时运行时覆写主题、动画和模糊且保留深浅色与字体`() {
+    fun `开启全局电纸书模式时运行时覆写主题、动画和模糊且保留深浅色与字体`() {
         val raw = AppUiConfiguration(
             appShell = AppShellSettings(
                 eInkGlobalMode = true,
@@ -41,7 +41,8 @@ class AppUiConfigurationEInkOverrideTest {
         val effective = raw.applyRuntimeOverrides()
 
         assertEquals("4", effective.theme.appTheme)
-        assertEquals(NavigationAnimationStyle.None, effective.appShell.navigationAnimationStyle)
+        assertFalse(effective.appShell.navigationAnimationEnabled)
+        assertEquals(NavigationAnimationStyle.Miuix, effective.appShell.navigationAnimationStyle)
         assertEquals(TextAnimationLevel.Off, effective.appShell.textAnimationLevel)
         assertFalse(effective.appShell.predictiveBackEnabled)
         assertFalse(effective.appShell.readerSharedElementEnabled)
@@ -60,7 +61,7 @@ class AppUiConfigurationEInkOverrideTest {
     }
 
     @Test
-    fun `关闭全局电子书模式时无损还原原始主题与动画配置`() {
+    fun `关闭全局电纸书模式时无损还原原始主题与动画配置`() {
         val prefsOff = (
             AppShellSettings(
                 eInkGlobalMode = false,
@@ -93,8 +94,10 @@ class AppUiConfigurationEInkOverrideTest {
         val configOff = prefsOff.toAppUiConfiguration("auto", isSystemDarkTheme = false)
 
         assertEquals("4", configOn.theme.appTheme)
-        assertEquals(NavigationAnimationStyle.None, configOn.appShell.navigationAnimationStyle)
+        assertFalse(configOn.appShell.navigationAnimationEnabled)
+        assertEquals(NavigationAnimationStyle.Scale, configOn.appShell.navigationAnimationStyle)
         assertEquals("2", configOff.theme.appTheme)
+        assertTrue(configOff.appShell.navigationAnimationEnabled)
         assertEquals(NavigationAnimationStyle.Scale, configOff.appShell.navigationAnimationStyle)
         assertEquals(TextAnimationLevel.Standard, configOff.appShell.textAnimationLevel)
         assertTrue(configOff.theme.enableBlur)

@@ -1,5 +1,7 @@
 package io.legado.app.base
 
+import android.animation.ValueAnimator
+import android.content.ContentResolver
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
@@ -61,7 +63,6 @@ abstract class BaseComposeActivity(
     private val appUiConfigurationGateway by inject<AppUiConfigurationGateway>()
     private val themeSettingsGateway by inject<ThemeSettingsGateway>()
     private var lastUiConfiguration: AppUiConfiguration? = null
-    private var motionDurationScale: DynamicMotionDurationScale? = null
 
     @Composable
     protected abstract fun Content()
@@ -87,17 +88,10 @@ abstract class BaseComposeActivity(
         if (initialUiConfiguration.appShell.eInkGlobalMode) {
             applyZeroActivityTransition(isOpen = true)
         }
-        val systemScale = runCatching {
-            Settings.Global.getFloat(
-                contentResolver,
-                Settings.Global.ANIMATOR_DURATION_SCALE,
-                1f,
-            )
-        }.getOrDefault(1f)
         val durationScale = DynamicMotionDurationScale(
-            systemScale = systemScale,
+            contentResolver = contentResolver,
             initialDisabled = initialUiConfiguration.appShell.eInkGlobalMode,
-        ).also { motionDurationScale = it }
+        )
         window.decorView.compositionContext = window.decorView.createLifecycleAwareWindowRecomposer(
             coroutineContext = durationScale,
             lifecycle = lifecycle,
@@ -287,15 +281,27 @@ abstract class BaseComposeActivity(
         )
     }
 
-    private class DynamicMotionDurationScale(
-        private val systemScale: Float,
+    internal class DynamicMotionDurationScale(
+        private val contentResolver: ContentResolver,
         initialDisabled: Boolean,
     ) : MotionDurationScale {
         @Volatile
         var disableAnimations: Boolean = initialDisabled
 
         override val scaleFactor: Float
-            get() = if (disableAnimations) 0f else systemScale
+            get() = if (disableAnimations) {
+                0f
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ValueAnimator.getDurationScale()
+            } else {
+                runCatching {
+                    Settings.Global.getFloat(
+                        contentResolver,
+                        Settings.Global.ANIMATOR_DURATION_SCALE,
+                        1f,
+                    )
+                }.getOrDefault(1f)
+            }
     }
 
 }

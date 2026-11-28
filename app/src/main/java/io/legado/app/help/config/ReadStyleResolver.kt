@@ -6,7 +6,6 @@ import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.toColorInt
 import com.google.android.material.color.MaterialColors
 import io.legado.app.domain.gateway.AppShellSettingsGateway
-import io.legado.app.domain.gateway.ThemeSettingsGateway
 import io.legado.app.model.ReadSessionState
 import io.legado.app.utils.BitmapUtils
 import io.legado.app.utils.FileUtils
@@ -22,7 +21,6 @@ import java.io.File
 object ReadStyleResolver {
 
     private val shellGateway by lazy { GlobalContext.get().get<AppShellSettingsGateway>() }
-    private val themeGateway by lazy { GlobalContext.get().get<ThemeSettingsGateway>() }
 
     private val isNightThemeCompat: Boolean
         get() = when (shellGateway.currentSettings.themeMode) {
@@ -32,8 +30,7 @@ object ReadStyleResolver {
         }
 
     private val isEInkModeCompat: Boolean
-        get() = shellGateway.currentSettings.eInkGlobalMode ||
-            themeGateway.currentSettings.appTheme == "4"
+        get() = AppConfig.isEInkMode
 
     enum class ReadStyleMode {
         Day,

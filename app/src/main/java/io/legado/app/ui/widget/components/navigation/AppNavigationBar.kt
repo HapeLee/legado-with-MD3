@@ -3,7 +3,10 @@ package io.legado.app.ui.widget.components.navigation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -139,6 +142,12 @@ private object ShortNavigationBarRowScope : RowScope {
     override fun Modifier.alignBy(alignmentLineBlock: (Measured) -> Int): Modifier = this
 }
 
+internal object NoOpMutableInteractionSource : MutableInteractionSource {
+    override val interactions: Flow<Interaction> = emptyFlow()
+    override suspend fun emit(interaction: Interaction) = Unit
+    override fun tryEmit(interaction: Interaction): Boolean = true
+}
+
 @Composable
 fun RowScope.AppNavigationBarItem(
     selected: Boolean,
@@ -175,8 +184,12 @@ fun RowScope.AppNavigationBarItem(
                 .fillMaxHeight()
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
-                    // 导航项专用的无界 32dp 反馈：刻意不随主题 indication 分发。
-                    indication = ripple(bounded = false, radius = 32.dp),
+                    // 导航项专用的无界 32dp 反馈：刻意不随主题 indication 分发，电纸书模式下关闭。
+                    indication = if (configuration.appShell.eInkGlobalMode) {
+                        null
+                    } else {
+                        ripple(bounded = false, radius = 32.dp)
+                    },
                     onClick = onClick
                 ),
             contentAlignment = Alignment.Center
@@ -228,6 +241,11 @@ fun RowScope.AppNavigationBarItem(
                 selected = selected,
                 onClick = onClick,
                 modifier = modifier,
+                interactionSource = if (configuration.appShell.eInkGlobalMode) {
+                    NoOpMutableInteractionSource
+                } else {
+                    null
+                },
                 icon = {
                     if (isEInkTheme && selected) {
                         Box(

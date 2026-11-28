@@ -23,7 +23,7 @@
 | 层级 | 位置 | 契约 |
 | :--- | :--- | :--- |
 | 偏好键 | `constant/PreferKey.kt` | `const val eInkGlobalMode = "eInkGlobalMode"` |
-| 领域模型 | `domain/model/settings/AppShellSettings.kt` | `val eInkGlobalMode: Boolean = false`；`NavigationAnimationStyle.None("none")` |
+| 领域模型 | `domain/model/settings/AppShellSettings.kt` | `val eInkGlobalMode: Boolean = false`；非持久化运行时开关 `val navigationAnimationEnabled: Boolean = true` |
 | 仓库映射 | `data/repository/FeatureSettingsRepositories.kt` | `toAppShellSettings()` / `toPrefMap()` 读写 `PreferKey.eInkGlobalMode` |
 | 备份配置 | `help/storage/BackupConfig.kt` | `PreferKey.eInkGlobalMode` 纳入 `themePrefKeys` |
 | 写入方式 | `MyViewModel.kt`、`OnboardingViewModel.kt` | 经 `AppShellSettingsGateway.update { it.copy(eInkGlobalMode = enabled) }` 原子提交 |
@@ -39,7 +39,7 @@
 | 维度 | 底层原始字段 | 有效覆写值 |
 | :--- | :--- | :--- |
 | 应用主题 | `theme.appTheme` | `"4"`（电纸书主题） |
-| 导航动画 | `appShell.navigationAnimationStyle` | `NavigationAnimationStyle.None` |
+| 导航动画 | `appShell.navigationAnimationEnabled` | `false`（保留用户原始 `navigationAnimationStyle`） |
 | 文字动画 | `appShell.textAnimationLevel` | `TextAnimationLevel.Off` |
 | 预测性返回 | `appShell.predictiveBackEnabled` | `false` |
 | 共享元素 | `appShell.readerSharedElementEnabled` | `false` |
@@ -51,11 +51,13 @@
 
 ### 3.2 非 `LocalAppUiConfiguration` 消费点对齐
 
-以下位置不直接读取 `LocalAppUiConfiguration`，均已对齐运行时有效 E-Ink 状态：
+以下位置不直接读取 `LocalAppUiConfiguration`，均已统一收敛至 `AppConfig.isEInkMode` 或对齐运行时有效 E-Ink 状态：
 
-- `help/config/AppConfig.kt`：`isEInkMode` = `shell.eInkGlobalMode || theme.appTheme == "4"`
-- `help/config/ReadStyleResolver.kt`：`isEInkModeCompat` = `shell.eInkGlobalMode || theme.appTheme == "4"`（驱动阅读页正文自动切换 `ReadStyleMode.EInk` 白底黑字并保留原日/夜背景）
-- `ui/config/readConfig/ReadConfig.kt`：`isEInkMode` = `shell.eInkGlobalMode || theme.appTheme == "4"`
+- `help/config/AppConfig.kt`：`isEInkMode` = `shell.eInkGlobalMode || theme.appTheme == "4"`（单一真相源）
+- `help/config/ReadStyleResolver.kt`：`isEInkModeCompat` 委托 `AppConfig.isEInkMode`（驱动阅读页正文自动切换 `ReadStyleMode.EInk` 白底黑字并保留原日/夜背景）
+- `ui/config/readConfig/ReadConfig.kt`：`isEInkMode` 委托 `AppConfig.isEInkMode`
+- `utils/AnimationExtensions.kt`：`loadAnimation()` 委托 `AppConfig.isEInkMode`（开启时动画时长置 0）
+- `base/BasePrefDialogFragment.kt`、`lib/prefs/ListPreferenceDialog.kt`、`lib/prefs/MultiSelectListPreferenceDialog.kt`、`lib/prefs/EditTextPreferenceDialog.kt`：旧版偏好弹窗描边统一委托 `AppConfig.isEInkMode`
 - `ui/book/searchContent/SearchContentViewModel.kt`：订阅 `AppUiConfigurationGateway.configuration`，取 `theme.appTheme == "4"`
 - `feature/reader/legacy/LegacyReaderPaginationStyleFactory.kt`：读取 `AppUiConfigurationGateway.currentConfiguration.theme.appTheme == "4"`
 
@@ -63,12 +65,12 @@
 
 ## 4. 全局零动画分层
 
-1. **Navigation 3 路由转场（`MainNavigationTransition.kt`）**
-   - `navigationPreset(...)` 命中 `NavigationAnimationStyle.None` 时直接返回 `EnterTransition.None togetherWith ExitTransition.None`。
-   - `NavigationPageScene` 在 `None` 档位下不附加 `sidePushSurface` 或 `scalePageCorners`。
+1. **Navigation 3 路由转场（`MainNavigationTransition.kt`、`MainActivity.kt`）**
+   - `navigationPreset(...)` 接收 `enabled = appShell.navigationAnimationEnabled`，为 `false` 时直接返回 `EnterTransition.None togetherWith ExitTransition.None`。
+   - `NavigationPageScene` 在 `!appShell.navigationAnimationEnabled` 时不附加 `sidePushSurface` 或 `scalePageCorners`。
 2. **Compose 运行时与交互反馈（`BaseComposeActivity.kt`、`AppTheme.kt`）**
-   - `BaseComposeActivity` 通过 `window.decorView.compositionContext = window.decorView.createLifecycleAwareWindowRecomposer(coroutineContext = durationScale, lifecycle = lifecycle)` 注入动态 `MotionDurationScale`：开启时 `scaleFactor = 0f`，关闭时恢复缓存的系统 `ANIMATOR_DURATION_SCALE`（默认 `1f`），切换即时生效且无需重启 Activity。
-   - `AppTheme.kt` 在所有主题引擎（Material / Miuix / Mochi / Oxygen / Coui）内层提供 `LocalIndication provides NoIndication`，消除点击水波纹。
+   - `BaseComposeActivity` 通过 `window.decorView.compositionContext = window.decorView.createLifecycleAwareWindowRecomposer(coroutineContext = durationScale, lifecycle = lifecycle)` 注入动态 `MotionDurationScale`：开启时 `scaleFactor = 0f`，关闭时逐次读取 `ValueAnimator.getDurationScale()`（API 33+）或 `Settings.Global.ANIMATOR_DURATION_SCALE`（API 26–32），实时响应系统/无障碍改动且无需重启 Activity。
+   - `AppTheme.kt` 在所有主题引擎（Material / Miuix / Mochi / Oxygen / Coui）内层提供 `LocalIndication provides NoIndication` 与 `LocalRippleConfiguration provides null`（并同步关闭 `AppNavigationBar` 自定义图标项显式 `ripple()`），彻底消除点击水波纹。
 3. **传统 Activity 切换（`BaseComposeActivity.kt`、`BaseActivity.kt`）**
    - 开启时在 `onCreate` 与 `finish()` 中应用零过渡动画（API 34+ 使用 `overrideActivityTransition(..., 0, 0)`，低版本回退 `overridePendingTransition(0, 0)`）。
 
