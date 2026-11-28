@@ -247,7 +247,6 @@ object SettingsSearchCatalog {
         SettingsSearchItem("private.background_permission", SettingsSearchPage.Private, R.string.background_permission, groupIndex = 2, groupTitleRes = R.string.private_permission_title),
         SettingsSearchItem("private.firebase_enable_title", SettingsSearchPage.Private, R.string.firebase_enable_title, groupIndex = 2, groupTitleRes = R.string.private_permission_title, descriptionRes = R.string.firebase_enable_summary),
         SettingsSearchItem("lab.lab_enabled_title", SettingsSearchPage.Lab, R.string.lab_enabled_title, groupIndex = 0, descriptionRes = R.string.lab_enabled_summary),
-        SettingsSearchItem("lab.lab_eink_display_title", SettingsSearchPage.Lab, R.string.lab_eink_display_title, groupIndex = 0, groupTitleRes = R.string.lab_display, descriptionRes = R.string.lab_eink_display_summary, parentId = "lab.lab_enabled_title"),
         SettingsSearchItem("lab.lab_page_estimate_diagnostics_title", SettingsSearchPage.Lab, R.string.lab_page_estimate_diagnostics_title, groupIndex = 0, groupTitleRes = R.string.lab_diagnostics),
         SettingsSearchItem("summary.ai_custom_prompt", SettingsSearchPage.AiSummary, R.string.ai_custom_prompt, groupIndex = 0, groupTitleRes = R.string.ai_prompt_setting, descriptionRes = R.string.ai_custom_prompt_desc),
         SettingsSearchItem("summary.ai_reset_prompt", SettingsSearchPage.AiSummary, R.string.ai_reset_prompt, groupIndex = 0, groupTitleRes = R.string.ai_prompt_setting, descriptionRes = R.string.ai_prompt_template),

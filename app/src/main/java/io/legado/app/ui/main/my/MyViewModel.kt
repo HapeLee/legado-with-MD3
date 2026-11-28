@@ -5,6 +5,7 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.EventBus
+import io.legado.app.domain.gateway.AppShellSettingsGateway
 import io.legado.app.help.LocalNetworkAccess
 import io.legado.app.service.WebService
 import io.legado.app.utils.eventBus.FlowEventBus
@@ -19,7 +20,8 @@ import kotlinx.coroutines.launch
 @Stable
 data class MyUiState(
     val isWebServiceRun: Boolean = false,
-    val webServiceAddress: String = ""
+    val webServiceAddress: String = "",
+    val eInkGlobalMode: Boolean = false,
 )
 
 sealed class PrefClickEvent {
@@ -44,6 +46,8 @@ sealed interface MyIntent {
 
     /** 本地网络权限授予后由界面触发，避免再次进入申请分支。 */
     data object StartWebService : MyIntent
+
+    data class SetEInkGlobalMode(val enabled: Boolean) : MyIntent
 }
 
 sealed interface MyEffect {
@@ -52,13 +56,15 @@ sealed interface MyEffect {
 }
 
 class MyViewModel(
-    application: Application
+    application: Application,
+    private val appShellSettingsGateway: AppShellSettingsGateway,
 ) : BaseViewModel(application) {
 
     private val _uiState = MutableStateFlow(
         MyUiState(
             isWebServiceRun = WebService.isRun,
-            webServiceAddress = if (WebService.isRun) WebService.hostAddress else ""
+            webServiceAddress = if (WebService.isRun) WebService.hostAddress else "",
+            eInkGlobalMode = appShellSettingsGateway.currentSettings.eInkGlobalMode,
         )
     )
     val uiState: StateFlow<MyUiState> = _uiState.asStateFlow()
@@ -79,6 +85,14 @@ class MyViewModel(
                     }
                 }
         }
+        viewModelScope.launch {
+            appShellSettingsGateway.settings.collect { shell ->
+                _uiState.update { state ->
+                    if (state.eInkGlobalMode == shell.eInkGlobalMode) state
+                    else state.copy(eInkGlobalMode = shell.eInkGlobalMode)
+                }
+            }
+        }
     }
 
     fun onIntent(intent: MyIntent) {
@@ -95,6 +109,11 @@ class MyViewModel(
             }
 
             MyIntent.StartWebService -> WebService.start(context)
+            is MyIntent.SetEInkGlobalMode -> {
+                viewModelScope.launch {
+                    appShellSettingsGateway.update { it.copy(eInkGlobalMode = intent.enabled) }
+                }
+            }
         }
     }
 

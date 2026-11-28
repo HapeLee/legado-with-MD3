@@ -91,7 +91,14 @@ class SearchContentHistoryRecordingTest {
             searchResultIndex = 0,
             bookRepository = BookRepository(db.bookDao, db.bookChapterDao, db),
             searchContentRepository = SearchContentRepository(historyDao = db.searchContentHistoryDao),
-            themeSettingsGateway = FakeThemeSettingsGateway(),
+            appUiConfigurationGateway = object : io.legado.app.domain.gateway.AppUiConfigurationGateway {
+                private val state = kotlinx.coroutines.flow.MutableStateFlow(
+                    io.legado.app.domain.model.settings.AppUiConfiguration()
+                )
+                override val currentConfiguration get() = state.value
+                override val configuration get() = state
+                override fun synchronizeSystemDarkTheme(isDarkTheme: Boolean) = Unit
+            },
         )
     }
 

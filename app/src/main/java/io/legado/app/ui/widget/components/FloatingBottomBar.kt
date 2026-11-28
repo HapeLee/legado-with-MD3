@@ -8,8 +8,9 @@ import android.os.Build
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -160,6 +161,7 @@ fun FloatingBottomBar(
     val menuAlpha = ((compactProgress - 0.35f) / 0.65f).coerceIn(0f, 1f)
     val isInLightTheme = !LegadoTheme.isDark
     val themeSettings = LocalAppUiConfiguration.current.theme
+    val isEInkTheme = themeSettings.appTheme == "4"
     val engine = LegadoTheme.composeEngine
     val isCoui = engine == ComposeEngine.Coui
     val couiNavigation = LocalCouiFloatingNavigation.current
@@ -358,6 +360,9 @@ fun FloatingBottomBar(
                             lensRadius = themeSettings.bottomBarLensRadius.dp,
                         )
                         mochiBackdrop != null -> Modifier
+                        isEInkTheme -> Modifier
+                            .background(LegadoTheme.colorScheme.surface, capsuleShape)
+                            .border(1.5.dp, LegadoTheme.colorScheme.onSurface, capsuleShape)
                         else -> Modifier.shadow(4.dp, capsuleShape, clip = false)
                             .background(containerColor.copy(alpha = 1f), capsuleShape)
                     },
@@ -521,6 +526,12 @@ fun FloatingBottomBar(
                                         drawRect(color = indicatorColor, alpha = 1f - progress)
                                         drawRect(Color.Black.copy(alpha = 0.03f * progress))
                                     },
+                                )
+                            } else if (isEInkTheme) {
+                                Modifier.border(
+                                    width = 1.5.dp,
+                                    color = LegadoTheme.colorScheme.onSurface,
+                                    shape = capsuleShape,
                                 )
                             } else Modifier.background(indicatorColor, capsuleShape),
                         )

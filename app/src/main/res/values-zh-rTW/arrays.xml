@@ -33,6 +33,23 @@
         <item>暗色主題</item>
     </string-array>
 
+    <string-array name="themes_item">
+        <item>動態取色</item>
+        <item>草野</item>
+        <item>檸檬</item>
+        <item>黑白</item>
+        <item>電紙書</item>
+        <item>晴空</item>
+        <item>八月</item>
+        <item>新浪潮</item>
+        <item>春</item>
+        <item>千禧年</item>
+        <item>隱海修會</item>
+        <item>樂團</item>
+        <item>自訂</item>
+        <item>透明</item>
+    </string-array>
+
     <string-array name="NavBarColors">
         <item>自動</item>
         <item>黑色</item>

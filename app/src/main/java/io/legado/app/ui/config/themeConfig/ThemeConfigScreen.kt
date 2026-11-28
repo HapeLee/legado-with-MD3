@@ -47,6 +47,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -143,9 +144,6 @@ fun ThemeConfigScreen(
                 val themes = remember(themeItems, themeValues) {
                     themeItems.zip(themeValues).toList()
                 }
-                val visibleThemes = themes.filter { (_, value) ->
-                    value != "4" || state.showEInkTheme
-                }
 
                 if (!useBuiltInPaletteEngine) {
                     Column(
@@ -178,7 +176,7 @@ fun ThemeConfigScreen(
                             SearchableSetting("theme.theme") {
                                 ThemeColorSelector(
                                     context = context,
-                                    themes = visibleThemes,
+                                    themes = themes,
                                     selectedTheme = theme.appTheme,
                                     isDark = isDarkTheme,
                                     isAmoled = theme.isPureBlack,
@@ -286,8 +284,8 @@ fun ThemeConfigScreen(
                                 DropdownListSettingItem(
                                     title = stringResource(R.string.theme),
                                     selectedValue = theme.appTheme,
-                                    displayEntries = visibleThemes.map { it.first }.toTypedArray(),
-                                    entryValues = visibleThemes.map { it.second }.toTypedArray(),
+                                    displayEntries = themes.map { it.first }.toTypedArray(),
+                                    entryValues = themes.map { it.second }.toTypedArray(),
                                     onValueChange = { value ->
                                         onIntent(ThemeConfigIntent.SelectTheme(value))
                                     }
@@ -1164,7 +1162,8 @@ private fun BaseCardBorderColorSettingItem(
 @Composable
 fun ThemeModeSelector(
     selectedMode: String,
-    onModeSelected: (String) -> Unit
+    onModeSelected: (String) -> Unit,
+    enabled: Boolean = true,
 ) {
     val modes = listOf(
         Triple("0", stringResource(R.string.flow_sys), Icons.Filled.BrightnessMedium),
@@ -1176,7 +1175,9 @@ fun ThemeModeSelector(
         .coerceAtLeast(0)
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .alpha(if (enabled) 1f else 0.45f),
         horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
     ) {
         val modifiers = listOf(Modifier.weight(1.2f), Modifier.weight(1f), Modifier.weight(1f))
@@ -1185,6 +1186,7 @@ fun ThemeModeSelector(
             ToggleButton(
                 checked = selectedIndex == index,
                 onCheckedChange = { onModeSelected(value) },
+                enabled = enabled,
                 modifier = modifiers[index].semantics { role = Role.RadioButton },
                 shapes = when (index) {
                     0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
@@ -1210,11 +1212,14 @@ fun ThemeColorSelector(
     paletteStyle: String?,
     customLightSeedColor: Int,
     customNightSeedColor: Int,
-    onThemeSelected: (String) -> Unit
+    onThemeSelected: (String) -> Unit,
+    enabled: Boolean = true,
 ) {
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .alpha(if (enabled) 1f else 0.45f)
     ) {
         items(themes) { (label, value) ->
             ThemeColorButton(
@@ -1227,6 +1232,7 @@ fun ThemeColorSelector(
                 paletteStyle = paletteStyle,
                 customLightSeedColor = customLightSeedColor,
                 customNightSeedColor = customNightSeedColor,
+                enabled = enabled,
                 onClick = { onThemeSelected(value) }
             )
         }
@@ -1245,6 +1251,7 @@ fun ThemeColorButton(
     paletteStyle: String?,
     customLightSeedColor: Int,
     customNightSeedColor: Int,
+    enabled: Boolean = true,
     onClick: () -> Unit
 ) {
     // 配色方案由种子色实时生成，开销不小，缓存避免无关重组时重复计算
@@ -1287,7 +1294,7 @@ fun ThemeColorButton(
                         Modifier
                     }
                 )
-                .clickable(role = Role.Button, onClick = onClick),
+                .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
             Box(

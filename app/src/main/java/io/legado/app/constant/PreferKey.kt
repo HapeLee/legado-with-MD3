@@ -401,6 +401,7 @@ object PreferKey {
     const val navigationAnimationStyle = "navigationAnimationStyle"
     const val textAnimationLevel = "textAnimationLevel"
     const val readerSharedElementEnabled = "readerSharedElementEnabled"
+    const val eInkGlobalMode = "eInkGlobalMode"
     const val readRecordDisplayMode = "readRecordDisplayMode"
     const val replaceSortMode = "desc"
     const val readBarStyle = "readBarStyle"
@@ -516,7 +517,6 @@ object PreferKey {
 
     // Lab
     const val labEnabled = "labEnabled"
-    const val labEInkDisplay = "labEInkDisplay"
     const val labEyeProtection = "labEyeProtection"
 
     // Eye Protection

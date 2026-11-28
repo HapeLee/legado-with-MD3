@@ -44,7 +44,6 @@ class LabConfigViewModel(
             settingsGateway.update { settings ->
                 when (intent) {
                     is LabConfigIntent.SetEnabled -> settings.copy(enabled = intent.value)
-                    is LabConfigIntent.SetEInkDisplay -> settings.copy(eInkDisplay = intent.value)
                     LabConfigIntent.ExportPageEstimateDiagnostics -> settings
                 }
             }

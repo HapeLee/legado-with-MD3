@@ -1,8 +1,12 @@
 package io.legado.app.ui.widget.components.navigation
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,7 +27,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.HorizontalAlignmentLine
 import androidx.compose.ui.layout.Measured
@@ -133,6 +142,12 @@ private object ShortNavigationBarRowScope : RowScope {
     override fun Modifier.alignBy(alignmentLineBlock: (Measured) -> Int): Modifier = this
 }
 
+internal object NoOpMutableInteractionSource : MutableInteractionSource {
+    override val interactions: Flow<Interaction> = emptyFlow()
+    override suspend fun emit(interaction: Interaction) = Unit
+    override fun tryEmit(interaction: Interaction): Boolean = true
+}
+
 @Composable
 fun RowScope.AppNavigationBarItem(
     selected: Boolean,
@@ -157,8 +172,10 @@ fun RowScope.AppNavigationBarItem(
         return
     }
     val isMiuix = LegadoTheme.composeEngine == ComposeEngine.Miuix
+    val configuration = LocalAppUiConfiguration.current
+    val isEInkTheme = configuration.theme.appTheme == "4"
     val useCustomIconBox =
-        useCustomIcon && LocalAppUiConfiguration.current.appShell.useFloatingBottomBar
+        useCustomIcon && configuration.appShell.useFloatingBottomBar
 
     if (useCustomIconBox) {
         Box(
@@ -167,8 +184,12 @@ fun RowScope.AppNavigationBarItem(
                 .fillMaxHeight()
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
-                    // 导航项专用的无界 32dp 反馈：刻意不随主题 indication 分发。
-                    indication = ripple(bounded = false, radius = 32.dp),
+                    // 导航项专用的无界 32dp 反馈：刻意不随主题 indication 分发，电纸书模式下关闭。
+                    indication = if (configuration.appShell.eInkGlobalMode) {
+                        null
+                    } else {
+                        ripple(bounded = false, radius = 32.dp)
+                    },
                     onClick = onClick
                 ),
             contentAlignment = Alignment.Center
@@ -178,8 +199,19 @@ fun RowScope.AppNavigationBarItem(
                     modifier = Modifier
                         .width(64.dp)
                         .height(32.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(m3IndicatorColor)
+                        .then(
+                            if (isEInkTheme) {
+                                Modifier.border(
+                                    width = 1.5.dp,
+                                    color = LegadoTheme.colorScheme.onSurface,
+                                    shape = RoundedCornerShape(16.dp),
+                                )
+                            } else {
+                                Modifier
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(m3IndicatorColor)
+                            }
+                        )
                 )
             }
             m3Icon()
@@ -204,12 +236,42 @@ fun RowScope.AppNavigationBarItem(
             )
         }
         ComposeEngine.Oxygen, ComposeEngine.Material, ComposeEngine.Mochi, ComposeEngine.Coui -> {
+            val eInkOutlineColor = LegadoTheme.colorScheme.onSurface
             ShortNavigationBarItem(
                 selected = selected,
                 onClick = onClick,
                 modifier = modifier,
-                icon = m3Icon,
-                colors = ShortNavigationBarItemDefaults.colors(selectedIndicatorColor = m3IndicatorColor),
+                interactionSource = if (configuration.appShell.eInkGlobalMode) {
+                    NoOpMutableInteractionSource
+                } else {
+                    null
+                },
+                icon = {
+                    if (isEInkTheme && selected) {
+                        Box(
+                            modifier = Modifier.drawBehind {
+                                val strokeWidth = 1.5.dp.toPx()
+                                val w = 64.dp.toPx()
+                                val h = 32.dp.toPx()
+                                drawRoundRect(
+                                    color = eInkOutlineColor,
+                                    topLeft = Offset((size.width - w) / 2f, (size.height - h) / 2f),
+                                    size = Size(w, h),
+                                    cornerRadius = CornerRadius(h / 2f, h / 2f),
+                                    style = Stroke(width = strokeWidth),
+                                )
+                            },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            m3Icon()
+                        }
+                    } else {
+                        m3Icon()
+                    }
+                },
+                colors = ShortNavigationBarItemDefaults.colors(
+                    selectedIndicatorColor = if (isEInkTheme) Color.Transparent else m3IndicatorColor
+                ),
                 label = if (m3ShowLabel && (m3AlwaysShowLabel || selected)) {
                     {
                         AnimatedText(labelString)

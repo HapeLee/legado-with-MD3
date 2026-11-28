@@ -548,6 +548,7 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
     override fun Content() {
         val configuration = LocalAppUiConfiguration.current
         val navigationAnimationStyle = configuration.appShell.navigationAnimationStyle
+        val navigationAnimationEnabled = configuration.appShell.navigationAnimationEnabled
         val navigationLayoutDirection = LocalLayoutDirection.current
         val navigationDisplayLeft = remember { mutableFloatStateOf(0f) }
         val navigationSceneDecorators = remember { listOf(NavigationPageSceneDecorator(navigationDisplayLeft)) }
@@ -896,7 +897,10 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                             sceneDecoratorStrategies = navigationSceneDecorators,
                             transitionSpec = {
                                 navigationPreset(
-                                    navigationAnimationStyle, true, navigationLayoutDirection
+                                    navigationAnimationStyle,
+                                    true,
+                                    navigationLayoutDirection,
+                                    enabled = navigationAnimationEnabled,
                                 ) ?: if (targetState is ListDetailScene) {
                                     // 双栏自己演形变：左栏从占满窗口收到窗格宽度、右栏从右侧滑进来。
                                     // 场景级再滑一次会让左栏里的首页跟着从头滑入，看起来像换了页面。
@@ -931,7 +935,10 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                             },
                             popTransitionSpec = {
                                 navigationPreset(
-                                    navigationAnimationStyle, false, navigationLayoutDirection
+                                    navigationAnimationStyle,
+                                    false,
+                                    navigationLayoutDirection,
+                                    enabled = navigationAnimationEnabled,
                                 ) ?: if (initialState is ListDetailScene) {
                                     // 返回时双栏要做「右栏滑出、左栏回满」的收拢动画，所以离场场景
                                     // 必须活到动画结束；淡出叠加在收拢之上，下方已经恢复成单栏的同一页面。
@@ -966,7 +973,11 @@ open class MainActivity : BaseComposeActivity(), AudioPlay.CallBack {
                             },
                             predictivePopTransitionSpec = { swipeEdge ->
                                 navigationPreset(
-                                    navigationAnimationStyle, false, navigationLayoutDirection, swipeEdge
+                                    navigationAnimationStyle,
+                                    false,
+                                    navigationLayoutDirection,
+                                    swipeEdge,
+                                    enabled = navigationAnimationEnabled,
                                 ) ?: ((slideIntoContainer(
                                     towards = AnimatedContentTransitionScope.SlideDirection.Start,
                                     animationSpec = tween(easing = FastOutSlowInEasing),

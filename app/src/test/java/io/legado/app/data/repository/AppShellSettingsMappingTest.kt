@@ -149,6 +149,28 @@ class AppShellSettingsMappingTest {
             values,
         )
     }
+
+    @Test
+    fun `全局电纸书模式默认关闭且可独立原子写入并读取`() {
+        assertEquals(
+            false,
+            emptyMap<String, Any?>().toTestPreferences()
+                .toAppShellSettings().eInkGlobalMode,
+        )
+        listOf(true, false).forEach { enabled ->
+            val values = captureAtomicUpdateValues(
+                current = AppShellSettings(eInkGlobalMode = !enabled),
+                read = { it.toAppShellSettings() },
+                toPrefMap = AppShellSettings::toPrefMap,
+                transform = { it.copy(eInkGlobalMode = enabled) },
+            )
+            assertEquals(mapOf(PreferKey.eInkGlobalMode to enabled), values)
+            assertEquals(
+                enabled,
+                values.toTestPreferences().toAppShellSettings().eInkGlobalMode,
+            )
+        }
+    }
 }
 
 private fun appShellMappingSamples(): List<AppShellSettings> {
@@ -187,6 +209,7 @@ private fun appShellMappingSamples(): List<AppShellSettings> {
         base.copy(useFloatingBottomBar = true),
         base.copy(useFloatingBottomBarLiquidGlass = true),
         base.copy(navExtended = true),
+        base.copy(eInkGlobalMode = true),
     )
 }
 
@@ -224,4 +247,5 @@ private fun AppShellSettings.expectedPrefMap(): Map<String, Any?> = mapOf(
     PreferKey.navIconRssSelected to navIconRssSelected,
     PreferKey.navIconMySelected to navIconMySelected,
     PreferKey.launcherIcon to launcherIcon,
+    PreferKey.eInkGlobalMode to eInkGlobalMode,
 )

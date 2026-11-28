@@ -1,7 +1,12 @@
 package io.legado.app.ui.theme
 
+import androidx.compose.foundation.IndicationNodeFactory
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -12,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.node.DelegatableNode
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
@@ -71,7 +77,7 @@ private fun AppThemePreview(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun AppThemeActual(
     configuration: AppUiConfiguration,
@@ -184,6 +190,19 @@ private fun AppThemeActual(
         )
     }
 
+    val effectiveContent: @Composable () -> Unit = if (appShellSettings.eInkGlobalMode) {
+        {
+            CompositionLocalProvider(
+                LocalIndication provides NoIndication,
+                LocalRippleConfiguration provides null,
+            ) {
+                content()
+            }
+        }
+    } else {
+        content
+    }
+
     // 7. 提供主题数据并根据引擎渲染
     CompositionLocalProvider(
         LocalLegadoThemeColors provides themeColors,
@@ -195,7 +214,7 @@ private fun AppThemeActual(
                     themeColors = themeColors,
                     customFontFamily = customFontFamily,
                     applyBackground = applyBackground,
-                    content = content
+                    content = effectiveContent
                 )
             }
             ComposeEngine.Mochi -> {
@@ -204,7 +223,7 @@ private fun AppThemeActual(
                 CompositionLocalProvider(LocalMochiBackdropRegistry provides registry) {
                     val themedContent: @Composable () -> Unit = {
                         MaterialThemeWrapper(themeColors, customFontFamily, applyBackground) {
-                            ProvideMochiTheme(themeColors.colorScheme, themeColors.isDark, content = content)
+                            ProvideMochiTheme(themeColors.colorScheme, themeColors.isDark, content = effectiveContent)
                         }
                     }
                     if (parentRegistry == null) {
@@ -222,22 +241,31 @@ private fun AppThemeActual(
                     applyBackground = applyBackground,
                 ) {
                     if (themeColors.composeEngine == ComposeEngine.Oxygen) {
-                        ProvideOxygenTheme(useDefaultColors = useBuiltInPalette, content = content)
+                        ProvideOxygenTheme(useDefaultColors = useBuiltInPalette, content = effectiveContent)
                     } else if (themeColors.composeEngine == ComposeEngine.Coui && ThemeResolver.isCouiSupported()) {
                         ProvideCouiTheme(themeColors.isDark, useBuiltInPalette) {
                             // COUI 菜单的玻璃材质要采样所属窗口的内容根；单参数版保留隔离，
                             // 与 Mochi 分支一样用 propagateMinConstraints 保持内容测量不变。
                             ProvideCouiMenuBackdrop { backdropModifier ->
                                 Box(backdropModifier, propagateMinConstraints = true) {
-                                    content()
+                                    effectiveContent()
                                 }
                             }
                         }
                     } else {
-                        content()
+                        effectiveContent()
                     }
                 }
             }
         }
     }
+}
+
+private object NoIndication : IndicationNodeFactory {
+    override fun create(interactionSource: InteractionSource): DelegatableNode =
+        object : Modifier.Node() {}
+
+    override fun equals(other: Any?): Boolean = other === this
+
+    override fun hashCode(): Int = System.identityHashCode(this)
 }

@@ -123,6 +123,9 @@ abstract class BaseActivity<VB : ViewBinding>(
         super.onCreate(savedInstanceState)
         lastPlatformConfiguration = Configuration(resources.configuration)
         lastUiConfiguration = appUiConfigurationGateway.currentConfiguration
+        if (lastUiConfiguration?.appShell?.eInkGlobalMode == true) {
+            applyZeroActivityTransition(isOpen = true)
+        }
         WindowCompat.setDecorFitsSystemWindows(window, false)
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S)
             enableEdgeToEdge()
@@ -422,5 +425,21 @@ abstract class BaseActivity<VB : ViewBinding>(
     override fun finish() {
         currentFocus?.hideSoftInput()
         super.finish()
+        if (appUiConfigurationGateway.currentConfiguration.appShell.eInkGlobalMode) {
+            applyZeroActivityTransition(isOpen = false)
+        }
+    }
+
+    private fun applyZeroActivityTransition(isOpen: Boolean) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            overrideActivityTransition(
+                if (isOpen) OVERRIDE_TRANSITION_OPEN else OVERRIDE_TRANSITION_CLOSE,
+                0,
+                0,
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            overridePendingTransition(0, 0)
+        }
     }
 }

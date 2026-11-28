@@ -2,18 +2,15 @@ package io.legado.app.base
 
 import androidx.lifecycle.LifecycleEventObserver
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import io.legado.app.domain.gateway.ThemeSettingsGateway
-import org.koin.core.context.GlobalContext
+import io.legado.app.help.config.AppConfig
 
 
 abstract class BasePrefDialogFragment(
 ) : BottomSheetDialogFragment() {
 
-    private val themeGateway get() = GlobalContext.get().get<ThemeSettingsGateway>()
-
     override fun onStart() {
         super.onStart()
-        if (themeGateway.currentSettings.appTheme == "4") {
+        if (AppConfig.isEInkMode) {
 //            dialog?.window?.let {
 //                it.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
 //                val attr = it.attributes

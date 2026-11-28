@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -68,7 +69,11 @@ internal fun AnimatedContentTransitionScope<Scene<NavKey>>.navigationPreset(
     forward: Boolean,
     layoutDirection: LayoutDirection,
     swipeEdge: Int? = null,
+    enabled: Boolean = true,
 ): ContentTransform? {
+    if (!enabled) {
+        return EnterTransition.None togetherWith ExitTransition.None
+    }
     if (initialState !is NavigationPageScene || targetState !is NavigationPageScene) return null
     val direction = if (layoutDirection == LayoutDirection.Rtl) -1 else 1
     return when (style) {
@@ -135,11 +140,15 @@ internal data class NavigationPageScene(
     private val displayLeft: FloatState,
 ) : Scene<NavKey> by scene {
     override val content: @Composable () -> Unit = {
-        val style = LocalAppUiConfiguration.current.appShell.navigationAnimationStyle
-        val modifier = when (style) {
-            NavigationAnimationStyle.Default -> Modifier
-            NavigationAnimationStyle.Miuix -> Modifier.fillMaxSize().sidePushSurface(displayLeft)
-            NavigationAnimationStyle.Scale -> Modifier.fillMaxSize().scalePageCorners()
+        val appShell = LocalAppUiConfiguration.current.appShell
+        val modifier = if (!appShell.navigationAnimationEnabled) {
+            Modifier
+        } else {
+            when (appShell.navigationAnimationStyle) {
+                NavigationAnimationStyle.Default -> Modifier
+                NavigationAnimationStyle.Miuix -> Modifier.fillMaxSize().sidePushSurface(displayLeft)
+                NavigationAnimationStyle.Scale -> Modifier.fillMaxSize().scalePageCorners()
+            }
         }
         Box(modifier, propagateMinConstraints = true) { scene.content() }
     }

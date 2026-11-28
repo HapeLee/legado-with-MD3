@@ -58,4 +58,4 @@ internal fun Preferences.toAppUiConfiguration(
         theme = toThemeSettings(),
         cover = toCoverSettings(),
         isSystemDarkTheme = isSystemDarkTheme,
-    )
+    ).applyRuntimeOverrides()

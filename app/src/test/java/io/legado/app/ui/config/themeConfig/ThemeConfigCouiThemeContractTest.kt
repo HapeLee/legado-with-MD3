@@ -63,7 +63,7 @@ class ThemeConfigCouiThemeContractTest {
         )
         assertTrue(
             "下拉列表未直接使用 themes 原始标签（首项为动态取色）",
-            source.contains("displayEntries = visibleThemes.map { it.first }.toTypedArray()"),
+            source.contains("displayEntries = themes.map { it.first }.toTypedArray()"),
         )
         val array = repoFileOf(THEMES_ARRAY_CN)
             .substringAfter("<string-array name=\"themes_item\">")

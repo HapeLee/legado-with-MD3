@@ -73,7 +73,9 @@ object AppConfig {
 
     val isCronet get() = cache.cronetEnabled
     val userAgent get() = cache.userAgent
-    val isEInkMode get() = theme.appTheme == "4"
+    val isEInkMode: Boolean
+        get() = (::shellGateway.isInitialized && shell.eInkGlobalMode) ||
+            (::themeGateway.isInitialized && theme.appTheme == "4")
     val customMode get() = theme.customMode
     val useDefaultCover get() = cover.useDefaultCover
     val recordLog get() = other.recordLog

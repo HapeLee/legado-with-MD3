@@ -283,6 +283,7 @@ object BackupConfig {
         PreferKey.composeEngine,
         PreferKey.navigationAnimationStyle,
         PreferKey.textAnimationLevel,
+        PreferKey.eInkGlobalMode,
         PreferKey.customContrast,
         PreferKey.customMode,
         PreferKey.useMiuixMonet,

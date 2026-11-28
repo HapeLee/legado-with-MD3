@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,12 +15,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuOpen
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.FloatingActionButtonMenu
 import androidx.compose.material3.FloatingActionButtonMenuItem
 import androidx.compose.material3.Icon
@@ -48,6 +51,7 @@ import com.itos.coui.theme.CouiTheme
 import io.legado.app.R
 import io.legado.app.ui.theme.ComposeEngine
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LocalAppUiConfiguration
 import io.legado.app.ui.theme.ProvideAppDensity
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.coui.AppCouiFloatingActionButton
@@ -129,13 +133,19 @@ private fun FloatingActionButtonByEngine(
     content: (@Composable () -> Unit)?,
 ) {
     val isMiuix = LegadoTheme.composeEngine == ComposeEngine.Miuix
+    val isEInkTheme = LocalAppUiConfiguration.current.theme.appTheme == "4"
+    val eInkOutlineColor = LegadoTheme.colorScheme.onSurface
     val fabContent: @Composable () -> Unit = {
         if (icon != null) {
             if (isMiuix) {
                 MiuixIcon(
                     imageVector = icon,
                     contentDescription = tooltipText,
-                    tint = containerColor ?: LegadoTheme.colorScheme.primaryContainer
+                    tint = if (isEInkTheme) {
+                        contentColor ?: eInkOutlineColor
+                    } else {
+                        contentColor ?: containerColor ?: LegadoTheme.colorScheme.primaryContainer
+                    }
                 )
             } else {
                 Icon(
@@ -149,58 +159,102 @@ private fun FloatingActionButtonByEngine(
         }
     }
 
+    val roundedEInkModifier = if (isEInkTheme) {
+        modifier.border(
+            width = 1.5.dp,
+            color = eInkOutlineColor,
+            shape = FloatingActionButtonDefaults.shape,
+        )
+    } else {
+        modifier
+    }
+    val circleEInkModifier = if (isEInkTheme) {
+        modifier.border(
+            width = 1.5.dp,
+            color = eInkOutlineColor,
+            shape = CircleShape,
+        )
+    } else {
+        modifier
+    }
+
     when (LegadoTheme.composeEngine) {
         ComposeEngine.Oxygen -> {
             io.oxygenx.material3.ProvideMaterial3Content {
                 if (icon != null) {
                     val defaults = io.oxygenx.ui.basic.FabDefaults.colors()
                     io.oxygenx.ui.basic.FloatingActionButton(
-                        onClick, icon, tooltipText, modifier,
+                        onClick,
+                        icon,
+                        tooltipText,
+                        roundedEInkModifier,
                         colors = defaults.copy(
-                            containerColor = containerColor ?: defaults.containerColor,
-                            contentColor = contentColor ?: defaults.contentColor,
+                            containerColor = containerColor
+                                ?: if (isEInkTheme) LegadoTheme.colorScheme.surface else defaults.containerColor,
+                            contentColor = contentColor
+                                ?: if (isEInkTheme) eInkOutlineColor else defaults.contentColor,
                         ),
                     )
                 } else {
                     // The library's FAB is vector-based; retain arbitrary custom content.
-                    MaterialFloatingActionButton(modifier, onClick,
-                        containerColor ?: LegadoTheme.colorScheme.primaryContainer,
-                        contentColor ?: LegadoTheme.colorScheme.onPrimaryContainer, fabContent)
+                    MaterialFloatingActionButton(
+                        modifier = roundedEInkModifier,
+                        onClick = onClick,
+                        containerColor = containerColor
+                            ?: if (isEInkTheme) LegadoTheme.colorScheme.surface else LegadoTheme.colorScheme.primaryContainer,
+                        contentColor = contentColor
+                            ?: if (isEInkTheme) eInkOutlineColor else LegadoTheme.colorScheme.onPrimaryContainer,
+                        isEInkTheme = isEInkTheme,
+                        content = fabContent,
+                    )
                 }
             }
         }
         ComposeEngine.Miuix -> {
             MiuixFloatingActionButton(
                 onClick = onClick,
-                modifier = modifier,
+                modifier = circleEInkModifier,
                 content = fabContent,
-                containerColor = LegadoTheme.colorScheme.surfaceContainer
+                containerColor = containerColor ?: if (isEInkTheme) {
+                    LegadoTheme.colorScheme.surface
+                } else {
+                    LegadoTheme.colorScheme.surfaceContainer
+                }
             )
         }
         ComposeEngine.Coui -> {
             if (ThemeResolver.isCouiSupported()) {
                 AppCouiFloatingActionButton(
                     onClick = onClick,
-                    modifier = modifier,
-                    containerColor = containerColor ?: CouiTheme.colorScheme.accent,
+                    modifier = circleEInkModifier,
+                    containerColor = containerColor
+                        ?: if (isEInkTheme) LegadoTheme.colorScheme.surface else CouiTheme.colorScheme.accent,
+                    contentColor = contentColor
+                        ?: if (isEInkTheme) eInkOutlineColor else Color.White,
                     content = fabContent,
                 )
             } else {
                 MaterialFloatingActionButton(
-                    modifier = modifier,
+                    modifier = roundedEInkModifier,
                     onClick = onClick,
-                    containerColor = containerColor ?: LegadoTheme.colorScheme.primaryContainer,
-                    contentColor = Color.White,
+                    containerColor = containerColor
+                        ?: if (isEInkTheme) LegadoTheme.colorScheme.surface else LegadoTheme.colorScheme.primaryContainer,
+                    contentColor = contentColor
+                        ?: if (isEInkTheme) eInkOutlineColor else Color.White,
+                    isEInkTheme = isEInkTheme,
                     content = fabContent,
                 )
             }
         }
         ComposeEngine.Material, ComposeEngine.Mochi -> {
             MaterialFloatingActionButton(
-                modifier = modifier,
+                modifier = roundedEInkModifier,
                 onClick = onClick,
-                containerColor = containerColor ?: LegadoTheme.colorScheme.primaryContainer,
-                contentColor = contentColor ?: LegadoTheme.colorScheme.primary,
+                containerColor = containerColor
+                    ?: if (isEInkTheme) LegadoTheme.colorScheme.surface else LegadoTheme.colorScheme.primaryContainer,
+                contentColor = contentColor
+                    ?: if (isEInkTheme) eInkOutlineColor else LegadoTheme.colorScheme.primary,
+                isEInkTheme = isEInkTheme,
                 content = fabContent,
             )
         }
@@ -213,6 +267,7 @@ private fun MaterialFloatingActionButton(
     onClick: () -> Unit,
     containerColor: Color,
     contentColor: Color,
+    isEInkTheme: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     FloatingActionButton(
@@ -220,6 +275,16 @@ private fun MaterialFloatingActionButton(
         modifier = modifier,
         containerColor = containerColor,
         contentColor = contentColor,
+        elevation = if (isEInkTheme) {
+            FloatingActionButtonDefaults.elevation(
+                defaultElevation = 0.dp,
+                pressedElevation = 0.dp,
+                focusedElevation = 0.dp,
+                hoveredElevation = 0.dp,
+            )
+        } else {
+            FloatingActionButtonDefaults.elevation()
+        },
         content = content,
     )
 }

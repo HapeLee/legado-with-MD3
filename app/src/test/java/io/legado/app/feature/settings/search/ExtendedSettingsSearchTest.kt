@@ -19,8 +19,6 @@ import io.legado.app.domain.model.settings.AppUiConfiguration
 import io.legado.app.domain.model.settings.NavigationAnimationStyle
 import io.legado.app.domain.model.settings.TextAnimationLevel
 import io.legado.app.feature.settings.reading.ReadSetting
-import io.legado.app.ui.config.labConfig.LabConfigScreen
-import io.legado.app.ui.config.labConfig.LabConfigUiState
 import io.legado.app.ui.config.otherConfig.OtherConfigIntent
 import io.legado.app.ui.config.otherConfig.OtherConfigScreen
 import io.legado.app.ui.config.otherConfig.OtherConfigUiState
@@ -352,22 +350,5 @@ class ExtendedSettingsSearchTest {
         compose.onNodeWithText(app.getString(R.string.settings_search_prerequisite,
             app.getString(item.titleRes), app.getString(R.string.show_divider_line))).assertIsDisplayed()
         assertThemeUnchanged(themeEvents)
-    }
-
-    @Test fun `disabled laboratory option guides to the master switch`() {
-        val app = RuntimeEnvironment.getApplication().also { it.injectAsAppCtx() }
-        val item = SettingsSearchCatalog.find("lab.lab_eink_display_title")!!
-        val mutations = mutableListOf<Any>()
-        compose.setContent {
-            AppTheme(AppUiConfiguration()) {
-                SettingsSearchTargetScope(item) {
-                    LabConfigScreen(LabConfigUiState(), { mutations += it }, {})
-                }
-            }
-        }
-        compose.onNodeWithTag("setting:lab.lab_enabled_title").assertIsDisplayed()
-        compose.onNodeWithText(app.getString(R.string.settings_search_prerequisite,
-            app.getString(item.titleRes), app.getString(R.string.lab_enabled_title))).assertIsDisplayed()
-        assertTrue("Unexpected setting write: $mutations", mutations.isEmpty())
     }
 }

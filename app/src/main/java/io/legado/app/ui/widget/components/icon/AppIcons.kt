@@ -40,7 +40,12 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.RssFeed
 import androidx.compose.material.icons.outlined.Sell
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.unit.dp
 import com.itos.coui.icons.CouiIcons
 import io.legado.app.ui.main.MainDestination
 import io.legado.app.ui.theme.ComposeEngine
@@ -325,6 +330,64 @@ object AppIcons {
             ComposeEngine.Oxygen -> MaterialSymbols.ExpandMore
             else -> Icons.Default.KeyboardArrowDown
         }
+
+    /** 极简电纸书阅读器图标：圆角机身、内嵌文字屏与底部窄下巴按键，适配各引擎行首图标权重。 */
+    val EInkReader: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "EInkReader",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f,
+        ).apply {
+            path(
+                fill = SolidColor(Color.Black),
+                pathFillType = PathFillType.EvenOdd,
+            ) {
+                // 外机身轮廓 (4..20, 2..22, r=2)
+                moveTo(6f, 2f)
+                horizontalLineTo(18f)
+                curveTo(19.1f, 2f, 20f, 2.9f, 20f, 4f)
+                verticalLineTo(20f)
+                curveTo(20f, 21.1f, 19.1f, 22f, 18f, 22f)
+                horizontalLineTo(6f)
+                curveTo(4.9f, 22f, 4f, 21.1f, 4f, 20f)
+                verticalLineTo(4f)
+                curveTo(4f, 2.9f, 4.9f, 2f, 6f, 2f)
+                close()
+                // 内嵌墨水屏区域 (6..18, 4..17)
+                moveTo(6f, 4f)
+                horizontalLineTo(18f)
+                verticalLineTo(17f)
+                horizontalLineTo(6f)
+                close()
+                // 底部下巴实体指示点 (10.5..13.5, 18.75..20.25)
+                moveTo(10.5f, 18.75f)
+                horizontalLineTo(13.5f)
+                verticalLineTo(20.25f)
+                horizontalLineTo(10.5f)
+                close()
+            }
+            path(fill = SolidColor(Color.Black)) {
+                // 屏幕内三行文字排布
+                moveTo(7.5f, 6.5f)
+                horizontalLineTo(16.5f)
+                verticalLineTo(8f)
+                horizontalLineTo(7.5f)
+                close()
+                moveTo(7.5f, 9.75f)
+                horizontalLineTo(16.5f)
+                verticalLineTo(11.25f)
+                horizontalLineTo(7.5f)
+                close()
+                moveTo(7.5f, 13f)
+                horizontalLineTo(13.5f)
+                verticalLineTo(14.5f)
+                horizontalLineTo(7.5f)
+                close()
+            }
+        }.build()
+    }
 
     @Composable
     fun mainDestination(destination: MainDestination, selected: Boolean): ImageVector {

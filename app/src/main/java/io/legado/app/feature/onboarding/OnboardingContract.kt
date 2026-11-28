@@ -21,6 +21,7 @@ data class OnboardingUiState(
     val bookFolderUri: String? = null,
     val theme: ThemeSettings = ThemeSettings(),
     val themeMode: String = "0",
+    val eInkGlobalMode: Boolean = false,
     val busyText: String? = null,
     val backupNames: ImmutableList<String>? = null,
     val restoreErrorMessage: String? = null,
@@ -46,6 +47,7 @@ sealed interface OnboardingIntent {
     data class SelectBookFolder(val uri: String) : OnboardingIntent
     data class SelectTheme(val value: String) : OnboardingIntent
     data class SetThemeMode(val value: String) : OnboardingIntent
+    data class SetEInkGlobalMode(val enabled: Boolean) : OnboardingIntent
     data object DismissRestoreError : OnboardingIntent
     data object CancelBusy : OnboardingIntent
 }
